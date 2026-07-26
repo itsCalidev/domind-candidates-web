@@ -1,0 +1,13 @@
+/*
+ * Reset mínimo. La mayor parte de la normalización de estilos base
+ * la maneja <CssBaseline /> de MUI (ver src/app/App.tsx).
+ */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
