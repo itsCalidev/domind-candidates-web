@@ -1,6 +1,8 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { PageLoader } from '@/shared/components/PageLoader';
+import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
+import { GuestRoute } from '@/features/auth/components/GuestRoute';
 import { paths } from './paths';
 
 /**
@@ -22,15 +24,42 @@ const CandidatesListPage = lazy(() =>
     default: m.CandidatesListPage,
   })),
 );
+const CandidateDetailPage = lazy(() =>
+  import('@/features/candidates/components/CandidateDetailPage').then((m) => ({
+    default: m.CandidateDetailPage,
+  })),
+);
+const AdminLayout = lazy(() =>
+  import('@/layouts/AdminLayout').then((m) => ({ default: m.AdminLayout })),
+);
 
 export function AppRouter() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/" element={<Navigate to={paths.login} replace />} />
-        <Route path={paths.login} element={<LoginPage />} />
-        <Route path={paths.dashboard} element={<DashboardPage />} />
-        <Route path={paths.candidates} element={<CandidatesListPage />} />
+
+        <Route
+          path={paths.login}
+          element={
+            <GuestRoute>
+              <LoginPage />
+            </GuestRoute>
+          }
+        />
+
+        {/* Rutas del panel administrativo, protegidas y bajo el mismo layout */}
+        <Route
+          element={
+            <ProtectedRoute>
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path={paths.dashboard} element={<DashboardPage />} />
+          <Route path={paths.candidates} element={<CandidatesListPage />} />
+          <Route path={paths.candidateDetail(':id')} element={<CandidateDetailPage />} />
+        </Route>
       </Routes>
     </Suspense>
   );

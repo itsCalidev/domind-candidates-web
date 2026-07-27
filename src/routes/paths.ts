@@ -9,4 +9,6 @@ export const paths = {
   dashboard: '/dashboard',
   candidates: '/candidates',
   candidateDetail: (id: string) => `/candidates/${id}`,
+  users: '/users',
+  settings: '/settings',
 } as const;
