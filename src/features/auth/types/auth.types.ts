@@ -37,3 +37,7 @@ export interface AuthenticatedUser {
   email: string;
   role: UserRole;
 }
+
+export interface LogoutRequest {
+  refreshToken: string;
+}
