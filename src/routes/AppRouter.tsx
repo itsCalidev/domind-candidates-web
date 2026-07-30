@@ -29,6 +29,9 @@ const CandidateDetailPage = lazy(() =>
     default: m.CandidateDetailPage,
   })),
 );
+const UsersPage = lazy(() =>
+  import('@/features/users/components/UsersPage').then((m) => ({ default: m.UsersPage })),
+);
 const AdminLayout = lazy(() =>
   import('@/layouts/AdminLayout').then((m) => ({ default: m.AdminLayout })),
 );
@@ -59,6 +62,7 @@ export function AppRouter() {
           <Route path={paths.dashboard} element={<DashboardPage />} />
           <Route path={paths.candidates} element={<CandidatesListPage />} />
           <Route path={paths.candidateDetail(':id')} element={<CandidateDetailPage />} />
+          <Route path={paths.users} element={<UsersPage />} />
         </Route>
       </Routes>
     </Suspense>
