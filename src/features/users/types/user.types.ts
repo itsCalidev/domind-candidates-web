@@ -25,3 +25,29 @@ export interface UserListQuery {
   page?: number;
   limit?: number;
 }
+
+/** Body de POST /users. */
+export interface CreateUserRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  role: UserRole;
+}
+
+/** Body de PUT /users/:id. No incluye password ni role: ese endpoint no los acepta. */
+export interface UpdateUserRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+/** Body de PATCH /users/:id/status. */
+export interface UpdateUserStatusRequest {
+  isActive: boolean;
+}
+
+/** Body de PATCH /users/:id/password. Cambio administrativo: sin contraseña anterior. */
+export interface UpdateUserPasswordRequest {
+  password: string;
+}

@@ -77,10 +77,11 @@ export function LoginPage() {
 
         <Box sx={{ position: 'relative', maxWidth: 420 }}>
           <Typography variant="h3" sx={{ mb: 2, lineHeight: 1.25 }}>
-            Sistema de Gestión de Candidatos.
+            Estudios socioeconómicos, sin fricción.
           </Typography>
           <Typography variant="body1" sx={{ opacity: 0.85 }}>
-            Texto a cambiar, variantes de tamaño, posición, tipografía etc.
+            Digitaliza la captura de información de candidatos y da a tus
+            analistas un expediente completo, ordenado y siempre disponible.
           </Typography>
         </Box>
 
@@ -102,10 +103,10 @@ export function LoginPage() {
       >
         <Box sx={{ width: '100%', maxWidth: 400 }}>
           <Typography variant="h4" sx={{ mb: 1 }}>
-            Bienvenido
+            Bienvenido de vuelta
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-            Ingresa tus credenciales para acceder al panel.
+            Ingresa tus credenciales para acceder al panel administrativo.
           </Typography>
 
           <Box component="form" onSubmit={onSubmit} noValidate>

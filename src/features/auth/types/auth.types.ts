@@ -38,6 +38,11 @@ export interface AuthenticatedUser {
   role: UserRole;
 }
 
+/**
+ * Body de POST /auth/logout. A diferencia de la respuesta de login
+ * (snake_case), este endpoint espera camelCase — se respeta tal cual,
+ * sin normalizar ambos a un mismo estilo.
+ */
 export interface LogoutRequest {
   refreshToken: string;
 }

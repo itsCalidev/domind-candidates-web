@@ -5,11 +5,11 @@ import {
   useMemo,
   useState,
   type ReactNode,
-} from "react";
-import { authService } from "../services/authService";
-import { tokenStorage } from "@/lib/http/tokenStorage";
-import { decodeJwtPayload } from "@/shared/utils/jwt";
-import type { AuthenticatedUser, JwtPayload } from "../types/auth.types";
+} from 'react';
+import { authService } from '../services/authService';
+import { tokenStorage } from '@/lib/http/tokenStorage';
+import { decodeJwtPayload } from '@/shared/utils/jwt';
+import type { AuthenticatedUser, JwtPayload } from '../types/auth.types';
 
 interface AuthContextValue {
   user: AuthenticatedUser | null;
@@ -47,39 +47,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Recupera la sesión guardada al cargar/recargar la página.
   useEffect(() => {
     const accessToken = tokenStorage.getAccessToken();
-
     if (accessToken) {
       const restoredUser = userFromToken(accessToken);
-
       if (restoredUser) {
         setUser(restoredUser);
       } else {
         tokenStorage.clear();
       }
     }
-
     setIsLoading(false);
   }, []);
 
   async function login(email: string, password: string) {
-    const { access_token, refresh_token } = await authService.login({
-      email,
-      password,
-    });
+    const { access_token, refresh_token } = await authService.login({ email, password });
     tokenStorage.setTokens(access_token, refresh_token);
     setUser(userFromToken(access_token));
   }
 
   async function logout() {
     const refreshToken = tokenStorage.getRefreshToken();
-
     try {
       if (refreshToken) {
-        await authService.logout({
-          refreshToken,
-        });
+        await authService.logout({ refreshToken });
       }
     } finally {
+      // La sesión local se limpia aunque la llamada al backend falle
+      // (ej. red caída): el usuario debe poder salir de todos modos.
       tokenStorage.clear();
       setUser(null);
     }
@@ -96,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) {
-    throw new Error("useAuth debe usarse dentro de <AuthProvider>");
+    throw new Error('useAuth debe usarse dentro de <AuthProvider>');
   }
   return ctx;
 }

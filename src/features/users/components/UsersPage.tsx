@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Alert,
   Box,
@@ -12,9 +13,22 @@ import {
 } from '@mui/material';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import PeopleOutlineOutlinedIcon from '@mui/icons-material/PeopleOutlineOutlined';
+import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import { useUsersQuery } from '../hooks/useUsersQuery';
+import { useUserMutations } from '../hooks/useUserMutations';
 import { UsersTable } from './UsersTable';
+import { UserFormDialog } from './UserFormDialog';
+import { ChangePasswordDialog } from './ChangePasswordDialog';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { extractApiErrorMessage } from '@/shared/utils/apiError';
+import type { User } from '../types/user.types';
+import type { UserFormMode } from '../types/userForm.schema';
+
+interface FormDialogState {
+  open: boolean;
+  mode: UserFormMode;
+  user: User | null;
+}
 
 export function UsersPage() {
   const {
@@ -29,12 +43,49 @@ export function UsersPage() {
     page,
     setPage,
   } = useUsersQuery();
+  const { updateStatus } = useUserMutations();
+
+  const [formDialog, setFormDialog] = useState<FormDialogState>({
+    open: false,
+    mode: 'create',
+    user: null,
+  });
+  const [passwordDialogUser, setPasswordDialogUser] = useState<User | null>(null);
+  const [statusTarget, setStatusTarget] = useState<User | null>(null);
+
+  async function handleConfirmStatus() {
+    if (!statusTarget) return;
+    try {
+      await updateStatus.mutateAsync({
+        id: statusTarget.id,
+        payload: { isActive: !statusTarget.isActive },
+      });
+      setStatusTarget(null);
+    } catch {
+      // El diálogo se queda abierto: el usuario puede reintentar o cerrarlo.
+      // Si más adelante hace falta, se puede mostrar el mensaje de error
+      // dentro del propio ConfirmDialog.
+    }
+  }
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ mb: 0.5 }}>
-        Usuarios
-      </Typography>
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="flex-start"
+        sx={{ mb: 0.5 }}
+      >
+        <Typography variant="h4">Usuarios</Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddOutlinedIcon />}
+          onClick={() => setFormDialog({ open: true, mode: 'create', user: null })}
+        >
+          Nuevo usuario
+        </Button>
+      </Stack>
+
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
         {pagination
           ? `${pagination.total} usuario${pagination.total !== 1 ? 's' : ''} encontrado${pagination.total !== 1 ? 's' : ''}`
@@ -115,7 +166,15 @@ export function UsersPage() {
 
       {!isLoading && !isError && users.length > 0 && (
         <>
-          <UsersTable users={users} />
+          <UsersTable
+            users={users}
+            onEdit={(user) => setFormDialog({ open: true, mode: 'edit', user })}
+            onToggleStatus={setStatusTarget}
+            onChangePassword={setPasswordDialogUser}
+            statusPendingUserId={
+              updateStatus.isPending ? updateStatus.variables?.id : undefined
+            }
+          />
 
           {pagination && pagination.totalPages > 1 && (
             <Stack alignItems="center" sx={{ mt: 3 }}>
@@ -130,6 +189,34 @@ export function UsersPage() {
           )}
         </>
       )}
+
+      <UserFormDialog
+        open={formDialog.open}
+        mode={formDialog.mode}
+        user={formDialog.user}
+        onClose={() => setFormDialog((state) => ({ ...state, open: false }))}
+      />
+
+      <ChangePasswordDialog
+        open={!!passwordDialogUser}
+        user={passwordDialogUser}
+        onClose={() => setPasswordDialogUser(null)}
+      />
+
+      <ConfirmDialog
+        open={!!statusTarget}
+        title={statusTarget?.isActive ? 'Desactivar usuario' : 'Activar usuario'}
+        description={
+          statusTarget
+            ? `¿Confirmas que deseas ${statusTarget.isActive ? 'desactivar' : 'activar'} a ${statusTarget.firstName} ${statusTarget.lastName}?`
+            : ''
+        }
+        confirmText={statusTarget?.isActive ? 'Sí, desactivar' : 'Sí, activar'}
+        severity={statusTarget?.isActive ? 'warning' : 'info'}
+        loading={updateStatus.isPending}
+        onConfirm={handleConfirmStatus}
+        onClose={() => setStatusTarget(null)}
+      />
     </Box>
   );
 }
