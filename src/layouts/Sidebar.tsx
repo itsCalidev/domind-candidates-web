@@ -14,7 +14,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { navItems } from './navItems';
+import { getVisibleNavItems } from './navItems';
 import { useLayout } from './LayoutContext';
 import { paths } from '@/routes/paths';
 import { useAuth } from '@/features/auth/context/AuthContext';
@@ -27,7 +27,8 @@ export function Sidebar() {
     useLayout();
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const visibleNavItems = getVisibleNavItems(user?.role);
 
   const width = isSidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED;
 
@@ -71,7 +72,7 @@ export function Sidebar() {
       <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
 
       <List sx={{ flex: 1, px: 1, py: 1.5 }}>
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive = location.pathname.startsWith(item.path);
           const Icon = item.icon;
 

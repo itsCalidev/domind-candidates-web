@@ -30,7 +30,15 @@ function userFromToken(accessToken: string): AuthenticatedUser | null {
   const payload = decodeJwtPayload<JwtPayload>(accessToken);
   if (!payload || isExpired(payload)) return null;
 
-  return { id: payload.sub, email: payload.email, role: payload.role };
+  // TODO: cuando exista el módulo "Mi Perfil", si mustChangePassword es
+  // true tras un login exitoso, redirigir ahí en vez de al Dashboard.
+  // No se implementa todavía porque el backend aún no emite este campo.
+  return {
+    id: payload.sub,
+    email: payload.email,
+    role: payload.role,
+    mustChangePassword: payload.mustChangePassword,
+  };
 }
 
 /**

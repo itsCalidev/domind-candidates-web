@@ -1,6 +1,8 @@
 import { useState, type MouseEvent } from 'react';
 import {
   IconButton,
+  ListItemIcon,
+  ListItemText,
   Menu,
   MenuItem,
   Paper,
@@ -13,6 +15,10 @@ import {
   Typography,
 } from '@mui/material';
 import MoreVertOutlinedIcon from '@mui/icons-material/MoreVertOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import LockResetOutlinedIcon from '@mui/icons-material/LockResetOutlined';
+import ToggleOnOutlinedIcon from '@mui/icons-material/ToggleOnOutlined';
+import ToggleOffOutlinedIcon from '@mui/icons-material/ToggleOffOutlined';
 import type { User } from '../types/user.types';
 import { UserStatusChip } from './UserStatusChip';
 import { UserRoleChip } from './UserRoleChip';
@@ -51,7 +57,8 @@ export function UsersTable({
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell sx={{ fontWeight: 600 }}>Usuario</TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>Nombre</TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>Correo</TableCell>
             <TableCell sx={{ fontWeight: 600 }}>Rol</TableCell>
             <TableCell sx={{ fontWeight: 600 }}>Estado</TableCell>
             <TableCell sx={{ fontWeight: 600 }} align="right">
@@ -69,7 +76,9 @@ export function UsersTable({
                   <Typography variant="body2" fontWeight={600}>
                     {user.firstName} {user.lastName}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" color="text.secondary">
                     {user.email}
                   </Typography>
                 </TableCell>
@@ -101,7 +110,10 @@ export function UsersTable({
             closeMenu();
           }}
         >
-          Editar
+          <ListItemIcon>
+            <EditOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Editar</ListItemText>
         </MenuItem>
         <MenuItem
           onClick={() => {
@@ -109,7 +121,10 @@ export function UsersTable({
             closeMenu();
           }}
         >
-          Cambiar contraseña
+          <ListItemIcon>
+            <LockResetOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Cambiar contraseña</ListItemText>
         </MenuItem>
         <MenuItem
           onClick={() => {
@@ -117,7 +132,14 @@ export function UsersTable({
             closeMenu();
           }}
         >
-          {menuUser?.isActive ? 'Desactivar' : 'Activar'}
+          <ListItemIcon>
+            {menuUser?.isActive ? (
+              <ToggleOffOutlinedIcon fontSize="small" />
+            ) : (
+              <ToggleOnOutlinedIcon fontSize="small" />
+            )}
+          </ListItemIcon>
+          <ListItemText>{menuUser?.isActive ? 'Desactivar' : 'Activar'}</ListItemText>
         </MenuItem>
       </Menu>
     </TableContainer>

@@ -22,11 +22,17 @@ export interface LoginResponse {
  * firma, eso es responsabilidad exclusiva del backend) únicamente para
  * obtener datos de presentación (id, correo, rol) sin pedirlos a un
  * endpoint aparte.
+ *
+ * `mustChangePassword` está preparado pero el backend todavía no lo
+ * incluye. Cuando lo incluya, AuthContext.login ya lo propagará a
+ * AuthenticatedUser (ver abajo) — falta únicamente la redirección a
+ * "Mi Perfil" tras el login, que se implementa cuando exista ese módulo.
  */
 export interface JwtPayload {
   sub: string;
   email: string;
   role: UserRole;
+  mustChangePassword?: boolean;
   iat: number;
   exp: number;
 }
@@ -36,6 +42,7 @@ export interface AuthenticatedUser {
   id: string;
   email: string;
   role: UserRole;
+  mustChangePassword?: boolean;
 }
 
 /**

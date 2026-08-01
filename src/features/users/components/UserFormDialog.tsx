@@ -19,7 +19,7 @@ import {
   type UserFormMode,
   type UserFormValues,
 } from '../types/userForm.schema';
-import type { User } from '../types/user.types';
+import { VISIBLE_USER_ROLES, type User } from '../types/user.types';
 import { UserRole } from '@/features/auth/types/role.enum';
 import { extractApiErrorMessage } from '@/shared/utils/apiError';
 
@@ -72,7 +72,6 @@ function UserFormDialogContent({
       firstName: user?.firstName ?? '',
       lastName: user?.lastName ?? '',
       email: user?.email ?? '',
-      password: '',
       role: user?.role ?? '',
     },
   });
@@ -83,11 +82,13 @@ function UserFormDialogContent({
     setServerError(null);
     try {
       if (mode === 'create') {
+        // Nota: ya no se envía `password`. El backend genera una
+        // contraseña temporal (ver mustChangePassword, pendiente de
+        // activarse cuando el backend la incorpore).
         await createUser.mutateAsync({
           firstName: values.firstName,
           lastName: values.lastName,
           email: values.email,
-          password: values.password as string,
           role: values.role as UserRole,
         });
       } else if (user) {
@@ -114,6 +115,12 @@ function UserFormDialogContent({
           <Stack spacing={2.5}>
             {serverError && <Alert severity="error">{serverError}</Alert>}
 
+            {mode === 'create' && (
+              <Alert severity="info" variant="outlined">
+                El sistema generará una contraseña temporal para este usuario.
+              </Alert>
+            )}
+
             <TextField
               label="Nombre"
               fullWidth
@@ -139,37 +146,26 @@ function UserFormDialogContent({
             />
 
             {mode === 'create' && (
-              <>
-                <TextField
-                  label="Contraseña"
-                  type="password"
-                  fullWidth
-                  error={!!errors.password}
-                  helperText={errors.password?.message}
-                  {...register('password')}
-                />
-
-                <Controller
-                  control={control}
-                  name="role"
-                  render={({ field }) => (
-                    <TextField
-                      select
-                      label="Rol"
-                      fullWidth
-                      error={!!errors.role}
-                      helperText={errors.role?.message}
-                      {...field}
-                    >
-                      {Object.values(UserRole).map((role) => (
-                        <MenuItem key={role} value={role}>
-                          {role}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  )}
-                />
-              </>
+              <Controller
+                control={control}
+                name="role"
+                render={({ field }) => (
+                  <TextField
+                    select
+                    label="Rol"
+                    fullWidth
+                    error={!!errors.role}
+                    helperText={errors.role?.message}
+                    {...field}
+                  >
+                    {VISIBLE_USER_ROLES.map((role) => (
+                      <MenuItem key={role} value={role}>
+                        {role}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              />
             )}
           </Stack>
         </DialogContent>
