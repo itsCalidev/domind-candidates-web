@@ -4,7 +4,6 @@ import {
   Box,
   Button,
   InputAdornment,
-  MenuItem,
   Pagination,
   Paper,
   Skeleton,
@@ -20,7 +19,8 @@ import { useUsersQuery } from '../hooks/useUsersQuery';
 import { useUserMutations } from '../hooks/useUserMutations';
 import { UsersTable } from './UsersTable';
 import { UserFormDialog } from './UserFormDialog';
-import { ChangePasswordDialog } from './ChangePasswordDialog';
+import { AddFilterButton } from './AddFilterButton';
+import { FilterChip } from './FilterChip';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { extractApiErrorMessage } from '@/shared/utils/apiError';
 import { VISIBLE_USER_ROLES, type User } from '../types/user.types';
@@ -34,6 +34,27 @@ interface FormDialogState {
   mode: UserFormMode;
   user: User | null;
 }
+
+type FilterKey = 'status' | 'role';
+
+/**
+ * Definición de filtros disponibles. Agregar un filtro nuevo (Empresa,
+ * Fecha, etc.) más adelante es agregar una entrada aquí, no rediseñar
+ * la UI de filtros.
+ */
+const FILTER_DEFINITIONS: Record<FilterKey, { label: string; options: { value: string; label: string }[] }> = {
+  status: {
+    label: 'Estado',
+    options: [
+      { value: 'active', label: 'Activo' },
+      { value: 'inactive', label: 'Inactivo' },
+    ],
+  },
+  role: {
+    label: 'Rol',
+    options: VISIBLE_USER_ROLES.map((role) => ({ value: role, label: role })),
+  },
+};
 
 export function UsersPage() {
   // Todos los hooks se llaman siempre, sin condicionar su ejecución al
@@ -63,8 +84,25 @@ export function UsersPage() {
     mode: 'create',
     user: null,
   });
-  const [passwordDialogUser, setPasswordDialogUser] = useState<User | null>(null);
   const [statusTarget, setStatusTarget] = useState<User | null>(null);
+  const [activeFilterKeys, setActiveFilterKeys] = useState<FilterKey[]>([]);
+
+  function handleAddFilter(key: string) {
+    const filterKey = key as FilterKey;
+    setActiveFilterKeys((prev) => [...prev, filterKey]);
+    if (filterKey === 'status') setStatusFilter('active');
+    if (filterKey === 'role') setRoleFilter(FILTER_DEFINITIONS.role.options[0].value as UserRole);
+  }
+
+  function handleRemoveFilter(key: FilterKey) {
+    setActiveFilterKeys((prev) => prev.filter((k) => k !== key));
+    if (key === 'status') setStatusFilter('all');
+    if (key === 'role') setRoleFilter('all');
+  }
+
+  const availableFilterOptions = (Object.keys(FILTER_DEFINITIONS) as FilterKey[])
+    .filter((key) => !activeFilterKeys.includes(key))
+    .map((key) => ({ key, label: FILTER_DEFINITIONS[key].label }));
 
   async function handleConfirmStatus() {
     if (!statusTarget) return;
@@ -111,22 +149,27 @@ export function UsersPage() {
         TODO(temporal): mientras el backend siga contando a SYSTEM y al
         propio usuario autenticado dentro de pagination.total, el
         contador debe basarse en las filas realmente renderizadas
-        (users.length), no en pagination.total. Revertir cuando el
-        backend excluya ambos casos en el conteo.
+        (users.length), no en pagination.total.
       */}
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
         {users.length} usuario{users.length !== 1 ? 's' : ''} encontrado
         {users.length !== 1 ? 's' : ''}
       </Typography>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 3 }}>
+      <Stack
+        direction="row"
+        spacing={1.5}
+        sx={{ mb: 3 }}
+        flexWrap="wrap"
+        useFlexGap
+        alignItems="center"
+      >
         <TextField
           placeholder="Buscar por nombre o correo…"
           size="small"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          sx={{ maxWidth: { sm: 280 } }}
-          fullWidth
+          sx={{ width: 280 }}
           slotProps={{
             input: {
               startAdornment: (
@@ -138,34 +181,27 @@ export function UsersPage() {
           }}
         />
 
-        <TextField
-          select
-          size="small"
-          label="Estado"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-          sx={{ minWidth: 160 }}
-        >
-          <MenuItem value="all">Todos</MenuItem>
-          <MenuItem value="active">Activo</MenuItem>
-          <MenuItem value="inactive">Inactivo</MenuItem>
-        </TextField>
+        {activeFilterKeys.includes('status') && (
+          <FilterChip
+            label={FILTER_DEFINITIONS.status.label}
+            value={statusFilter}
+            options={FILTER_DEFINITIONS.status.options}
+            onChange={(value) => setStatusFilter(value as typeof statusFilter)}
+            onRemove={() => handleRemoveFilter('status')}
+          />
+        )}
 
-        <TextField
-          select
-          size="small"
-          label="Rol"
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value as typeof roleFilter)}
-          sx={{ minWidth: 160 }}
-        >
-          <MenuItem value="all">Todos</MenuItem>
-          {VISIBLE_USER_ROLES.map((role) => (
-            <MenuItem key={role} value={role}>
-              {role}
-            </MenuItem>
-          ))}
-        </TextField>
+        {activeFilterKeys.includes('role') && (
+          <FilterChip
+            label={FILTER_DEFINITIONS.role.label}
+            value={roleFilter}
+            options={FILTER_DEFINITIONS.role.options}
+            onChange={(value) => setRoleFilter(value as UserRole)}
+            onRemove={() => handleRemoveFilter('role')}
+          />
+        )}
+
+        <AddFilterButton options={availableFilterOptions} onAdd={handleAddFilter} />
       </Stack>
 
       {isError && (
@@ -215,7 +251,7 @@ export function UsersPage() {
             No se encontraron usuarios
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360 }}>
-            {searchInput || roleFilter !== 'all' || statusFilter !== 'all'
+            {searchInput || activeFilterKeys.length > 0
               ? 'Intenta con otros filtros o término de búsqueda.'
               : 'Todavía no hay usuarios registrados.'}
           </Typography>
@@ -228,7 +264,6 @@ export function UsersPage() {
             users={users}
             onEdit={(user) => setFormDialog({ open: true, mode: 'edit', user })}
             onToggleStatus={setStatusTarget}
-            onChangePassword={setPasswordDialogUser}
             statusPendingUserId={
               updateStatus.isPending ? updateStatus.variables?.id : undefined
             }
@@ -253,12 +288,6 @@ export function UsersPage() {
         mode={formDialog.mode}
         user={formDialog.user}
         onClose={() => setFormDialog((state) => ({ ...state, open: false }))}
-      />
-
-      <ChangePasswordDialog
-        open={!!passwordDialogUser}
-        user={passwordDialogUser}
-        onClose={() => setPasswordDialogUser(null)}
       />
 
       <ConfirmDialog

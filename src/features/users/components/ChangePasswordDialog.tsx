@@ -1,35 +1,34 @@
 import { useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Stack,
-  TextField,
-} from '@mui/material';
+import { Alert, Box, Button, Dialog, DialogActions, DialogContent, Stack, TextField } from '@mui/material';
+import LockResetOutlinedIcon from '@mui/icons-material/LockResetOutlined';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { changePasswordSchema, type ChangePasswordFormValues } from '../types/changePassword.schema';
 import { useUserMutations } from '../hooks/useUserMutations';
 import type { User } from '../types/user.types';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
+import { DialogHeader, dialogPaperSx } from '@/shared/components/DialogHeader';
 import { extractApiErrorMessage } from '@/shared/utils/apiError';
 
+/**
+ * NOTA (regla de negocio, iteración de calidad de Users): el cambio de
+ * contraseña dejó de ser una acción administrativa — el backend genera
+ * una contraseña temporal al crear el usuario y la envía por correo
+ * (ver mustChangePassword). Por eso este componente ya NO se invoca
+ * desde UsersPage/UsersTable.
+ *
+ * Se conserva el archivo (y la mutación `updatePassword` en
+ * useUserMutations) sin borrar porque sigue mapeando un endpoint real
+ * del backend (PATCH /users/:id/password) que podría reutilizarse para
+ * otro flujo futuro (ej. soporte). Si se confirma que ya no hace falta
+ * en absoluto, se puede eliminar junto con cortar esa mutación.
+ */
 interface ChangePasswordDialogProps {
   open: boolean;
   user: User | null;
   onClose: () => void;
 }
 
-/**
- * Diálogo independiente de UserFormDialog (responsabilidad distinta:
- * cambiar contraseña, no editar datos generales). El formulario en sí
- * no llama a la API directamente: al enviarlo, abre un ConfirmDialog
- * y solo al confirmar se ejecuta la mutación real.
- */
 export function ChangePasswordDialog({ open, user, onClose }: ChangePasswordDialogProps) {
   if (!open || !user) return null;
   return <ChangePasswordDialogContent key={user.id} user={user} onClose={onClose} />;
@@ -49,8 +48,6 @@ function ChangePasswordDialogContent({ user, onClose }: { user: User; onClose: (
     defaultValues: { password: '', confirmPassword: '' },
   });
 
-  // El submit del formulario solo valida y abre la confirmación;
-  // la llamada real a la API ocurre en handleConfirm.
   const onSubmit = handleSubmit((values) => {
     setServerError(null);
     setPendingValues(values);
@@ -73,17 +70,24 @@ function ChangePasswordDialogContent({ user, onClose }: { user: User; onClose: (
 
   return (
     <>
-      <Dialog open onClose={updatePassword.isPending ? undefined : onClose} maxWidth="xs" fullWidth>
-        <DialogTitle>Cambiar contraseña</DialogTitle>
+      <Dialog
+        open
+        onClose={updatePassword.isPending ? undefined : onClose}
+        maxWidth="xs"
+        fullWidth
+        slotProps={{ paper: { sx: dialogPaperSx } }}
+      >
+        <DialogHeader
+          icon={<LockResetOutlinedIcon fontSize="small" />}
+          title="Cambiar contraseña"
+          description={`Nueva contraseña para ${user.firstName} ${user.lastName}.`}
+          color="warning"
+          onClose={updatePassword.isPending ? undefined : onClose}
+        />
         <Box component="form" onSubmit={onSubmit} noValidate>
-          <DialogContent>
+          <DialogContent sx={{ px: 4, pt: 1, pb: 1 }}>
             <Stack spacing={2.5}>
               {serverError && <Alert severity="error">{serverError}</Alert>}
-
-              <Alert severity="info" variant="outlined">
-                Nueva contraseña para {user.firstName} {user.lastName}. No se solicita la
-                contraseña actual: es un cambio administrativo.
-              </Alert>
 
               <TextField
                 label="Nueva contraseña"
@@ -104,7 +108,7 @@ function ChangePasswordDialogContent({ user, onClose }: { user: User; onClose: (
               />
             </Stack>
           </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <DialogActions sx={{ px: 4, pb: 3, pt: 2.5, gap: 1 }}>
             <Button onClick={onClose} color="inherit">
               Cancelar
             </Button>

@@ -8,8 +8,13 @@ interface UserRoleChipProps {
   role: UserRole;
 }
 
-/** Solo color/ícono por rol; el texto siempre es el valor exacto del backend. */
-const roleColor: Record<UserRole, string> = {
+/**
+ * Color por rol. Se exporta (no solo se usa internamente) porque
+ * UserAvatar reutiliza exactamente el mismo mapeo — así el avatar y el
+ * chip de rol se leen como el mismo dato visual, no como dos sistemas
+ * de color distintos.
+ */
+export const roleColor: Record<UserRole, string> = {
   [UserRole.SYSTEM]: '#69478E',
   [UserRole.ADMIN]: '#004A98',
   [UserRole.RECRUITER]: '#0083C1',

@@ -6,11 +6,12 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   MenuItem,
   Stack,
   TextField,
 } from '@mui/material';
+import PersonAddAltOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useUserMutations } from '../hooks/useUserMutations';
@@ -22,6 +23,7 @@ import {
 import { VISIBLE_USER_ROLES, type User } from '../types/user.types';
 import { UserRole } from '@/features/auth/types/role.enum';
 import { extractApiErrorMessage } from '@/shared/utils/apiError';
+import { DialogHeader, dialogPaperSx } from '@/shared/components/DialogHeader';
 
 interface UserFormDialogProps {
   open: boolean;
@@ -82,9 +84,8 @@ function UserFormDialogContent({
     setServerError(null);
     try {
       if (mode === 'create') {
-        // Nota: ya no se envía `password`. El backend genera una
-        // contraseña temporal (ver mustChangePassword, pendiente de
-        // activarse cuando el backend la incorpore).
+        // Ya no se envía `password`: el backend genera una contraseña
+        // temporal y la envía por correo (ver mustChangePassword).
         await createUser.mutateAsync({
           firstName: values.firstName,
           lastName: values.lastName,
@@ -108,18 +109,33 @@ function UserFormDialogContent({
   });
 
   return (
-    <Dialog open onClose={isPending ? undefined : onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>{mode === 'create' ? 'Nuevo usuario' : 'Editar usuario'}</DialogTitle>
+    <Dialog
+      open
+      onClose={isPending ? undefined : onClose}
+      maxWidth="xs"
+      fullWidth
+      slotProps={{ paper: { sx: dialogPaperSx } }}
+    >
+      <DialogHeader
+        icon={
+          mode === 'create' ? (
+            <PersonAddAltOutlinedIcon fontSize="small" />
+          ) : (
+            <EditOutlinedIcon fontSize="small" />
+          )
+        }
+        title={mode === 'create' ? 'Nuevo usuario' : 'Editar usuario'}
+        description={
+          mode === 'create'
+            ? 'Se enviará una contraseña temporal al correo del usuario.'
+            : undefined
+        }
+        onClose={isPending ? undefined : onClose}
+      />
       <Box component="form" onSubmit={onSubmit} noValidate>
-        <DialogContent>
+        <DialogContent sx={{ px: 4, pt: 1, pb: 1 }}>
           <Stack spacing={2.5}>
             {serverError && <Alert severity="error">{serverError}</Alert>}
-
-            {mode === 'create' && (
-              <Alert severity="info" variant="outlined">
-                El sistema generará una contraseña temporal para este usuario.
-              </Alert>
-            )}
 
             <TextField
               label="Nombre"
@@ -169,7 +185,7 @@ function UserFormDialogContent({
             )}
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+        <DialogActions sx={{ px: 4, pb: 3, pt: 2.5, gap: 1 }}>
           <Button onClick={onClose} disabled={isPending} color="inherit">
             Cancelar
           </Button>
