@@ -1,5 +1,6 @@
 import {
   Box,
+  Checkbox,
   LinearProgress,
   Paper,
   Table,
@@ -17,9 +18,24 @@ import { paths } from '@/routes/paths';
 
 interface CandidatesTableProps {
   candidates: CandidateListItem[];
+  /**
+   * Props de selección: provienen de useRowSelection en la página
+   * (orquestación). Mismo contrato exacto que UsersTable — ninguna
+   * tabla mantiene su propio estado de selección.
+   */
+  headerState: 'checked' | 'indeterminate' | 'unchecked';
+  isSelected: (id: string) => boolean;
+  toggleRow: (id: string) => void;
+  toggleAllOnPage: () => void;
 }
 
-export function CandidatesTable({ candidates }: CandidatesTableProps) {
+export function CandidatesTable({
+  candidates,
+  headerState,
+  isSelected,
+  toggleRow,
+  toggleAllOnPage,
+}: CandidatesTableProps) {
   const navigate = useNavigate();
 
   return (
@@ -27,6 +43,14 @@ export function CandidatesTable({ candidates }: CandidatesTableProps) {
       <Table>
         <TableHead>
           <TableRow>
+            <TableCell padding="checkbox">
+              <Checkbox
+                checked={headerState === 'checked'}
+                indeterminate={headerState === 'indeterminate'}
+                onChange={toggleAllOnPage}
+                slotProps={{ input: { 'aria-label': 'Seleccionar todas las filas visibles' } }}
+              />
+            </TableCell>
             <TableCell sx={{ fontWeight: 600 }}>Candidato</TableCell>
             <TableCell sx={{ fontWeight: 600 }}>Puesto solicitado</TableCell>
             <TableCell sx={{ fontWeight: 600 }}>Estado</TableCell>
@@ -41,6 +65,18 @@ export function CandidatesTable({ candidates }: CandidatesTableProps) {
               onClick={() => navigate(paths.candidateDetail(candidate.id))}
               sx={{ cursor: 'pointer' }}
             >
+              {/* stopPropagation: clickear el checkbox no debe disparar
+                  la navegación al detalle del candidato que sí dispara
+                  el resto de la fila. */}
+              <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                <Checkbox
+                  checked={isSelected(candidate.id)}
+                  onChange={() => toggleRow(candidate.id)}
+                  slotProps={{
+                    input: { 'aria-label': `Seleccionar a ${candidate.fullName}` },
+                  }}
+                />
+              </TableCell>
               <TableCell>
                 <Typography variant="body2" fontWeight={600}>
                   {candidate.fullName}
@@ -78,7 +114,7 @@ export function CandidatesTable({ candidates }: CandidatesTableProps) {
 
           {candidates.length === 0 && (
             <TableRow>
-              <TableCell colSpan={4} align="center" sx={{ py: 6 }}>
+              <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
                 <Typography variant="body2" color="text.secondary">
                   No se encontraron candidatos con estos filtros.
                 </Typography>

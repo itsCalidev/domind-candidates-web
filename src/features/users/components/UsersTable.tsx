@@ -1,5 +1,6 @@
 import { useState, type MouseEvent } from 'react';
 import {
+  Checkbox,
   Divider,
   IconButton,
   ListItemIcon,
@@ -32,9 +33,28 @@ interface UsersTableProps {
   onToggleStatus: (user: User) => void;
   /** id del usuario cuyo cambio de estado está en curso ahora mismo. */
   statusPendingUserId?: string;
+  /**
+   * Props de selección: provienen de useRowSelection en la página
+   * (orquestación), no de estado propio de esta tabla. La tabla solo
+   * refleja lo que recibe — igual que Users/Candidates comparten este
+   * mismo contrato de props sin duplicar lógica.
+   */
+  headerState: 'checked' | 'indeterminate' | 'unchecked';
+  isSelected: (id: string) => boolean;
+  toggleRow: (id: string) => void;
+  toggleAllOnPage: () => void;
 }
 
-export function UsersTable({ users, onEdit, onToggleStatus, statusPendingUserId }: UsersTableProps) {
+export function UsersTable({
+  users,
+  onEdit,
+  onToggleStatus,
+  statusPendingUserId,
+  headerState,
+  isSelected,
+  toggleRow,
+  toggleAllOnPage,
+}: UsersTableProps) {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [menuUser, setMenuUser] = useState<User | null>(null);
 
@@ -53,6 +73,14 @@ export function UsersTable({ users, onEdit, onToggleStatus, statusPendingUserId 
       <Table>
         <TableHead>
           <TableRow>
+            <TableCell padding="checkbox">
+              <Checkbox
+                checked={headerState === 'checked'}
+                indeterminate={headerState === 'indeterminate'}
+                onChange={toggleAllOnPage}
+                slotProps={{ input: { 'aria-label': 'Seleccionar todas las filas visibles' } }}
+              />
+            </TableCell>
             <TableCell sx={{ fontWeight: 600, py: 2 }}>Usuario</TableCell>
             <TableCell sx={{ fontWeight: 600 }}>Correo</TableCell>
             <TableCell sx={{ fontWeight: 600 }}>Rol</TableCell>
@@ -73,6 +101,15 @@ export function UsersTable({ users, onEdit, onToggleStatus, statusPendingUserId 
                 hover
                 sx={{ opacity: isStatusPending ? 0.6 : 1, '& td': { py: 1.75 } }}
               >
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    checked={isSelected(user.id)}
+                    onChange={() => toggleRow(user.id)}
+                    slotProps={{
+                      input: { 'aria-label': `Seleccionar a ${user.firstName} ${user.lastName}` },
+                    }}
+                  />
+                </TableCell>
                 <TableCell>
                   <Stack direction="row" spacing={1.5} alignItems="center">
                     <UserAvatar firstName={user.firstName} lastName={user.lastName} role={user.role} />

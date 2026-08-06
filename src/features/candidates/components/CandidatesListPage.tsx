@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   Box,
   InputAdornment,
@@ -12,6 +13,8 @@ import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import { useCandidatesList } from '../hooks/useCandidatesList';
 import { CandidatesTable } from './CandidatesTable';
 import { CANDIDATE_STATUS_LABEL, type CandidateStatus } from '../types/candidate.types';
+import { SelectionActionBar } from '@/shared/components/SelectionActionBar';
+import { useRowSelection } from '@/shared/hooks/useRowSelection';
 
 export function CandidatesListPage() {
   const {
@@ -26,6 +29,18 @@ export function CandidatesListPage() {
     totalPages,
     setPage,
   } = useCandidatesList();
+
+  const selection = useRowSelection<string>({
+    pageIds: candidates.map((candidate) => candidate.id),
+    totalCount: totalResults,
+  });
+
+  // Igual que en Users: cambiar de búsqueda/filtro limpia la selección
+  // (ya no refiere al mismo conjunto de resultados); cambiar de página
+  // deliberadamente no está en estas dependencias.
+  useEffect(() => {
+    selection.clearSelection();
+  }, [search, statusFilter, selection.clearSelection]);
 
   return (
     <Box>
@@ -77,7 +92,25 @@ export function CandidatesListPage() {
         <Skeleton variant="rounded" height={420} sx={{ borderRadius: 3 }} />
       ) : (
         <>
-          <CandidatesTable candidates={candidates} />
+          {selection.hasSelection && (
+            <SelectionActionBar
+              selectedCount={selection.selectedCount}
+              totalCount={totalResults}
+              isAllSelected={selection.isAllSelected}
+              canSelectAllMatching={totalPages > 1}
+              onSelectAllMatching={selection.selectAllMatching}
+              onClearSelection={selection.clearSelection}
+              // Slot `actions` vacío a propósito — misma razón que en Users.
+            />
+          )}
+
+          <CandidatesTable
+            candidates={candidates}
+            headerState={selection.headerState}
+            isSelected={selection.isSelected}
+            toggleRow={selection.toggleRow}
+            toggleAllOnPage={selection.toggleAllOnPage}
+          />
 
           {totalPages > 1 && (
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -22,6 +22,8 @@ import { UserFormDialog } from './UserFormDialog';
 import { AddFilterButton } from './AddFilterButton';
 import { FilterChip } from './FilterChip';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
+import { SelectionActionBar } from '@/shared/components/SelectionActionBar';
+import { useRowSelection } from '@/shared/hooks/useRowSelection';
 import { extractApiErrorMessage } from '@/shared/utils/apiError';
 import { VISIBLE_USER_ROLES, type User } from '../types/user.types';
 import type { UserFormMode } from '../types/userForm.schema';
@@ -78,6 +80,23 @@ export function UsersPage() {
     setStatusFilter,
   } = useUsersQuery();
   const { updateStatus } = useUserMutations();
+
+  const selection = useRowSelection<string>({
+    pageIds: users.map((user) => user.id),
+    // TODO: pagination.total todavía cuenta a SYSTEM y al usuario
+    // autenticado (ver TODO del contador más abajo) — "seleccionar
+    // todos los N" heredará esa misma imprecisión hasta que el backend
+    // los excluya también del total. No es un bug nuevo de selección.
+    totalCount: pagination?.total,
+  });
+
+  // Cambiar de búsqueda o filtros implica que "todo lo seleccionado"
+  // ya no refiere al mismo conjunto de resultados — se limpia. Cambiar
+  // de PÁGINA deliberadamente no está en estas dependencias: la
+  // selección debe persistir al navegar entre páginas.
+  useEffect(() => {
+    selection.clearSelection();
+  }, [searchInput, roleFilter, statusFilter, selection.clearSelection]);
 
   const [formDialog, setFormDialog] = useState<FormDialogState>({
     open: false,
@@ -260,6 +279,20 @@ export function UsersPage() {
 
       {!isLoading && !isError && users.length > 0 && (
         <>
+          {selection.hasSelection && (
+            <SelectionActionBar
+              selectedCount={selection.selectedCount}
+              totalCount={pagination?.total}
+              isAllSelected={selection.isAllSelected}
+              canSelectAllMatching={!!pagination && pagination.totalPages > 1}
+              onSelectAllMatching={selection.selectAllMatching}
+              onClearSelection={selection.clearSelection}
+              // El slot `actions` queda vacío intencionalmente: exportar/
+              // eliminar/cambios masivos se conectan en una fase futura
+              // pasándolos aquí, sin tocar este componente ni el hook.
+            />
+          )}
+
           <UsersTable
             users={users}
             onEdit={(user) => setFormDialog({ open: true, mode: 'edit', user })}
@@ -267,6 +300,10 @@ export function UsersPage() {
             statusPendingUserId={
               updateStatus.isPending ? updateStatus.variables?.id : undefined
             }
+            headerState={selection.headerState}
+            isSelected={selection.isSelected}
+            toggleRow={selection.toggleRow}
+            toggleAllOnPage={selection.toggleAllOnPage}
           />
 
           {pagination && pagination.totalPages > 1 && (
