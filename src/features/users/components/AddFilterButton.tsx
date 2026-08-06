@@ -1,6 +1,6 @@
 import { useState, type MouseEvent } from 'react';
 import { Button, ListItemIcon, ListItemText, Menu, MenuItem } from '@mui/material';
-import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
+import FilterListOutlinedIcon from '@mui/icons-material/FilterListOutlined';
 import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
 
 interface FilterOption {
@@ -25,13 +25,22 @@ export function AddFilterButton({ options, onAdd }: AddFilterButtonProps) {
         variant="outlined"
         color="inherit"
         size="small"
-        startIcon={<AddOutlinedIcon fontSize="small" />}
+        startIcon={<FilterListOutlinedIcon fontSize="small" />}
         onClick={(e: MouseEvent<HTMLElement>) => setAnchor(e.currentTarget)}
-        sx={{ borderStyle: 'dashed', borderColor: 'divider', color: 'text.secondary' }}
+        sx={{
+          borderColor: 'divider',
+          color: 'text.secondary',
+          '&:hover': { borderColor: 'primary.main', color: 'primary.main', bgcolor: 'rgba(0,74,152,0.04)' },
+        }}
       >
-        Agregar filtro
+        Filtro
       </Button>
-      <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)}>
+      <Menu
+        anchorEl={anchor}
+        open={!!anchor}
+        onClose={() => setAnchor(null)}
+        slotProps={{ paper: { sx: { borderRadius: 2.5, minWidth: 200 } } }}
+      >
         {options.map((option) => (
           <MenuItem
             key={option.key}

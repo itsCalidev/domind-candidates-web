@@ -20,7 +20,8 @@ export const roleColor: Record<UserRole, string> = {
   [UserRole.RECRUITER]: '#0083C1',
 };
 
-const roleIcon: Record<UserRole, typeof AdminPanelSettingsOutlinedIcon> = {
+/** Ícono por rol. Se exporta para reutilizarse fuera del Chip (selector de creación, filtro de rol). */
+export const roleIcon: Record<UserRole, typeof AdminPanelSettingsOutlinedIcon> = {
   [UserRole.SYSTEM]: SettingsSuggestOutlinedIcon,
   [UserRole.ADMIN]: AdminPanelSettingsOutlinedIcon,
   [UserRole.RECRUITER]: BadgeOutlinedIcon,

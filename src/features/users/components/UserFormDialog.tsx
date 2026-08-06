@@ -21,6 +21,7 @@ import {
   type UserFormValues,
 } from '../types/userForm.schema';
 import { VISIBLE_USER_ROLES, type User } from '../types/user.types';
+import { roleIcon } from './UserRoleChip';
 import { UserRole } from '@/features/auth/types/role.enum';
 import { extractApiErrorMessage } from '@/shared/utils/apiError';
 import { DialogHeader, dialogPaperSx } from '@/shared/components/DialogHeader';
@@ -127,7 +128,7 @@ function UserFormDialogContent({
         title={mode === 'create' ? 'Nuevo usuario' : 'Editar usuario'}
         description={
           mode === 'create'
-            ? 'Se enviará una contraseña temporal al correo del usuario.'
+            ? 'El sistema generará una contraseña temporal para este usuario.'
             : undefined
         }
         onClose={isPending ? undefined : onClose}
@@ -174,18 +175,24 @@ function UserFormDialogContent({
                     helperText={errors.role?.message}
                     {...field}
                   >
-                    {VISIBLE_USER_ROLES.map((role) => (
-                      <MenuItem key={role} value={role}>
-                        {role}
-                      </MenuItem>
-                    ))}
+                    {VISIBLE_USER_ROLES.map((role) => {
+                      const Icon = roleIcon[role];
+                      return (
+                        <MenuItem key={role} value={role} sx={{ gap: 1.25 }}>
+                          <Icon fontSize="small" sx={{ color: 'text.secondary' }} />
+                          {role}
+                        </MenuItem>
+                      );
+                    })}
                   </TextField>
                 )}
               />
             )}
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ px: 4, pb: 3, pt: 2.5, gap: 1 }}>
+        <DialogActions
+          sx={{ px: 4, pb: 3, pt: 2.5, gap: 1, mt: 1, borderTop: '1px solid', borderColor: 'divider' }}
+        >
           <Button onClick={onClose} disabled={isPending} color="inherit">
             Cancelar
           </Button>

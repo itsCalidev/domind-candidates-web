@@ -117,7 +117,18 @@ export function UsersTable({ users, onEdit, onToggleStatus, statusPendingUserId 
         open={!!menuAnchor}
         onClose={closeMenu}
         slotProps={{
-          paper: { sx: { borderRadius: 2.5, minWidth: 200, boxShadow: '0px 12px 32px rgba(0,0,0,0.14)' } },
+          paper: {
+            sx: {
+              borderRadius: 2.5,
+              minWidth: 200,
+              boxShadow: '0px 12px 32px rgba(0,0,0,0.14)',
+              '& .MuiMenuItem-root': {
+                py: 1.1,
+                px: 2,
+                '&:hover': { bgcolor: 'rgba(0,74,152,0.06)' },
+              },
+            },
+          },
         }}
       >
         <MenuItem

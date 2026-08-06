@@ -44,7 +44,7 @@ export interface CreateUserRequest {
   role: UserRole;
 }
 
-/** Body de PUT /users/:id. No incluye password ni role: ese endpoint no los acepta. */
+/** Body de PATCH /users/:id. No incluye password ni role: ese endpoint no los acepta. */
 export interface UpdateUserRequest {
   firstName: string;
   lastName: string;

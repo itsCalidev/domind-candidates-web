@@ -51,7 +51,7 @@ export const usersService = {
   },
 
   async update(id: string, payload: UpdateUserRequest): Promise<User> {
-    const { data } = await apiClient.put<User>(`/users/${id}`, payload);
+    const { data } = await apiClient.patch<User>(`/users/${id}`, payload);
     return data;
   },
 

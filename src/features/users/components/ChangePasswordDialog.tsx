@@ -108,7 +108,9 @@ function ChangePasswordDialogContent({ user, onClose }: { user: User; onClose: (
               />
             </Stack>
           </DialogContent>
-          <DialogActions sx={{ px: 4, pb: 3, pt: 2.5, gap: 1 }}>
+          <DialogActions
+            sx={{ px: 4, pb: 3, pt: 2.5, gap: 1, mt: 1, borderTop: '1px solid', borderColor: 'divider' }}
+          >
             <Button onClick={onClose} color="inherit">
               Cancelar
             </Button>

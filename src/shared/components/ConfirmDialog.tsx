@@ -69,7 +69,9 @@ export function ConfirmDialog({
           {description}
         </Typography>
       </DialogContent>
-      <DialogActions sx={{ px: 4, pb: 3, pt: 2, gap: 1 }}>
+      <DialogActions
+        sx={{ px: 4, pb: 3, pt: 2, gap: 1, mt: 1, borderTop: '1px solid', borderColor: 'divider' }}
+      >
         <Button onClick={onClose} disabled={loading} color="inherit">
           {cancelText}
         </Button>
