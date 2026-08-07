@@ -26,6 +26,7 @@ import { UserStatusChip } from './UserStatusChip';
 import { UserRoleChip } from './UserRoleChip';
 import { UserAvatar } from './UserAvatar';
 import { formatShortDate } from '@/shared/utils/formatDate';
+import { scrollableTableContainerSx, stickyTableHeadCellSx } from '@/shared/constants/table';
 
 interface UsersTableProps {
   users: User[];
@@ -69,11 +70,15 @@ export function UsersTable({
   }
 
   return (
-    <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 3 }}>
+    <TableContainer
+      component={Paper}
+      elevation={0}
+      sx={{ borderRadius: 3, ...scrollableTableContainerSx }}
+    >
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell padding="checkbox">
+            <TableCell padding="checkbox" sx={stickyTableHeadCellSx}>
               <Checkbox
                 checked={headerState === 'checked'}
                 indeterminate={headerState === 'indeterminate'}
@@ -81,12 +86,12 @@ export function UsersTable({
                 slotProps={{ input: { 'aria-label': 'Seleccionar todas las filas visibles' } }}
               />
             </TableCell>
-            <TableCell sx={{ fontWeight: 600, py: 2 }}>Usuario</TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>Correo</TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>Rol</TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>Estado</TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>Última actualización</TableCell>
-            <TableCell sx={{ fontWeight: 600 }} align="right">
+            <TableCell sx={{ fontWeight: 600, py: 2, ...stickyTableHeadCellSx }}>Usuario</TableCell>
+            <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Correo</TableCell>
+            <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Rol</TableCell>
+            <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Estado</TableCell>
+            <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Última actualización</TableCell>
+            <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx }} align="right">
               Acciones
             </TableCell>
           </TableRow>

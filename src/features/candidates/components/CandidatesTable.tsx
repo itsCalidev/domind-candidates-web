@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import type { CandidateListItem } from '../types/candidate.types';
 import { CandidateStatusChip } from './CandidateStatusChip';
 import { paths } from '@/routes/paths';
+import { scrollableTableContainerSx, stickyTableHeadCellSx } from '@/shared/constants/table';
 
 interface CandidatesTableProps {
   candidates: CandidateListItem[];
@@ -39,11 +40,15 @@ export function CandidatesTable({
   const navigate = useNavigate();
 
   return (
-    <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 3 }}>
+    <TableContainer
+      component={Paper}
+      elevation={0}
+      sx={{ borderRadius: 3, ...scrollableTableContainerSx }}
+    >
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell padding="checkbox">
+            <TableCell padding="checkbox" sx={stickyTableHeadCellSx}>
               <Checkbox
                 checked={headerState === 'checked'}
                 indeterminate={headerState === 'indeterminate'}
@@ -51,10 +56,10 @@ export function CandidatesTable({
                 slotProps={{ input: { 'aria-label': 'Seleccionar todas las filas visibles' } }}
               />
             </TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>Candidato</TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>Puesto solicitado</TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>Estado</TableCell>
-            <TableCell sx={{ fontWeight: 600, width: 180 }}>Avance</TableCell>
+            <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Candidato</TableCell>
+            <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Puesto solicitado</TableCell>
+            <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Estado</TableCell>
+            <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx, width: 180 }}>Avance</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>

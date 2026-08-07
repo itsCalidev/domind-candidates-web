@@ -3,7 +3,6 @@ import {
   Box,
   InputAdornment,
   MenuItem,
-  Pagination,
   Skeleton,
   Stack,
   TextField,
@@ -14,6 +13,7 @@ import { useCandidatesList } from '../hooks/useCandidatesList';
 import { CandidatesTable } from './CandidatesTable';
 import { CANDIDATE_STATUS_LABEL, type CandidateStatus } from '../types/candidate.types';
 import { SelectionActionBar } from '@/shared/components/SelectionActionBar';
+import { PaginationBar } from '@/shared/components/PaginationBar';
 import { useRowSelection } from '@/shared/hooks/useRowSelection';
 
 export function CandidatesListPage() {
@@ -28,6 +28,8 @@ export function CandidatesListPage() {
     page,
     totalPages,
     setPage,
+    pageSize,
+    setPageSize,
   } = useCandidatesList();
 
   const selection = useRowSelection<string>({
@@ -40,7 +42,7 @@ export function CandidatesListPage() {
   // deliberadamente no está en estas dependencias.
   useEffect(() => {
     selection.clearSelection();
-  }, [search, statusFilter, selection.clearSelection]);
+  }, [search, statusFilter, pageSize, selection.clearSelection]);
 
   return (
     <Box>
@@ -112,17 +114,17 @@ export function CandidatesListPage() {
             toggleAllOnPage={selection.toggleAllOnPage}
           />
 
-          {totalPages > 1 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-              <Pagination
-                count={totalPages}
-                page={page}
-                onChange={(_, value) => setPage(value)}
-                shape="rounded"
-                color="primary"
-              />
-            </Box>
-          )}
+          {/* Misma regla que en Users: PaginationBar decide internamente
+              si oculta el control de páginas; el selector de tamaño es
+              permanente mientras no esté cargando. */}
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            totalCount={totalResults}
+          />
         </>
       )}
     </Box>

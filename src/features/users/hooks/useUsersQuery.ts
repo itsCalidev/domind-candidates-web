@@ -3,14 +3,32 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { usersService } from '../services/usersService';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { UserRole } from '@/features/auth/types/role.enum';
+import { DEFAULT_PAGE_SIZE } from '@/shared/constants/table';
 import type { User } from '../types/user.types';
 
-const PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 400;
 
 export type UserStatusFilter = 'all' | 'active' | 'inactive';
 export type UserRoleFilter = UserRole | 'all';
 
+/**
+ * Ordena por estado DENTRO de cada página recibida. NO logra "todos los
+ * activos primero en todas las páginas" — eso solo puede garantizarse
+ * con un `orderBy` en el backend (Prisma), porque el frontend nunca
+ * tiene el dataset completo cargado a la vez. Se deja como un
+ * ordenamiento cosmético de la página actual mientras el backend no lo
+ * resuelva; es inofensivo una vez que el backend sí ordene (reordenar
+ * una lista ya ordenada no cambia nada).
+ *
+ * ── CONTRATO ESPERADO DEL BACKEND (pendiente, lo implementa el equipo
+ *    de backend en UsersService.findAll) ──────────────────────────────
+ * `UsersService.findAll()` debería ordenar con Prisma:
+ *   orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }]
+ * (o el criterio secundario que prefieran). Una vez que exista, esta
+ * función y su llamada de abajo pueden eliminarse por completo — no
+ * queremos mantener el mismo ordenamiento duplicado en dos capas.
+ * ───────────────────────────────────────────────────────────────────
+ */
 function sortActiveFirst(users: User[]): User[] {
   return [...users].sort((a, b) => Number(b.isActive) - Number(a.isActive));
 }
@@ -26,6 +44,7 @@ export function useUsersQuery() {
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSizeState] = useState(DEFAULT_PAGE_SIZE);
   const [roleFilter, setRoleFilterState] = useState<UserRoleFilter>('all');
   const [statusFilter, setStatusFilterState] = useState<UserStatusFilter>('all');
 
@@ -48,6 +67,11 @@ export function useUsersQuery() {
     setPage(1);
   }
 
+  function setPageSize(value: number) {
+    setPageSizeState(value);
+    setPage(1);
+  }
+
   const roleParam = roleFilter === 'all' ? undefined : roleFilter;
   const isActiveParam = statusFilter === 'all' ? undefined : statusFilter === 'active';
 
@@ -55,13 +79,13 @@ export function useUsersQuery() {
     queryKey: [
       'users',
       'list',
-      { search: debouncedSearch, page, limit: PAGE_SIZE, role: roleParam, isActive: isActiveParam },
+      { search: debouncedSearch, page, limit: pageSize, role: roleParam, isActive: isActiveParam },
     ],
     queryFn: () =>
       usersService.getList({
         search: debouncedSearch || undefined,
         page,
-        limit: PAGE_SIZE,
+        limit: pageSize,
         role: roleParam,
         isActive: isActiveParam,
       }),
@@ -93,6 +117,8 @@ export function useUsersQuery() {
     setSearchInput,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     roleFilter,
     setRoleFilter,
     statusFilter,

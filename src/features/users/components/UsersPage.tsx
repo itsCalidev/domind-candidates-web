@@ -4,7 +4,6 @@ import {
   Box,
   Button,
   InputAdornment,
-  Pagination,
   Paper,
   Skeleton,
   Stack,
@@ -23,6 +22,7 @@ import { AddFilterButton } from './AddFilterButton';
 import { FilterChip } from './FilterChip';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { SelectionActionBar } from '@/shared/components/SelectionActionBar';
+import { PaginationBar } from '@/shared/components/PaginationBar';
 import { useRowSelection } from '@/shared/hooks/useRowSelection';
 import { extractApiErrorMessage } from '@/shared/utils/apiError';
 import { VISIBLE_USER_ROLES, type User } from '../types/user.types';
@@ -74,6 +74,8 @@ export function UsersPage() {
     setSearchInput,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     roleFilter,
     setRoleFilter,
     statusFilter,
@@ -96,7 +98,7 @@ export function UsersPage() {
   // selección debe persistir al navegar entre páginas.
   useEffect(() => {
     selection.clearSelection();
-  }, [searchInput, roleFilter, statusFilter, selection.clearSelection]);
+  }, [searchInput, roleFilter, statusFilter, pageSize, selection.clearSelection]);
 
   const [formDialog, setFormDialog] = useState<FormDialogState>({
     open: false,
@@ -239,83 +241,95 @@ export function UsersPage() {
 
       {isLoading && <Skeleton variant="rounded" height={360} sx={{ borderRadius: 3 }} />}
 
-      {!isLoading && !isError && users.length === 0 && (
-        <Paper
-          elevation={0}
-          sx={{
-            p: 6,
-            borderRadius: 3,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            textAlign: 'center',
-          }}
-        >
-          <Box
-            sx={{
-              width: 52,
-              height: 52,
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: 'rgba(0,74,152,0.08)',
-              color: 'primary.main',
-              mb: 2,
-            }}
-          >
-            <PeopleOutlineOutlinedIcon />
-          </Box>
-          <Typography variant="subtitle1" sx={{ mb: 0.5 }}>
-            No se encontraron usuarios
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360 }}>
-            {searchInput || activeFilterKeys.length > 0
-              ? 'Intenta con otros filtros o término de búsqueda.'
-              : 'Todavía no hay usuarios registrados.'}
-          </Typography>
-        </Paper>
-      )}
-
-      {!isLoading && !isError && users.length > 0 && (
+      {!isLoading && !isError && (
         <>
-          {selection.hasSelection && (
-            <SelectionActionBar
-              selectedCount={selection.selectedCount}
-              totalCount={pagination?.total}
-              isAllSelected={selection.isAllSelected}
-              canSelectAllMatching={!!pagination && pagination.totalPages > 1}
-              onSelectAllMatching={selection.selectAllMatching}
-              onClearSelection={selection.clearSelection}
-              // El slot `actions` queda vacío intencionalmente: exportar/
-              // eliminar/cambios masivos se conectan en una fase futura
-              // pasándolos aquí, sin tocar este componente ni el hook.
-            />
+          {users.length === 0 ? (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 6,
+                borderRadius: 3,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+              }}
+            >
+              <Box
+                sx={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: 'rgba(0,74,152,0.08)',
+                  color: 'primary.main',
+                  mb: 2,
+                }}
+              >
+                <PeopleOutlineOutlinedIcon />
+              </Box>
+              <Typography variant="subtitle1" sx={{ mb: 0.5 }}>
+                No se encontraron usuarios
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360 }}>
+                {searchInput || activeFilterKeys.length > 0
+                  ? 'Intenta con otros filtros o término de búsqueda.'
+                  : 'Todavía no hay usuarios registrados.'}
+              </Typography>
+            </Paper>
+          ) : (
+            <>
+              {selection.hasSelection && (
+                <SelectionActionBar
+                  selectedCount={selection.selectedCount}
+                  totalCount={pagination?.total}
+                  isAllSelected={selection.isAllSelected}
+                  canSelectAllMatching={!!pagination && pagination.totalPages > 1}
+                  onSelectAllMatching={selection.selectAllMatching}
+                  onClearSelection={selection.clearSelection}
+                  // El slot `actions` queda vacío intencionalmente: exportar/
+                  // eliminar/cambios masivos se conectan en una fase futura
+                  // pasándolos aquí, sin tocar este componente ni el hook.
+                />
+              )}
+
+              <UsersTable
+                users={users}
+                onEdit={(user) => setFormDialog({ open: true, mode: 'edit', user })}
+                onToggleStatus={setStatusTarget}
+                statusPendingUserId={
+                  updateStatus.isPending ? updateStatus.variables?.id : undefined
+                }
+                headerState={selection.headerState}
+                isSelected={selection.isSelected}
+                toggleRow={selection.toggleRow}
+                toggleAllOnPage={selection.toggleAllOnPage}
+              />
+            </>
           )}
 
-          <UsersTable
-            users={users}
-            onEdit={(user) => setFormDialog({ open: true, mode: 'edit', user })}
-            onToggleStatus={setStatusTarget}
-            statusPendingUserId={
-              updateStatus.isPending ? updateStatus.variables?.id : undefined
-            }
-            headerState={selection.headerState}
-            isSelected={selection.isSelected}
-            toggleRow={selection.toggleRow}
-            toggleAllOnPage={selection.toggleAllOnPage}
-          />
-
-          {pagination && pagination.totalPages > 1 && (
-            <Stack alignItems="center" sx={{ mt: 3 }}>
-              <Pagination
-                count={pagination.totalPages}
-                page={page}
-                onChange={(_, value) => setPage(value)}
-                shape="rounded"
-                color="primary"
-              />
-            </Stack>
+          {/*
+            La visibilidad de PaginationBar depende únicamente de que
+            `pagination` exista (respuesta real del backend) — nunca de
+            `users.length` ni de `totalPages`. Dos bugs resueltos con
+            esta misma regla:
+            1) si la página actual queda vacía tras filtrar SYSTEM/el
+               usuario autenticado, el control para volver sigue ahí;
+            2) el selector de "filas por página" ya no depende de que
+               existan varias páginas — esa distinción (ocultar solo el
+               control de números de página) vive dentro de PaginationBar.
+          */}
+          {pagination && (
+            <PaginationBar
+              page={page}
+              totalPages={pagination.totalPages}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              totalCount={pagination.total}
+            />
           )}
         </>
       )}
