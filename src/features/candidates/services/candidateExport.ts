@@ -15,7 +15,7 @@ import { CANDIDATE_STATUS_LABEL, type CandidateListItem } from '../types/candida
 export const CANDIDATE_EXPORT_COLUMNS: CsvColumn<CandidateListItem>[] = [
   { label: 'Nombre completo', getValue: (c) => c.fullName },
   { label: 'Correo', getValue: (c) => c.email },
-  { label: 'Puesto solicitado', getValue: (c) => c.positionApplied },
+  { label: 'Empresa', getValue: (c) => c.companyName },
+  { label: 'Puesto solicitado', getValue: (c) => c.positionName },
   { label: 'Estado', getValue: (c) => CANDIDATE_STATUS_LABEL[c.status] },
-  { label: 'Avance (%)', getValue: (c) => String(c.progress) },
 ];

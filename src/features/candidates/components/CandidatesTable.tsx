@@ -1,7 +1,5 @@
 import {
-  Box,
   Checkbox,
-  LinearProgress,
   Paper,
   Table,
   TableBody,
@@ -10,6 +8,7 @@ import {
   TableHead,
   TableRow,
   Typography,
+  Button,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import type { CandidateListItem } from '../types/candidate.types';
@@ -19,11 +18,6 @@ import { scrollableTableContainerSx, stickyTableHeadCellSx } from '@/shared/cons
 
 interface CandidatesTableProps {
   candidates: CandidateListItem[];
-  /**
-   * Props de selección: provienen de useRowSelection en la página
-   * (orquestación). Mismo contrato exacto que UsersTable — ninguna
-   * tabla mantiene su propio estado de selección.
-   */
   headerState: 'checked' | 'indeterminate' | 'unchecked';
   isSelected: (id: string) => boolean;
   toggleRow: (id: string) => void;
@@ -57,9 +51,10 @@ export function CandidatesTable({
               />
             </TableCell>
             <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Candidato</TableCell>
+            <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Empresa</TableCell>
             <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Puesto solicitado</TableCell>
             <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Estado</TableCell>
-            <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx, width: 180 }}>Avance</TableCell>
+            <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx }} align="right">Acciones</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -70,9 +65,6 @@ export function CandidatesTable({
               onClick={() => navigate(paths.candidateDetail(candidate.id))}
               sx={{ cursor: 'pointer' }}
             >
-              {/* stopPropagation: clickear el checkbox no debe disparar
-                  la navegación al detalle del candidato que sí dispara
-                  el resto de la fila. */}
               <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                 <Checkbox
                   checked={isSelected(candidate.id)}
@@ -91,35 +83,29 @@ export function CandidatesTable({
                 </Typography>
               </TableCell>
               <TableCell>
-                <Typography variant="body2">{candidate.positionApplied}</Typography>
+                <Typography variant="body2">{candidate.companyName}</Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">{candidate.positionName}</Typography>
               </TableCell>
               <TableCell>
                 <CandidateStatusChip status={candidate.status} />
               </TableCell>
-              <TableCell>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <LinearProgress
-                    variant="determinate"
-                    value={candidate.progress}
-                    sx={{
-                      flex: 1,
-                      height: 6,
-                      borderRadius: 3,
-                      bgcolor: 'rgba(0,0,0,0.06)',
-                      '& .MuiLinearProgress-bar': { borderRadius: 3 },
-                    }}
-                  />
-                  <Typography variant="caption" color="text.secondary" sx={{ width: 32 }}>
-                    {candidate.progress}%
-                  </Typography>
-                </Box>
+              <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                <Button 
+                  size="small" 
+                  onClick={() => navigate(paths.candidateDetail(candidate.id))}
+                >
+                  Ver detalle
+                </Button>
               </TableCell>
             </TableRow>
           ))}
 
           {candidates.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+              {/* Cambiamos el colSpan a 6 porque ahora tenemos 6 columnas */}
+              <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
                 <Typography variant="body2" color="text.secondary">
                   No se encontraron candidatos con estos filtros.
                 </Typography>

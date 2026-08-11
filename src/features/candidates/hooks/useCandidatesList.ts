@@ -1,71 +1,72 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { candidatesMock } from '../services/candidates.mock';
+import { useCallback, useEffect, useState } from 'react';
 import { DEFAULT_PAGE_SIZE } from '@/shared/constants/table';
 import type { CandidateListItem, CandidateStatus } from '../types/candidate.types';
+import { candidatesService } from '../services/candidateService';
 
-/**
- * Búsqueda, filtro y paginación se resuelven aquí, en memoria, porque hoy
- * los datos son mock. Cuando exista `GET /candidates?search=&status=&page=&limit=`,
- * este es el único archivo que cambia: en vez de filtrar el arreglo local,
- * se le pasan esos mismos parámetros al servicio real. La tabla y la
- * página no necesitan cambiar.
- */
 export function useCandidatesList() {
-  const [allCandidates, setAllCandidates] = useState<CandidateListItem[]>([]);
+  const [candidates, setCandidates] = useState<CandidateListItem[]>([]);
+  const [totalResults, setTotalResults] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+
   const [search, setSearchState] = useState('');
   const [statusFilter, setStatusFilterState] = useState<CandidateStatus | 'all'>('all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSizeState] = useState(DEFAULT_PAGE_SIZE);
 
-  useEffect(() => {
-    candidatesMock.getList().then((data) => {
-      setAllCandidates(data);
+  // Función orquestadora: dispara la petición a la API
+  const fetchCandidates = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await candidatesService.getList({
+        page,
+        limit: pageSize,
+        search: search.trim() !== '' ? search : undefined,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+      });
+
+      setCandidates(response.items);
+      setTotalResults(response.pagination.total);
+      setTotalPages(response.pagination.totalPages);
+    } catch (error) {
+      console.error('Error fetching candidates:', error);
+    } finally {
       setIsLoading(false);
-    });
-  }, []);
+    }
+  }, [page, pageSize, search, statusFilter]);
 
-  const filtered = useMemo(() => {
-    return allCandidates.filter((c) => {
-      const matchesSearch =
-        search.trim() === '' ||
-        c.fullName.toLowerCase().includes(search.toLowerCase()) ||
-        c.positionApplied.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [allCandidates, search, statusFilter]);
+  // Ejecutar búsqueda cada vez que cambia un parámetro
+  useEffect(() => {
+    fetchCandidates();
+  }, [fetchCandidates]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
-
-  /**
-   * Igual que en Users, pero aquí es trivial: como todo ya está en
-   * memoria (`filtered`), "pedir una página" es solo un slice — sin
-   * ninguna llamada real. Se mantiene async para que useExport (y
-   * resolveSelectionRecords) funcionen exactamente igual sin importar
-   * si la tabla es mock o real.
-   */
+  // Se mantiene async para las exportaciones masivas
   const fetchPage = useCallback(
     async (pageNumber: number, limit: number): Promise<CandidateListItem[]> => {
-      return filtered.slice((pageNumber - 1) * limit, pageNumber * limit);
+      const response = await candidatesService.getList({
+        page: pageNumber,
+        limit,
+        search: search.trim() !== '' ? search : undefined,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+      });
+      return response.items;
     },
-    [filtered],
+    [search, statusFilter],
   );
 
   return {
-    candidates: paginated,
-    totalResults: filtered.length,
+    candidates,
+    totalResults,
     isLoading,
     search,
     setSearch: (value: string) => {
       setSearchState(value);
-      setPage(1);
+      setPage(1); // Reset a página 1 al buscar
     },
     statusFilter,
     setStatusFilter: (value: CandidateStatus | 'all') => {
       setStatusFilterState(value);
-      setPage(1);
+      setPage(1); // Reset a página 1 al filtrar
     },
     page,
     totalPages,

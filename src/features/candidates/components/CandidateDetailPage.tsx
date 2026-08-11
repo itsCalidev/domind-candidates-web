@@ -56,7 +56,7 @@ export function CandidateDetailPage() {
             {candidate.fullName}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {candidate.positionApplied}
+            {candidate.positionName} — {candidate.companyName}
           </Typography>
         </Box>
         <CandidateStatusChip status={candidate.status} />

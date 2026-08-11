@@ -30,13 +30,7 @@ interface RawUsersListResponse {
 export const usersService = {
   async getList(query: UserListQuery): Promise<PaginatedResponse<User>> {
     const { data } = await apiClient.get<RawUsersListResponse>('/users', { params: query });
-
-    // TODO(temporal): el backend todavía no permite excluir SYSTEM del
-    // listado (UserQueryDto.role solo filtra POR un rol, no lo excluye).
-    // Se oculta aquí en el frontend hasta que exista ese filtro real.
-    // Mientras tanto, `pagination.total`/`totalPages` siguen contando a
-    // SYSTEM — es una limitación conocida, no un error. (El usuario
-    // autenticado se excluye aparte, en useUsersQuery — ver ese archivo.)
+    
     const items = data.data.filter((user) => user.role !== UserRole.SYSTEM);
 
     return {

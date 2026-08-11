@@ -1,14 +1,20 @@
-export type CandidateStatus = 'pending' | 'in_process' | 'review' | 'completed';
+export type CandidateStatus =
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'UNDER_REVIEW'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'ARCHIVED';
 
 export interface CandidateListItem {
   id: string;
+  folio: string;
   fullName: string;
-  positionApplied: string;
   email: string;
-  phone: string;
+  companyName: string;
+  positionName: string;
   status: CandidateStatus;
-  progress: number; // 0-100, avance del cuestionario
-  createdAt: string; // ISO date
+  isActive: boolean;
 }
 
 export interface CandidateGeneralInfo {
@@ -29,15 +35,19 @@ export interface CandidateDetail extends CandidateListItem {
 }
 
 export const CANDIDATE_STATUS_LABEL: Record<CandidateStatus, string> = {
-  pending: 'Pendiente',
-  in_process: 'En proceso',
-  review: 'En revisión',
-  completed: 'Completo',
+  IN_PROGRESS: 'En progreso',
+  COMPLETED: 'Completo',
+  UNDER_REVIEW: 'En revisión',
+  APPROVED: 'Aprobado',
+  REJECTED: 'Rechazado',
+  ARCHIVED: 'Archivado',
 };
 
 export const CANDIDATE_STATUS_COLOR: Record<CandidateStatus, string> = {
-  pending: '#F39200',
-  in_process: '#67B1E3',
-  review: '#69478E',
-  completed: '#76B82A',
+  IN_PROGRESS: '#F39200',
+  COMPLETED: '#67B1E3',
+  UNDER_REVIEW: '#69478E',
+  APPROVED: '#76B82A',
+  REJECTED: '#FF0000',
+  ARCHIVED: '#808080',
 };

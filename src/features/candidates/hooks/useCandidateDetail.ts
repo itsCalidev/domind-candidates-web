@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { candidatesMock } from '../services/candidates.mock';
+import { useState, useEffect } from 'react';
+import { candidatesService } from '../services/candidateService';
 import type { CandidateDetail } from '../types/candidate.types';
 
 export function useCandidateDetail(id: string | undefined) {
@@ -11,11 +11,32 @@ export function useCandidateDetail(id: string | undefined) {
       setIsLoading(false);
       return;
     }
+
+    let isMounted = true;
     setIsLoading(true);
-    candidatesMock.getById(id).then((data) => {
-      setCandidate(data);
-      setIsLoading(false);
-    });
+
+    candidatesService
+      .getById(id)
+      .then((data) => {
+        if (isMounted) {
+          setCandidate(data);
+        }
+      })
+      .catch((error) => {
+        console.error('Error al obtener el detalle del candidato:', error);
+        if (isMounted) {
+          setCandidate(null);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
   return { candidate, isLoading };
