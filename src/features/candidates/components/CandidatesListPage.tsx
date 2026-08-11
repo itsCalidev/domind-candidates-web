@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import {
+  Alert,
   Box,
   InputAdornment,
   MenuItem,
@@ -11,10 +12,13 @@ import {
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import { useCandidatesList } from '../hooks/useCandidatesList';
 import { CandidatesTable } from './CandidatesTable';
-import { CANDIDATE_STATUS_LABEL, type CandidateStatus } from '../types/candidate.types';
+import { CANDIDATE_STATUS_LABEL, type CandidateStatus, type CandidateListItem } from '../types/candidate.types';
+import { CANDIDATE_EXPORT_COLUMNS } from '../services/candidateExport';
 import { SelectionActionBar } from '@/shared/components/SelectionActionBar';
 import { PaginationBar } from '@/shared/components/PaginationBar';
+import { ExportButton } from '@/shared/components/ExportButton';
 import { useRowSelection } from '@/shared/hooks/useRowSelection';
+import { useExport } from '@/shared/hooks/useExport';
 
 export function CandidatesListPage() {
   const {
@@ -30,6 +34,7 @@ export function CandidatesListPage() {
     setPage,
     pageSize,
     setPageSize,
+    fetchPage,
   } = useCandidatesList();
 
   const selection = useRowSelection<string>({
@@ -44,15 +49,33 @@ export function CandidatesListPage() {
     selection.clearSelection();
   }, [search, statusFilter, pageSize, selection.clearSelection]);
 
+  const { isExporting, error: exportError, exportToCsv } = useExport<CandidateListItem, string>({
+    currentPageItems: candidates,
+    getId: (candidate) => candidate.id,
+    getSelectionPayload: selection.getSelectionPayload,
+    totalPages,
+    pageSize,
+    fetchPage,
+    columns: CANDIDATE_EXPORT_COLUMNS,
+    fileName: 'candidates-export.csv',
+  });
+
   return (
     <Box>
-      <Typography variant="h4" sx={{ mb: 0.5 }}>
-        Candidatos
-      </Typography>
+      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 0.5 }}>
+        <Typography variant="h4">Candidatos</Typography>
+        <ExportButton onExport={exportToCsv} isExporting={isExporting} disabled={isLoading} />
+      </Stack>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
         {totalResults} candidato{totalResults !== 1 ? 's' : ''} encontrado
         {totalResults !== 1 ? 's' : ''}
       </Typography>
+
+      {exportError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {exportError}
+        </Alert>
+      )}
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 3 }}>
         <TextField

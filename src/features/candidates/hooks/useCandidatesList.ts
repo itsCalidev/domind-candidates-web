@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { candidatesMock } from '../services/candidates.mock';
 import { DEFAULT_PAGE_SIZE } from '@/shared/constants/table';
 import type { CandidateListItem, CandidateStatus } from '../types/candidate.types';
@@ -39,6 +39,20 @@ export function useCandidatesList() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
+  /**
+   * Igual que en Users, pero aquí es trivial: como todo ya está en
+   * memoria (`filtered`), "pedir una página" es solo un slice — sin
+   * ninguna llamada real. Se mantiene async para que useExport (y
+   * resolveSelectionRecords) funcionen exactamente igual sin importar
+   * si la tabla es mock o real.
+   */
+  const fetchPage = useCallback(
+    async (pageNumber: number, limit: number): Promise<CandidateListItem[]> => {
+      return filtered.slice((pageNumber - 1) * limit, pageNumber * limit);
+    },
+    [filtered],
+  );
+
   return {
     candidates: paginated,
     totalResults: filtered.length,
@@ -61,5 +75,6 @@ export function useCandidatesList() {
       setPageSizeState(value);
       setPage(1);
     },
+    fetchPage,
   };
 }

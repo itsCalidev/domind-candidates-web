@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { usersService } from '../services/usersService';
 import { useAuth } from '@/features/auth/context/AuthContext';
@@ -75,6 +75,28 @@ export function useUsersQuery() {
   const roleParam = roleFilter === 'all' ? undefined : roleFilter;
   const isActiveParam = statusFilter === 'all' ? undefined : statusFilter === 'active';
 
+  /**
+   * Pide una página específica bajo los MISMOS filtros que la consulta
+   * en vivo (mismo `debouncedSearch`/`roleParam`/`isActiveParam`, y la
+   * misma exclusión del usuario autenticado que ya aplica más abajo).
+   * Existe para la exportación (useExport): cuando hay una selección que
+   * abarca varias páginas, es la forma de reunir todos los registros
+   * sin duplicar la lógica de filtros en otro archivo.
+   */
+  const fetchPage = useCallback(
+    async (pageNumber: number, limit: number): Promise<User[]> => {
+      const response = await usersService.getList({
+        search: debouncedSearch || undefined,
+        page: pageNumber,
+        limit,
+        role: roleParam,
+        isActive: isActiveParam,
+      });
+      return response.items.filter((item) => item.id !== currentUser?.id);
+    },
+    [debouncedSearch, roleParam, isActiveParam, currentUser?.id],
+  );
+
   const query = useQuery({
     queryKey: [
       'users',
@@ -123,5 +145,6 @@ export function useUsersQuery() {
     setRoleFilter,
     statusFilter,
     setStatusFilter,
+    fetchPage,
   };
 }

@@ -24,8 +24,11 @@ import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { SelectionActionBar } from '@/shared/components/SelectionActionBar';
 import { PaginationBar } from '@/shared/components/PaginationBar';
 import { useRowSelection } from '@/shared/hooks/useRowSelection';
+import { useExport } from '@/shared/hooks/useExport';
+import { ExportButton } from '@/shared/components/ExportButton';
 import { extractApiErrorMessage } from '@/shared/utils/apiError';
 import { VISIBLE_USER_ROLES, type User } from '../types/user.types';
+import { USER_EXPORT_COLUMNS } from '../services/userExport';
 import type { UserFormMode } from '../types/userForm.schema';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { UserRole } from '@/features/auth/types/role.enum';
@@ -80,6 +83,7 @@ export function UsersPage() {
     setRoleFilter,
     statusFilter,
     setStatusFilter,
+    fetchPage,
   } = useUsersQuery();
   const { updateStatus } = useUserMutations();
 
@@ -99,6 +103,17 @@ export function UsersPage() {
   useEffect(() => {
     selection.clearSelection();
   }, [searchInput, roleFilter, statusFilter, pageSize, selection.clearSelection]);
+
+  const { isExporting, error: exportError, exportToCsv } = useExport<User, string>({
+    currentPageItems: users,
+    getId: (user) => user.id,
+    getSelectionPayload: selection.getSelectionPayload,
+    totalPages: pagination?.totalPages ?? 1,
+    pageSize,
+    fetchPage,
+    columns: USER_EXPORT_COLUMNS,
+    fileName: 'users-export.csv',
+  });
 
   const [formDialog, setFormDialog] = useState<FormDialogState>({
     open: false,
@@ -157,14 +172,23 @@ export function UsersPage() {
         sx={{ mb: 0.5 }}
       >
         <Typography variant="h4">Usuarios</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddOutlinedIcon />}
-          onClick={() => setFormDialog({ open: true, mode: 'create', user: null })}
-        >
-          Nuevo usuario
-        </Button>
+        <Stack direction="row" spacing={1.5}>
+          <ExportButton onExport={exportToCsv} isExporting={isExporting} disabled={isLoading} />
+          <Button
+            variant="contained"
+            startIcon={<AddOutlinedIcon />}
+            onClick={() => setFormDialog({ open: true, mode: 'create', user: null })}
+          >
+            Nuevo usuario
+          </Button>
+        </Stack>
       </Stack>
+
+      {exportError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {exportError}
+        </Alert>
+      )}
 
       {/*
         TODO(temporal): mientras el backend siga contando a SYSTEM y al
