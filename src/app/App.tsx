@@ -5,6 +5,7 @@ import { theme } from '@/theme';
 import { AppRouter } from '@/routes/AppRouter';
 import { AuthProvider } from '@/features/auth/context/AuthContext';
 import { queryClient } from '@/lib/query/queryClient';
+import { ToastProvider } from '@/shared/context/ToastContext';
 
 export function App() {
   return (
@@ -15,9 +16,13 @@ export function App() {
         <BrowserRouter>
           {/* AuthProvider vive dentro del Router: ProtectedRoute/GuestRoute
               necesitan <Navigate /> y useNavigate, que requieren contexto
-              de enrutamiento. */}
+              de enrutamiento. ToastProvider no depende de ninguno de los
+              dos, pero vive aquí adentro para que cualquier página pueda
+              usar useToast() sin preocuparse del orden de providers. */}
           <AuthProvider>
-            <AppRouter />
+            <ToastProvider>
+              <AppRouter />
+            </ToastProvider>
           </AuthProvider>
         </BrowserRouter>
       </ThemeProvider>

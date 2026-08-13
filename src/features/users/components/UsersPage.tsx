@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -13,6 +13,8 @@ import {
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import PeopleOutlineOutlinedIcon from '@mui/icons-material/PeopleOutlineOutlined';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
+import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
+import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
 import { Navigate } from 'react-router-dom';
 import { useUsersQuery } from '../hooks/useUsersQuery';
 import { useUserMutations } from '../hooks/useUserMutations';
@@ -23,16 +25,17 @@ import { FilterChip } from './FilterChip';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { SelectionActionBar } from '@/shared/components/SelectionActionBar';
 import { PaginationBar } from '@/shared/components/PaginationBar';
-import { useRowSelection } from '@/shared/hooks/useRowSelection';
+import { useRowSelection, type SelectionPayload } from '@/shared/hooks/useRowSelection';
 import { useExport } from '@/shared/hooks/useExport';
 import { ExportButton } from '@/shared/components/ExportButton';
 import { extractApiErrorMessage } from '@/shared/utils/apiError';
 import { VISIBLE_USER_ROLES, type User } from '../types/user.types';
-import { USER_EXPORT_COLUMNS } from '../services/userExport';
+import { USER_EXPORT_COLUMNS, buildUsersPdfSubtitle } from '../services/userExport';
 import { downloadCsv } from '@/shared/utils/csv';
+import { downloadTablePdf } from '@/shared/utils/pdf';
 import type { UserFormMode } from '../types/userForm.schema';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { UserRole, hasFullAccess } from '@/features/auth/types/role.enum';
+import { UserRole, hasFullAccess, isSystem } from '@/features/auth/types/role.enum';
 import { paths } from '@/routes/paths';
 
 interface FormDialogState {
@@ -86,7 +89,7 @@ export function UsersPage() {
     setStatusFilter,
     fetchPage,
   } = useUsersQuery();
-  const { updateStatus } = useUserMutations();
+  const { updateStatus, deleteUser } = useUserMutations();
 
   const selection = useRowSelection<string>({
     pageIds: users.map((user) => user.id),
@@ -115,12 +118,43 @@ export function UsersPage() {
     generateFile: (records) => downloadCsv('users-export.csv', records, USER_EXPORT_COLUMNS),
   });
 
+  // PDF: misma política que en Candidates — sin selección exporta TODOS
+  // los usuarios que coincidan con los filtros activos (no solo la
+  // página visible), no solo la vista actual como sí hace el CSV. Se
+  // logra con un payload "exclude, sin excepciones" que fuerza a
+  // resolveSelectionRecords a recorrer todas las páginas.
+  const getPdfSelectionPayload = useCallback((): SelectionPayload<string> => {
+    if (selection.hasSelection) return selection.getSelectionPayload();
+    return { mode: 'exclude', ids: [], totalCount: pagination?.total ?? 0 };
+  }, [selection.hasSelection, selection.getSelectionPayload, pagination?.total]);
+
+  const { isExporting: isExportingPdf, error: pdfExportError, runExport: exportToPdf } = useExport<
+    User,
+    string
+  >({
+    currentPageItems: users,
+    getId: (user) => user.id,
+    getSelectionPayload: getPdfSelectionPayload,
+    totalPages: pagination?.totalPages ?? 1,
+    pageSize,
+    fetchPage,
+    generateFile: (records) =>
+      downloadTablePdf({
+        fileName: 'users-export.pdf',
+        title: 'Usuarios',
+        subtitle: buildUsersPdfSubtitle({ search: searchInput, roleFilter, statusFilter }),
+        columns: USER_EXPORT_COLUMNS,
+        items: records,
+      }),
+  });
+
   const [formDialog, setFormDialog] = useState<FormDialogState>({
     open: false,
     mode: 'create',
     user: null,
   });
   const [statusTarget, setStatusTarget] = useState<User | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [activeFilterKeys, setActiveFilterKeys] = useState<FilterKey[]>([]);
 
   function handleAddFilter(key: string) {
@@ -153,6 +187,19 @@ export function UsersPage() {
     }
   }
 
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    try {
+      await deleteUser.mutateAsync(deleteTarget.id);
+      setDeleteTarget(null);
+    } catch {
+      // El diálogo se queda abierto: el usuario puede reintentar o cerrarlo.
+      // El toast de error ya se disparó desde useUserMutations.
+    }
+  }
+
+  const canHardDelete = isSystem(currentUser?.role);
+
   // TODO: reemplazar por un RoleGuard genérico cuando construyamos la
   // infraestructura de autorización por roles (fase futura). Por ahora,
   // verificación puntual solo para este caso: RECRUITER no debe acceder
@@ -173,7 +220,20 @@ export function UsersPage() {
       >
         <Typography variant="h4">Usuarios</Typography>
         <Stack direction="row" spacing={1.5}>
-          <ExportButton onExport={exportToCsv} isExporting={isExporting} disabled={isLoading} />
+          <ExportButton
+            label="Exportar Excel"
+            icon={<TableChartOutlinedIcon fontSize="small" />}
+            onExport={exportToCsv}
+            isExporting={isExporting}
+            disabled={isLoading || isExportingPdf}
+          />
+          <ExportButton
+            label="Exportar PDF"
+            icon={<PictureAsPdfOutlinedIcon fontSize="small" />}
+            onExport={exportToPdf}
+            isExporting={isExportingPdf}
+            disabled={isLoading || isExporting}
+          />
           <Button
             variant="contained"
             startIcon={<AddOutlinedIcon />}
@@ -187,6 +247,11 @@ export function UsersPage() {
       {exportError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {exportError}
+        </Alert>
+      )}
+      {pdfExportError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {pdfExportError}
         </Alert>
       )}
 
@@ -326,6 +391,8 @@ export function UsersPage() {
                 statusPendingUserId={
                   updateStatus.isPending ? updateStatus.variables?.id : undefined
                 }
+                onHardDelete={setDeleteTarget}
+                canHardDelete={canHardDelete}
                 headerState={selection.headerState}
                 isSelected={selection.isSelected}
                 toggleRow={selection.toggleRow}
@@ -378,6 +445,21 @@ export function UsersPage() {
         loading={updateStatus.isPending}
         onConfirm={handleConfirmStatus}
         onClose={() => setStatusTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Eliminar definitivamente"
+        description={
+          deleteTarget
+            ? `¿Confirmas que deseas eliminar definitivamente a ${deleteTarget.firstName} ${deleteTarget.lastName}? Esta acción no se puede deshacer.`
+            : ''
+        }
+        confirmText="Sí, eliminar definitivamente"
+        severity="error"
+        loading={deleteUser.isPending}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteTarget(null)}
       />
     </Box>
   );

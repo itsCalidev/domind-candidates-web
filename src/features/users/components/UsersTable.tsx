@@ -21,6 +21,7 @@ import MoreVertOutlinedIcon from '@mui/icons-material/MoreVertOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ToggleOnOutlinedIcon from '@mui/icons-material/ToggleOnOutlined';
 import ToggleOffOutlinedIcon from '@mui/icons-material/ToggleOffOutlined';
+import DeleteForeverOutlinedIcon from '@mui/icons-material/DeleteForeverOutlined';
 import type { User } from '../types/user.types';
 import { UserStatusChip } from './UserStatusChip';
 import { UserRoleChip } from './UserRoleChip';
@@ -34,6 +35,13 @@ interface UsersTableProps {
   onToggleStatus: (user: User) => void;
   /** id del usuario cuyo cambio de estado está en curso ahora mismo. */
   statusPendingUserId?: string;
+  /**
+   * Eliminar definitivamente es exclusivo de SYSTEM (ver isSystem en
+   * role.enum.ts). La tabla no decide el rol — recibe el resultado ya
+   * calculado, igual que el resto de props de esta tabla.
+   */
+  onHardDelete: (user: User) => void;
+  canHardDelete: boolean;
   /**
    * Props de selección: provienen de useRowSelection en la página
    * (orquestación), no de estado propio de esta tabla. La tabla solo
@@ -51,6 +59,8 @@ export function UsersTable({
   onEdit,
   onToggleStatus,
   statusPendingUserId,
+  onHardDelete,
+  canHardDelete,
   headerState,
   isSelected,
   toggleRow,
@@ -203,6 +213,24 @@ export function UsersTable({
           </ListItemIcon>
           <ListItemText>{menuUser?.isActive ? 'Desactivar' : 'Activar'}</ListItemText>
         </MenuItem>
+
+        {canHardDelete && (
+          <>
+            <Divider sx={{ my: 0.5 }} />
+            <MenuItem
+              onClick={() => {
+                if (menuUser) onHardDelete(menuUser);
+                closeMenu();
+              }}
+              sx={{ color: 'error.main' }}
+            >
+              <ListItemIcon sx={{ color: 'inherit' }}>
+                <DeleteForeverOutlinedIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Eliminar definitivamente</ListItemText>
+            </MenuItem>
+          </>
+        )}
       </Menu>
     </TableContainer>
   );

@@ -20,3 +20,31 @@ export const USER_EXPORT_COLUMNS: CsvColumn<User>[] = [
   { label: 'Estado', getValue: (u) => (u.isActive ? 'Activo' : 'Inactivo') },
   { label: 'Última actualización', getValue: (u) => formatShortDate(u.updatedAt) },
 ];
+
+/**
+ * Subtítulo del PDF tabular de Users: fecha/hora de generación +
+ * filtros activos, igual que buildCandidatesPdfSubtitle. Mismos 6
+ * columnas que USER_EXPORT_COLUMNS — a diferencia de Candidates, aquí
+ * no hace falta un subconjunto: el CSV de Users ya coincide exactamente
+ * con lo que muestra la tabla, así que el PDF reutiliza el mismo arreglo tal cual.
+ */
+export function buildUsersPdfSubtitle(filters: {
+  search: string;
+  roleFilter: string;
+  statusFilter: string;
+}): string {
+  const parts: string[] = [];
+
+  if (filters.search.trim()) parts.push(`Búsqueda: "${filters.search.trim()}"`);
+  if (filters.roleFilter !== 'all') parts.push(`Rol: ${filters.roleFilter}`);
+  if (filters.statusFilter !== 'all') {
+    parts.push(`Estado: ${filters.statusFilter === 'active' ? 'Activo' : 'Inactivo'}`);
+  }
+
+  const filtersText = parts.length > 0 ? parts.join(' · ') : 'Sin filtros aplicados';
+  const generatedAt = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' }).format(
+    new Date(),
+  );
+
+  return `Generado el ${generatedAt} · ${filtersText}`;
+}

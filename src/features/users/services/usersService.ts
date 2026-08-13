@@ -63,4 +63,15 @@ export const usersService = {
   async updatePassword(id: string, payload: UpdateUserPasswordRequest): Promise<void> {
     await apiClient.patch(`/users/${id}/password`, payload);
   },
+
+  /**
+   * Hard delete. El contrato original de Users ya documentaba
+   * `DELETE /users/:id` como existente pero reservado para uso futuro
+   * exclusivo de SYSTEM — ese futuro es ahora; la restricción de rol se
+   * aplica en el frontend (UsersPage/UsersTable), este método solo
+   * ejecuta la llamada.
+   */
+  async remove(id: string): Promise<void> {
+    await apiClient.delete(`/users/${id}`);
+  },
 };

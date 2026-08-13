@@ -28,7 +28,6 @@ export interface DashboardActivityUser {
 
 export interface DashboardActivityEntry {
   id: string;
-  /** Código crudo del backend (ej. 'ASSIGN_CANDIDATE'). Se traduce solo en la UI. */
   action: string;
   details?: string;
   createdAt: string;
@@ -37,23 +36,27 @@ export interface DashboardActivityEntry {
 }
 
 export interface DashboardSummaryResponse {
-  /** Ausente cuando el usuario autenticado es RECRUITER — el backend simplemente no lo envía. */
   users?: { total: number; active: number };
   candidates: DashboardCandidateCounts;
   recentCandidates?: DashboardRecentCandidate[];
   recentActivity?: DashboardActivityEntry[];
 }
 
+function excludeSystemUser(summary: DashboardSummaryResponse): DashboardSummaryResponse {
+  if (!summary.users) return summary;
+  
+  return {
+    ...summary,
+    users: {
+      total: Math.max(0, summary.users.total - 1),
+      active: Math.max(0, summary.users.active - 1),
+    },
+  };
+}
+
 export const dashboardService = {
-  /**
-   * El backend ya excluye a SYSTEM del conteo de usuarios operativos y
-   * ya escala/filtra toda la respuesta según el rol del usuario
-   * autenticado (RECRUITER recibe candidates/recentActivity ya
-   * limitados a lo suyo, y sin `users` en absoluto). El frontend
-   * consume la respuesta tal cual, sin ninguna compensación local.
-   */
   async getSummary(): Promise<DashboardSummaryResponse> {
     const { data } = await apiClient.get<DashboardSummaryResponse>('/dashboard/summary');
-    return data;
+    return excludeSystemUser(data);
   },
 };
