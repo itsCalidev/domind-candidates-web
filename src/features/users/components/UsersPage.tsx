@@ -29,6 +29,7 @@ import { ExportButton } from '@/shared/components/ExportButton';
 import { extractApiErrorMessage } from '@/shared/utils/apiError';
 import { VISIBLE_USER_ROLES, type User } from '../types/user.types';
 import { USER_EXPORT_COLUMNS } from '../services/userExport';
+import { downloadCsv } from '@/shared/utils/csv';
 import type { UserFormMode } from '../types/userForm.schema';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { UserRole, hasFullAccess } from '@/features/auth/types/role.enum';
@@ -104,15 +105,14 @@ export function UsersPage() {
     selection.clearSelection();
   }, [searchInput, roleFilter, statusFilter, pageSize, selection.clearSelection]);
 
-  const { isExporting, error: exportError, exportToCsv } = useExport<User, string>({
+  const { isExporting, error: exportError, runExport: exportToCsv } = useExport<User, string>({
     currentPageItems: users,
     getId: (user) => user.id,
     getSelectionPayload: selection.getSelectionPayload,
     totalPages: pagination?.totalPages ?? 1,
     pageSize,
     fetchPage,
-    columns: USER_EXPORT_COLUMNS,
-    fileName: 'users-export.csv',
+    generateFile: (records) => downloadCsv('users-export.csv', records, USER_EXPORT_COLUMNS),
   });
 
   const [formDialog, setFormDialog] = useState<FormDialogState>({
