@@ -1,43 +1,50 @@
-import type {
-  ActivityItem,
-  AlertItem,
-  CandidatesByStatusPoint,
-  SummaryMetric,
-} from '../types/dashboard.types';
+import { CANDIDATE_STATUS_LABEL, type CandidateStatus } from '@/features/candidates/types/candidate.types';
+import type { ActivityItem, AlertItem, CandidatesByStatusPoint } from '../types/dashboard.types';
 
 /**
- * Datos simulados del Dashboard.
+ * Datos simulados del Dashboard que TODAVÍA no tienen endpoint real
+ * confirmado (candidatos por estado, actividad reciente, alertas).
+ * `getSummaryMetrics` fue removido de aquí — ese dato ya es real, ver
+ * dashboardService.ts.
  *
- * Cada función simula el endpoint que eventualmente la reemplazará
- * (ej. `dashboardService.getSummary()` → GET /dashboard/summary),
- * para que `DashboardPage` no tenga que cambiar su forma de consumir
- * estos datos cuando conectemos el backend real.
+ * IMPORTANTE: `getCandidatesByStatus` y `getRecentActivity` usan el
+ * enum/labels REALES de Candidates (CANDIDATE_STATUS_LABEL) y fechas
+ * ISO reales — cuando exista el campo real en GET /dashboard/summary,
+ * solo cambia la fuente de datos, no la forma que ya consumen los
+ * componentes.
  */
-export const dashboardMock = {
-  async getSummaryMetrics(): Promise<SummaryMetric[]> {
-    return [
-      { id: 'new', label: 'Candidatos nuevos', value: 8, delta: '+3 hoy', icon: 'new', accentColor: '#0083C1' },
-      { id: 'inProgress', label: 'En proceso', value: 24, delta: '+5 esta semana', icon: 'inProgress', accentColor: '#67B1E3' },
-      { id: 'review', label: 'Bajo revisión', value: 11, delta: '4 con más de 7 días', icon: 'review', accentColor: '#F39200' },
-      { id: 'approved', label: 'Aprobados', value: 39, delta: '+9 este mes', icon: 'approved', accentColor: '#76B82A' },
-    ];
-  },
+function minutesAgo(minutes: number): string {
+  return new Date(Date.now() - minutes * 60_000).toISOString();
+}
 
+const MOCK_STATUS_COUNTS: Record<CandidateStatus, number> = {
+  IN_PROGRESS: 24,
+  UNDER_REVIEW: 11,
+  COMPLETED: 9,
+  APPROVED: 39,
+  REJECTED: 4,
+  ARCHIVED: 0,
+};
+
+export const dashboardMock = {
   async getCandidatesByStatus(): Promise<CandidatesByStatusPoint[]> {
-    return [
-      { status: 'Pendientes', total: 14 },
-      { status: 'En revisión', total: 11 },
-      { status: 'En proceso', total: 24 },
-      { status: 'Completos', total: 39 },
-    ];
+    return (Object.keys(MOCK_STATUS_COUNTS) as CandidateStatus[]).map((status) => ({
+      status: CANDIDATE_STATUS_LABEL[status],
+      total: MOCK_STATUS_COUNTS[status],
+    }));
   },
 
   async getRecentActivity(): Promise<ActivityItem[]> {
     return [
-      { id: '1', actor: 'María López', action: 'inició su solicitud.', timestamp: 'Hace 5 min' },
-      { id: '2', actor: 'Juan Pérez', action: 'terminó el cuestionario.', timestamp: 'Hace 18 min' },
-      { id: '3', actor: 'Carlos Hernández', action: 'subió su comprobante de domicilio.', timestamp: 'Hace 35 min' },
-      { id: '4', actor: 'Administrador', action: 'creó un nuevo usuario.', timestamp: 'Hace 1 hora' },
+      { id: '1', actor: 'María López', action: 'inició su solicitud.', timestamp: minutesAgo(5) },
+      { id: '2', actor: 'Juan Pérez', action: 'terminó el cuestionario.', timestamp: minutesAgo(18) },
+      {
+        id: '3',
+        actor: 'Carlos Hernández',
+        action: 'subió su comprobante de domicilio.',
+        timestamp: minutesAgo(35),
+      },
+      { id: '4', actor: 'Administrador', action: 'creó un nuevo usuario.', timestamp: minutesAgo(60) },
     ];
   },
 

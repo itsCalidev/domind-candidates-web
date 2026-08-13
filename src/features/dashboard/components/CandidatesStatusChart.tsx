@@ -15,8 +15,8 @@ interface CandidatesStatusChartProps {
   data: CandidatesByStatusPoint[];
 }
 
-/** Un color por barra, coherente con la paleta corporativa */
-const barColors = ['#F39200', '#67B1E3', '#0083C1', '#76B82A'];
+/** Un color por barra, coherente con la paleta corporativa. 6 valores: uno por cada CandidateStatus real. */
+const barColors = ['#67B1E3', '#69478E', '#F39200', '#76B82A', '#D32F2F', '#706F6F'];
 
 export function CandidatesStatusChart({ data }: CandidatesStatusChartProps) {
   return (
