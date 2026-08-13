@@ -1,12 +1,15 @@
 import { Button, Paper, Stack, Typography } from '@mui/material';
+import { Link } from 'react-router-dom';
 import PersonAddAltOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined';
 import GroupAddOutlinedIcon from '@mui/icons-material/GroupAddOutlined';
 import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
 
 /**
- * Botones sin handlers reales todavía: navegarán a sus rutas
- * correspondientes cuando esos módulos existan (Candidatos, Usuarios,
- * Reportes). Hoy son visualmente funcionales pero no navegan.
+ * "Nuevo candidato" sigue sin navegar a propósito: no existe todavía un
+ * formulario de registro de candidatos (fuera de alcance, no se
+ * construye desde el frontend por ahora). "Nuevo usuario" y "Ver
+ * candidatos" sí navegan, vía el componente Link de react-router-dom
+ * pasado como `component` a Button (patrón estándar de MUI + RRD).
  */
 export function QuickActions() {
   return (
@@ -24,6 +27,8 @@ export function QuickActions() {
           Nuevo candidato
         </Button>
         <Button
+          component={Link}
+          to="/users"
           variant="outlined"
           startIcon={<GroupAddOutlinedIcon />}
           sx={{ justifyContent: 'flex-start' }}
@@ -31,11 +36,13 @@ export function QuickActions() {
           Nuevo usuario
         </Button>
         <Button
+          component={Link}
+          to="/candidates"
           variant="outlined"
           startIcon={<AssessmentOutlinedIcon />}
           sx={{ justifyContent: 'flex-start' }}
         >
-          Ver reportes
+          Ver candidatos
         </Button>
       </Stack>
     </Paper>

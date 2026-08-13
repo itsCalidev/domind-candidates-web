@@ -31,7 +31,14 @@ export function CandidatesStatusChart({ data }: CandidatesStatusChartProps) {
       <ResponsiveContainer width="100%" height={260}>
         <BarChart data={data} layout="vertical" margin={{ left: 8, right: 24 }}>
           <CartesianGrid horizontal={false} stroke="#EEEFF1" />
-          <XAxis type="number" tick={{ fontSize: 12, fill: '#706F6F' }} axisLine={false} tickLine={false} />
+          <XAxis
+            type="number"
+            allowDecimals={false}
+            domain={[0, (dataMax: number) => Math.max(dataMax, 5)]}
+            tick={{ fontSize: 12, fill: '#706F6F' }}
+            axisLine={false}
+            tickLine={false}
+          />
           <YAxis
             type="category"
             dataKey="status"
