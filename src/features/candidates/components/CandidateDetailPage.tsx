@@ -1,12 +1,15 @@
 import { useState } from 'react';
-import { Box, IconButton, Skeleton, Stack, Tab, Tabs, Typography } from '@mui/material';
+import { Box, Button, IconButton, Skeleton, Stack, Tab, Tabs, Typography } from '@mui/material';
 import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
+import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCandidateDetail } from '../hooks/useCandidateDetail';
 import { CandidateStatusChip } from './CandidateStatusChip';
 import { GeneralInfoTab } from './GeneralInfoTab';
 import { ComingSoonTab } from './ComingSoonTab';
 import { paths } from '@/routes/paths';
+import { downloadPdf } from '@/shared/utils/pdf';
+import { transformCandidateDetailForPdf } from '../services/candidateExport';
 
 const tabs = [
   'Información General',
@@ -60,6 +63,21 @@ export function CandidateDetailPage() {
           </Typography>
         </Box>
         <CandidateStatusChip status={candidate.status} />
+        <Button
+          size="small"
+          variant="outlined"
+          color="inherit"
+          startIcon={<PictureAsPdfOutlinedIcon fontSize="small" />}
+          onClick={() =>
+            downloadPdf(
+              `candidate-${candidate.folio}-export.pdf`,
+              'Información del candidato',
+              transformCandidateDetailForPdf(candidate),
+            )
+          }
+        >
+          Exportar PDF
+        </Button>
       </Stack>
 
       <Tabs

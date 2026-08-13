@@ -11,10 +11,33 @@ const SEARCH_DEBOUNCE_MS = 400;
 export type UserStatusFilter = 'all' | 'active' | 'inactive';
 export type UserRoleFilter = UserRole | 'all';
 
+/**
+ * Ordena por estado DENTRO de cada página recibida. NO logra "todos los
+ * activos primero en todas las páginas" — eso solo puede garantizarse
+ * con un `orderBy` en el backend (Prisma), porque el frontend nunca
+ * tiene el dataset completo cargado a la vez. Se deja como un
+ * ordenamiento cosmético de la página actual mientras el backend no lo
+ * resuelva; es inofensivo una vez que el backend sí ordene (reordenar
+ * una lista ya ordenada no cambia nada).
+ *
+ * ── CONTRATO ESPERADO DEL BACKEND (pendiente, lo implementa el equipo
+ *    de backend en UsersService.findAll) ──────────────────────────────
+ * `UsersService.findAll()` debería ordenar con Prisma:
+ *   orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }]
+ * (o el criterio secundario que prefieran). Una vez que exista, esta
+ * función y su llamada de abajo pueden eliminarse por completo — no
+ * queremos mantener el mismo ordenamiento duplicado en dos capas.
+ * ───────────────────────────────────────────────────────────────────
+ */
 function sortActiveFirst(users: User[]): User[] {
   return [...users].sort((a, b) => Number(b.isActive) - Number(a.isActive));
 }
 
+/**
+ * Orquesta el listado de Users contra la API real, incluyendo los
+ * filtros de estado/rol que ya soporta UserQueryDto en el backend
+ * (`isActive`, `role`) — se envían tal cual, no se simulan en memoria.
+ */
 export function useUsersQuery() {
   const { user: currentUser } = useAuth();
 
@@ -52,6 +75,14 @@ export function useUsersQuery() {
   const roleParam = roleFilter === 'all' ? undefined : roleFilter;
   const isActiveParam = statusFilter === 'all' ? undefined : statusFilter === 'active';
 
+  /**
+   * Pide una página específica bajo los MISMOS filtros que la consulta
+   * en vivo (mismo `debouncedSearch`/`roleParam`/`isActiveParam`, y la
+   * misma exclusión del usuario autenticado que ya aplica más abajo).
+   * Existe para la exportación (useExport): cuando hay una selección que
+   * abarca varias páginas, es la forma de reunir todos los registros
+   * sin duplicar la lógica de filtros en otro archivo.
+   */
   const fetchPage = useCallback(
     async (pageNumber: number, limit: number): Promise<User[]> => {
       const response = await usersService.getList({
@@ -80,10 +111,17 @@ export function useUsersQuery() {
         role: roleParam,
         isActive: isActiveParam,
       }),
-
+    // Mantiene los datos de la página anterior visibles mientras carga
+    // la siguiente, en vez de mostrar un loading en blanco al paginar.
     placeholderData: keepPreviousData,
   });
 
+  // El usuario autenticado administrará su propia información desde
+  // "Mi Perfil" (fase futura): nunca debe verse a sí mismo en este
+  // listado general. A diferencia del filtro de SYSTEM (regla de datos
+  // pura, vive en usersService), esta exclusión depende de la sesión
+  // activa — por eso vive aquí, en el hook, que sí tiene acceso a
+  // useAuth(). usersService no debe conocer el contexto de React.
   const visibleItems = (query.data?.items ?? []).filter(
     (item) => item.id !== currentUser?.id,
   );

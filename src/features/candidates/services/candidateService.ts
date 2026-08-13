@@ -42,7 +42,6 @@ interface BackendCandidateDetail extends DetailedCandidateList {
   // Identity vendrá después
 }
 
-
 // 2. Query Params permitidos por nuestro Backend DTO
 export interface GetCandidatesQuery {
   page: number;
@@ -73,7 +72,7 @@ export const candidatesService = {
     };
   },
 
-async getById(id: string): Promise<CandidateDetail> {
+  async getById(id: string): Promise<CandidateDetail> {
     const { data } = await apiClient.get<BackendCandidateDetail>(`/candidates/${id}`);
 
     // Mapeamos la respuesta del backend a la interfaz que espera tu CandidateDetailPage
@@ -86,7 +85,6 @@ async getById(id: string): Promise<CandidateDetail> {
       positionName: data.positionName,
       status: data.status,
       isActive: data.isActive,
-      // Construimos el objeto generalInfo que usa tu pestaña "Información General"
       generalInfo: {
         fullName: data.personal ? `${data.personal.firstName} ${data.personal.lastName}` : 'Sin nombre',
         positionApplied: data.positionName,
@@ -95,7 +93,6 @@ async getById(id: string): Promise<CandidateDetail> {
         postalCode: data.personal?.postalCode || 'No registrado',
         phone: data.personal?.phone || 'No registrado',
         email: data.personal?.email || 'No registrado',
-        // Cortamos la fecha ISO para mostrar solo YYYY-MM-DD
         birthDate: data.personal?.birthDate ? data.personal.birthDate.split('T')[0] : 'No registrado',
         birthPlace: data.personal?.birthPlace || 'No registrado',
         civilStatus: data.personal?.maritalStatus || 'No registrado',

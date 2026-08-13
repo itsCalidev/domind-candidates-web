@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import {
   Alert,
   Box,
+  Button,
   InputAdornment,
   MenuItem,
   Skeleton,
@@ -19,18 +20,24 @@ import { PaginationBar } from '@/shared/components/PaginationBar';
 import { ExportButton } from '@/shared/components/ExportButton';
 import { useRowSelection } from '@/shared/hooks/useRowSelection';
 import { useExport } from '@/shared/hooks/useExport';
+import { extractApiErrorMessage } from '@/shared/utils/apiError';
 
 export function CandidatesListPage() {
   const {
     candidates,
     totalResults,
+    totalPages,
     isLoading,
+    isError,
+    error,
+    refetch,
     search,
     setSearch,
     statusFilter,
     setStatusFilter,
+    activeFilter,
+    setActiveFilter,
     page,
-    totalPages,
     setPage,
     pageSize,
     setPageSize,
@@ -47,7 +54,7 @@ export function CandidatesListPage() {
   // deliberadamente no está en estas dependencias.
   useEffect(() => {
     selection.clearSelection();
-  }, [search, statusFilter, pageSize, selection.clearSelection]);
+  }, [search, statusFilter, activeFilter, pageSize, selection.clearSelection]);
 
   const { isExporting, error: exportError, exportToCsv } = useExport<CandidateListItem, string>({
     currentPageItems: candidates,
@@ -79,7 +86,7 @@ export function CandidatesListPage() {
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 3 }}>
         <TextField
-          placeholder="Buscar por nombre o puesto…"
+          placeholder="Buscar por nombre, folio o puesto…"
           size="small"
           fullWidth
           value={search}
@@ -111,11 +118,38 @@ export function CandidatesListPage() {
             </MenuItem>
           ))}
         </TextField>
+
+        <TextField
+          select
+          size="small"
+          label="Activo"
+          value={activeFilter}
+          onChange={(e) => setActiveFilter(e.target.value as typeof activeFilter)}
+          sx={{ minWidth: 160 }}
+        >
+          <MenuItem value="all">Todos</MenuItem>
+          <MenuItem value="active">Activo</MenuItem>
+          <MenuItem value="inactive">Inactivo</MenuItem>
+        </TextField>
       </Stack>
 
-      {isLoading ? (
-        <Skeleton variant="rounded" height={420} sx={{ borderRadius: 3 }} />
-      ) : (
+      {isError && (
+        <Alert
+          severity="error"
+          sx={{ mb: 3 }}
+          action={
+            <Button color="inherit" size="small" onClick={() => refetch()}>
+              Reintentar
+            </Button>
+          }
+        >
+          {extractApiErrorMessage(error, 'No se pudo cargar la lista de candidatos.')}
+        </Alert>
+      )}
+
+      {isLoading && <Skeleton variant="rounded" height={420} sx={{ borderRadius: 3 }} />}
+
+      {!isLoading && !isError && (
         <>
           {selection.hasSelection && (
             <SelectionActionBar
@@ -139,7 +173,7 @@ export function CandidatesListPage() {
 
           {/* Misma regla que en Users: PaginationBar decide internamente
               si oculta el control de páginas; el selector de tamaño es
-              permanente mientras no esté cargando. */}
+              permanente y no depende de candidates.length. */}
           <PaginationBar
             page={page}
             totalPages={totalPages}

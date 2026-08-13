@@ -1,4 +1,4 @@
-import { Box, Grid, Skeleton, Typography } from '@mui/material';
+import { Alert, Box, Grid, Skeleton, Typography } from '@mui/material';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { SummaryCard } from './SummaryCard';
 import { CandidatesStatusChart } from './CandidatesStatusChart';
@@ -6,10 +6,12 @@ import { RecentActivity } from './RecentActivity';
 import { AlertsPanel } from './AlertsPanel';
 import { QuickActions } from './QuickActions';
 import { useAuth } from '@/features/auth/context/AuthContext';
+import { hasFullAccess } from '@/features/auth/types/role.enum';
 
 export function DashboardPage() {
-  const { data, isLoading } = useDashboardData();
+  const { data, isLoading, isError } = useDashboardData();
   const { user } = useAuth();
+  const canViewActivityLog = hasFullAccess(user?.role);
 
   return (
     <Box>
@@ -19,6 +21,12 @@ export function DashboardPage() {
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
         Este es el resumen del sistema hoy.
       </Typography>
+
+      {isError && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          No se pudieron cargar las métricas del Dashboard. Verifica tu conexión e intenta de nuevo.
+        </Alert>
+      )}
 
       {/* Resumen general */}
       <Grid container spacing={2.5} sx={{ mb: 3 }}>
@@ -53,16 +61,21 @@ export function DashboardPage() {
         </Grid>
       </Grid>
 
-      {/* Actividad reciente + Acciones rápidas */}
+      {/* Actividad reciente + Acciones rápidas.
+          "Actividad reciente" es, hoy, el equivalente más cercano a un
+          Activity Log — contiene acciones administrativas (ej. "Administrador
+          creó un nuevo usuario"). RECRUITER no debe verla. */}
       <Grid container spacing={2.5}>
-        <Grid size={{ xs: 12, lg: 8 }}>
-          {isLoading || !data ? (
-            <Skeleton variant="rounded" height={260} sx={{ borderRadius: 3 }} />
-          ) : (
-            <RecentActivity items={data.recentActivity} />
-          )}
-        </Grid>
-        <Grid size={{ xs: 12, lg: 4 }}>
+        {canViewActivityLog && (
+          <Grid size={{ xs: 12, lg: 8 }}>
+            {isLoading || !data ? (
+              <Skeleton variant="rounded" height={260} sx={{ borderRadius: 3 }} />
+            ) : (
+              <RecentActivity items={data.recentActivity} />
+            )}
+          </Grid>
+        )}
+        <Grid size={{ xs: 12, lg: canViewActivityLog ? 4 : 12 }}>
           <QuickActions />
         </Grid>
       </Grid>

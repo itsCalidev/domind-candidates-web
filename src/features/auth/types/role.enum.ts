@@ -16,3 +16,19 @@ export const UserRole = {
 } as const;
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
+
+/**
+ * Regla de negocio central: SYSTEM y ADMIN tienen acceso administrativo
+ * completo; las restricciones de visibilidad se aplican específicamente
+ * a RECRUITER (nunca al revés). Se centraliza aquí a propósito para
+ * evitar comparaciones repetidas tipo `role === SYSTEM || role === ADMIN`
+ * por toda la app — cualquier pantalla que necesite aplicar esta regla
+ * importa esta única función.
+ *
+ * Esto NO es un sistema de permisos genérico (eso es una fase aparte,
+ * ya planeada — RoleGuard). Es solo el predicado binario que ya
+ * necesitamos hoy: ¿este rol tiene acceso completo, o es RECRUITER?
+ */
+export function hasFullAccess(role: UserRole | undefined): boolean {
+  return role === UserRole.SYSTEM || role === UserRole.ADMIN;
+}

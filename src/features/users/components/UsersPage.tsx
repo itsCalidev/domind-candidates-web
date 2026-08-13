@@ -31,7 +31,7 @@ import { VISIBLE_USER_ROLES, type User } from '../types/user.types';
 import { USER_EXPORT_COLUMNS } from '../services/userExport';
 import type { UserFormMode } from '../types/userForm.schema';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { UserRole } from '@/features/auth/types/role.enum';
+import { UserRole, hasFullAccess } from '@/features/auth/types/role.enum';
 import { paths } from '@/routes/paths';
 
 interface FormDialogState {
@@ -159,7 +159,7 @@ export function UsersPage() {
   // a Users, ni siquiera navegando la URL directamente (el ítem del
   // menú ya está oculto vía getVisibleNavItems, pero eso no bloquea la
   // navegación directa por URL).
-  if (currentUser?.role === UserRole.RECRUITER) {
+  if (!hasFullAccess(currentUser?.role)) {
     return <Navigate to={paths.dashboard} replace />;
   }
 
