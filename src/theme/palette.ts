@@ -26,7 +26,12 @@ export const accentColors = {
   purple: '#69478E',
 } as const;
 
-export const palette = {
+/**
+ * Tokens que NO cambian entre modo claro/oscuro: la identidad de marca
+ * (azules corporativos, colores de estado) se mantiene, solo cambian
+ * fondos/textos/superficies (ver `getPalette`).
+ */
+const sharedPaletteTokens = {
   primary: {
     main: brandColors.bluePrimary,
     light: brandColors.blueSecondary,
@@ -52,6 +57,11 @@ export const palette = {
   info: {
     main: accentColors.skyBlue,
   },
+} as const;
+
+const lightPalette = {
+  ...sharedPaletteTokens,
+  mode: 'light' as const,
   background: {
     default: '#F7F8FA',
     paper: '#FFFFFF',
@@ -60,4 +70,30 @@ export const palette = {
     primary: '#1A1A1A',
     secondary: brandColors.grey,
   },
-} as const;
+};
+
+/**
+ * Fondos "#121212"/"#1E1E1E" (no negro puro) a propósito: es la
+ * recomendación estándar de Material Design para modo oscuro — negro
+ * puro (#000) contra texto blanco puro genera demasiado contraste y
+ * cansa la vista en sesiones largas, justo lo opuesto de lo que se busca.
+ */
+const darkPalette = {
+  ...sharedPaletteTokens,
+  mode: 'dark' as const,
+  background: {
+    default: '#121212',
+    paper: '#1E1E1E',
+  },
+  text: {
+    primary: '#F5F5F5',
+    secondary: '#B3B3B3',
+  },
+};
+
+export type ThemeMode = 'light' | 'dark';
+
+/** Fuente única de paleta para theme/index.ts — nunca se construye un `createTheme` con otra cosa. */
+export function getPalette(mode: ThemeMode) {
+  return mode === 'dark' ? darkPalette : lightPalette;
+}

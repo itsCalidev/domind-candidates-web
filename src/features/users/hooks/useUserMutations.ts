@@ -6,6 +6,7 @@ import type {
   CreateUserRequest,
   UpdateUserPasswordRequest,
   UpdateUserRequest,
+  UpdateUserRoleRequest,
   UpdateUserStatusRequest,
 } from '../types/user.types';
 
@@ -63,6 +64,18 @@ export function useUserMutations() {
     },
   });
 
+  const updateRole = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateUserRoleRequest }) =>
+      usersService.updateRole(id, payload),
+    onSuccess: () => {
+      showToast('Rol del usuario actualizado exitosamente.');
+      return invalidateList();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo actualizar el rol del usuario.'), 'error');
+    },
+  });
+
   const updatePassword = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: UpdateUserPasswordRequest }) =>
       usersService.updatePassword(id, payload),
@@ -80,5 +93,5 @@ export function useUserMutations() {
     },
   });
 
-  return { createUser, updateUser, updateStatus, updatePassword, deleteUser };
+  return { createUser, updateUser, updateStatus, updateRole, updatePassword, deleteUser };
 }

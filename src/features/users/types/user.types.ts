@@ -44,16 +44,34 @@ export interface CreateUserRequest {
   role: UserRole;
 }
 
-/** Body de PATCH /users/:id. No incluye password ni role: ese endpoint no los acepta. */
+/**
+ * Body de PATCH /users/:id. No incluye password, role ni isActive: ese
+ * endpoint los rechaza explícitamente (el backend responde 400 "property
+ * role/isActive should not exist", verificado en vivo). `email` es
+ * opcional: confirmado que un PATCH sin ese campo deja el correo intacto
+ * — así el llamador puede omitirlo cuando no tiene permiso de editarlo
+ * (ver regla ADMIN/SYSTEM en UserFormDialog).
+ */
 export interface UpdateUserRequest {
   firstName: string;
   lastName: string;
-  email: string;
+  email?: string;
 }
 
 /** Body de PATCH /users/:id/status. */
 export interface UpdateUserStatusRequest {
   isActive: boolean;
+}
+
+/**
+ * Body de PATCH /users/:id/role. El backend acepta únicamente ADMIN o
+ * RECRUITER (UpdateRoleDto.role) y rechaza SYSTEM con 403 "No es posible
+ * asignar el rol SYSTEM." — confirmado en vivo. La UI solo debe ofrecer
+ * VISIBLE_USER_ROLES (ya excluye SYSTEM), pero el backend es quien
+ * realmente impone la regla de único SYSTEM.
+ */
+export interface UpdateUserRoleRequest {
+  role: UserRole;
 }
 
 /** Body de PATCH /users/:id/password. Cambio administrativo: sin contraseña anterior. */

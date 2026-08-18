@@ -1,7 +1,6 @@
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import Groups2OutlinedIcon from '@mui/icons-material/Groups2Outlined';
-import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import type { SvgIconComponent } from '@mui/icons-material';
 import { paths } from '@/routes/paths';
 import { UserRole } from '@/features/auth/types/role.enum';
@@ -34,7 +33,6 @@ export const navItems: NavItem[] = [
     icon: Groups2OutlinedIcon,
     allowedRoles: [UserRole.SYSTEM, UserRole.ADMIN],
   },
-  { label: 'Configuración', path: paths.settings, icon: SettingsOutlinedIcon },
 ];
 
 /** Ítems visibles para un rol dado. Sin rol (sesión aún cargando), no se muestra nada restringido. */

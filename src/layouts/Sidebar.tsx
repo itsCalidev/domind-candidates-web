@@ -15,6 +15,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getVisibleNavItems } from './navItems';
+import { AccessibilityMenu } from './AccessibilityMenu';
 import { useLayout } from './LayoutContext';
 import { paths } from '@/routes/paths';
 import { useAuth } from '@/features/auth/context/AuthContext';
@@ -59,6 +60,7 @@ export function Sidebar() {
         <IconButton
           onClick={toggleSidebar}
           size="small"
+          aria-label={isSidebarCollapsed ? 'Expandir menú' : 'Contraer menú'}
           sx={{ color: 'rgba(255,255,255,0.8)', display: { xs: 'none', md: 'inline-flex' } }}
         >
           {isSidebarCollapsed ? (
@@ -130,6 +132,7 @@ export function Sidebar() {
       <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
 
       <Box sx={{ p: 1 }}>
+        <AccessibilityMenu isSidebarCollapsed={isSidebarCollapsed} />
         <ListItemButton
           onClick={async () => {
             await logout();

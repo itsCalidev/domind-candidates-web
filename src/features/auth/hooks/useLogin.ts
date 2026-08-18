@@ -27,8 +27,8 @@ export function useLogin() {
   const onSubmit = form.handleSubmit(async (values) => {
     setServerError(null);
     try {
-      await login(values.email, values.password);
-      navigate(paths.dashboard);
+      const mustChangePassword = await login(values.email, values.password);
+      navigate(mustChangePassword ? paths.changePassword : paths.dashboard);
     } catch (error) {
       setServerError(extractApiErrorMessage(error, 'Correo o contraseña incorrectos'));
     }

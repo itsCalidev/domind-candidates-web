@@ -1,43 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { candidatesService } from '../services/candidateService';
-import type { CandidateDetail } from '../types/candidate.types';
 
+/**
+ * Detalle de un candidato vía TanStack Query, igual que useCandidatesList
+ * y useUsersQuery. Antes usaba useState/useEffect crudo, lo que dejaba el
+ * detalle fuera de la caché: tras asignar un reclutador no había nada que
+ * invalidar y la cabecera seguía mostrando el valor viejo. La clave
+ * ['candidates', 'detail', id] comparte prefijo con la del listado, así
+ * que useCandidateMutations puede invalidar ambas por separado.
+ *
+ * Devuelve la misma forma { candidate, isLoading } que antes para no
+ * obligar a CandidateDetailPage a cambiar.
+ */
 export function useCandidateDetail(id: string | undefined) {
-  const [candidate, setCandidate] = useState<CandidateDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const query = useQuery({
+    queryKey: ['candidates', 'detail', id],
+    queryFn: () => candidatesService.getById(id as string),
+    enabled: !!id,
+  });
 
-  useEffect(() => {
-    if (!id) {
-      setIsLoading(false);
-      return;
-    }
-
-    let isMounted = true;
-    setIsLoading(true);
-
-    candidatesService
-      .getById(id)
-      .then((data) => {
-        if (isMounted) {
-          setCandidate(data);
-        }
-      })
-      .catch((error) => {
-        console.error('Error al obtener el detalle del candidato:', error);
-        if (isMounted) {
-          setCandidate(null);
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [id]);
-
-  return { candidate, isLoading };
+  return {
+    candidate: query.data ?? null,
+    // Sin `id` la query queda deshabilitada y isLoading se quedaría en
+    // true para siempre; ese caso es "no hay nada que cargar", no "está
+    // cargando" — la página debe pasar directo a "Candidato no encontrado".
+    isLoading: !!id && query.isLoading,
+  };
 }

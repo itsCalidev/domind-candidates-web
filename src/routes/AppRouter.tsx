@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { PageLoader } from '@/shared/components/PageLoader';
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
 import { GuestRoute } from '@/features/auth/components/GuestRoute';
+import { RequirePasswordChangeRoute } from '@/features/auth/components/RequirePasswordChangeRoute';
 import { paths } from './paths';
 
 /**
@@ -15,6 +16,11 @@ import { paths } from './paths';
  */
 const LoginPage = lazy(() =>
   import('@/features/auth/components/LoginPage').then((m) => ({ default: m.LoginPage })),
+);
+const ForcePasswordChangePage = lazy(() =>
+  import('@/features/auth/components/ForcePasswordChangePage').then((m) => ({
+    default: m.ForcePasswordChangePage,
+  })),
 );
 const DashboardPage = lazy(() =>
   import('@/features/dashboard/components/DashboardPage').then((m) => ({ default: m.DashboardPage })),
@@ -31,6 +37,9 @@ const CandidateDetailPage = lazy(() =>
 );
 const UsersPage = lazy(() =>
   import('@/features/users/components/UsersPage').then((m) => ({ default: m.UsersPage })),
+);
+const ProfilePage = lazy(() =>
+  import('@/features/profile/components/ProfilePage').then((m) => ({ default: m.ProfilePage })),
 );
 const AdminLayout = lazy(() =>
   import('@/layouts/AdminLayout').then((m) => ({ default: m.AdminLayout })),
@@ -51,6 +60,17 @@ export function AppRouter() {
           }
         />
 
+        {/* Fuera de AdminLayout a propósito: sin sidebar, sin menú, mientras
+            el backend exija cambiar la contraseña (ver ProtectedRoute). */}
+        <Route
+          path={paths.changePassword}
+          element={
+            <RequirePasswordChangeRoute>
+              <ForcePasswordChangePage />
+            </RequirePasswordChangeRoute>
+          }
+        />
+
         {/* Rutas del panel administrativo, protegidas y bajo el mismo layout */}
         <Route
           element={
@@ -63,6 +83,7 @@ export function AppRouter() {
           <Route path={paths.candidates} element={<CandidatesListPage />} />
           <Route path={paths.candidateDetail(':id')} element={<CandidateDetailPage />} />
           <Route path={paths.users} element={<UsersPage />} />
+          <Route path={paths.profile} element={<ProfilePage />} />
         </Route>
       </Routes>
     </Suspense>

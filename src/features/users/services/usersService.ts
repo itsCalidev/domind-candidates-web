@@ -5,6 +5,7 @@ import type {
   CreateUserRequest,
   UpdateUserPasswordRequest,
   UpdateUserRequest,
+  UpdateUserRoleRequest,
   UpdateUserStatusRequest,
   User,
   UserListQuery,
@@ -45,6 +46,18 @@ export const usersService = {
     };
   },
 
+  /**
+   * GET /users/:id. Usado hoy por ProfilePage para precargar nombre/
+   * apellido del usuario autenticado (no vienen en el JWT ni en
+   * /auth/profile). OJO: confirmado en vivo que RECRUITER recibe 403 al
+   * pedir incluso su propio id — SYSTEM y ADMIN sí pueden. El llamador
+   * debe tolerar ese fallo, no asumir que siempre resuelve.
+   */
+  async getById(id: string): Promise<User> {
+    const { data } = await apiClient.get<User>(`/users/${id}`);
+    return data;
+  },
+
   async create(payload: CreateUserRequest): Promise<User> {
     const { data } = await apiClient.post<User>('/users', payload);
     return data;
@@ -57,6 +70,12 @@ export const usersService = {
 
   async updateStatus(id: string, payload: UpdateUserStatusRequest): Promise<User> {
     const { data } = await apiClient.patch<User>(`/users/${id}/status`, payload);
+    return data;
+  },
+
+  /** PATCH /users/:id/role — ver UpdateUserRoleRequest para las restricciones reales del DTO. */
+  async updateRole(id: string, payload: UpdateUserRoleRequest): Promise<User> {
+    const { data } = await apiClient.patch<User>(`/users/${id}/role`, payload);
     return data;
   },
 

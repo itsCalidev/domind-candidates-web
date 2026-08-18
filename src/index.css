@@ -11,3 +11,72 @@ body,
 #root {
   height: 100%;
 }
+
+:root {
+  --a11y-focus-color: #fdc52c;
+}
+
+/*
+ * Navegación por teclado: outline visible en CUALQUIER elemento
+ * enfocado vía teclado (:focus-visible lo distingue de un clic de mouse,
+ * que no debe mostrar el anillo). Sin esto, varios componentes de MUI
+ * (Chip, ListItemButton, TableRow) no dejan rastro visible al tabular.
+ */
+:focus-visible {
+  outline: 3px solid var(--a11y-focus-color);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/*
+ * Modo de alto contraste (ver AccessibilityContext.tsx). Usa `!important`
+ * a propósito: las superficies de MUI (Paper, Dialog, Drawer, inputs)
+ * traen su color de fondo/texto desde el tema vía `sx`, con la misma
+ * especificidad CSS que una clase — sin `!important` esta hoja de
+ * estilos estática perdería casi siempre contra los estilos inyectados
+ * en caliente por Emotion. NO cubre colores dentro de gráficas Recharts
+ * (se pintan con atributos SVG fill/stroke, no con CSS).
+ */
+body.high-contrast {
+  --a11y-focus-color: #ffff00;
+}
+
+body.high-contrast,
+body.high-contrast .MuiPaper-root,
+body.high-contrast .MuiDrawer-paper,
+body.high-contrast .MuiDialog-paper,
+body.high-contrast .MuiPopover-paper {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+body.high-contrast .MuiPaper-root,
+body.high-contrast .MuiDialog-paper,
+body.high-contrast .MuiDivider-root,
+body.high-contrast .MuiTableCell-root,
+body.high-contrast .MuiOutlinedInput-notchedOutline {
+  border-color: #ffffff !important;
+}
+
+body.high-contrast .MuiTypography-root,
+body.high-contrast .MuiInputBase-input,
+body.high-contrast .MuiInputLabel-root,
+body.high-contrast .MuiTableCell-root,
+body.high-contrast .MuiListItemText-primary,
+body.high-contrast .MuiListItemText-secondary,
+body.high-contrast .MuiFormHelperText-root {
+  color: #ffffff !important;
+}
+
+body.high-contrast .MuiButton-root,
+body.high-contrast .MuiChip-root,
+body.high-contrast .MuiTab-root,
+body.high-contrast a {
+  color: #ffff00 !important;
+}
+
+body.high-contrast .MuiButton-outlined,
+body.high-contrast .MuiChip-outlined,
+body.high-contrast .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
+  border-color: #ffff00 !important;
+}

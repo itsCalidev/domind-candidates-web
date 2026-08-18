@@ -6,9 +6,10 @@
  */
 export const paths = {
   login: '/login',
+  changePassword: '/change-password',
+  profile: '/profile',
   dashboard: '/dashboard',
   candidates: '/candidates',
   candidateDetail: (id: string) => `/candidates/${id}`,
   users: '/users',
-  settings: '/settings',
 } as const;

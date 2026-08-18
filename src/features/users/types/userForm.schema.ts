@@ -5,6 +5,8 @@ const userFormBaseSchema = z.object({
   lastName: z.string().min(1, 'El apellido es obligatorio'),
   email: z.string().min(1, 'El correo es obligatorio').email('Ingresa un correo válido'),
   role: z.string().optional(),
+  /** Solo se renderiza (y se envía a un endpoint real) en modo `edit`; ver UserFormDialog. */
+  isActive: z.boolean().optional(),
 });
 
 export type UserFormMode = 'create' | 'edit';

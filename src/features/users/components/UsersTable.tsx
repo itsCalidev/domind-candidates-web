@@ -88,7 +88,7 @@ export function UsersTable({
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell padding="checkbox" sx={stickyTableHeadCellSx}>
+            <TableCell padding="checkbox" scope="col" sx={stickyTableHeadCellSx}>
               <Checkbox
                 checked={headerState === 'checked'}
                 indeterminate={headerState === 'indeterminate'}
@@ -96,12 +96,12 @@ export function UsersTable({
                 slotProps={{ input: { 'aria-label': 'Seleccionar todas las filas visibles' } }}
               />
             </TableCell>
-            <TableCell sx={{ fontWeight: 600, py: 2, ...stickyTableHeadCellSx }}>Usuario</TableCell>
-            <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Correo</TableCell>
-            <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Rol</TableCell>
-            <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Estado</TableCell>
-            <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Última actualización</TableCell>
-            <TableCell sx={{ fontWeight: 600, ...stickyTableHeadCellSx }} align="right">
+            <TableCell scope="col" sx={{ fontWeight: 600, py: 2, ...stickyTableHeadCellSx }}>Usuario</TableCell>
+            <TableCell scope="col" sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Correo</TableCell>
+            <TableCell scope="col" sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Rol</TableCell>
+            <TableCell scope="col" sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Estado</TableCell>
+            <TableCell scope="col" sx={{ fontWeight: 600, ...stickyTableHeadCellSx }}>Última actualización</TableCell>
+            <TableCell scope="col" sx={{ fontWeight: 600, ...stickyTableHeadCellSx }} align="right">
               Acciones
             </TableCell>
           </TableRow>
@@ -154,6 +154,7 @@ export function UsersTable({
                     size="small"
                     onClick={(e) => openMenu(e, user)}
                     disabled={isStatusPending}
+                    aria-label={`Más acciones para ${user.firstName} ${user.lastName}`}
                   >
                     <MoreVertOutlinedIcon fontSize="small" />
                   </IconButton>

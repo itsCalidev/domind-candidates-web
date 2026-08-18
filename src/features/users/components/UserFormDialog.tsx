@@ -6,8 +6,10 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
+  FormControlLabel,
   MenuItem,
   Stack,
+  Switch,
   TextField,
 } from '@mui/material';
 import PersonAddAltOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined';
@@ -22,9 +24,10 @@ import {
 } from '../types/userForm.schema';
 import { VISIBLE_USER_ROLES, type User } from '../types/user.types';
 import { roleIcon } from './UserRoleChip';
-import { UserRole } from '@/features/auth/types/role.enum';
+import { UserRole, isSystem } from '@/features/auth/types/role.enum';
 import { extractApiErrorMessage } from '@/shared/utils/apiError';
 import { DialogHeader, dialogPaperSx } from '@/shared/components/DialogHeader';
+import { useAuth } from '@/features/auth/context/AuthContext';
 
 interface UserFormDialogProps {
   open: boolean;
@@ -60,9 +63,26 @@ function UserFormDialogContent({
   user: User | null;
   onClose: () => void;
 }) {
-  const { createUser, updateUser } = useUserMutations();
+  const { createUser, updateUser, updateRole, updateStatus } = useUserMutations();
+  const { user: currentUser } = useAuth();
   const [serverError, setServerError] = useState<string | null>(null);
   const schema = useMemo(() => buildUserFormSchema(mode), [mode]);
+
+  /**
+   * Edición de correo y rol restringida a SYSTEM (el backend, verificado
+   * en vivo, hoy NO impone esta restricción por rol en PATCH /users/:id
+   * ni en PATCH /users/:id/role — es una decisión de producto aplicada
+   * aquí, no una medida de seguridad; el backend sigue siendo la
+   * autoridad real). Activar/desactivar sí lo puede hacer también ADMIN
+   * (backend confirmado: PATCH /users/:id/status no restringe por rol),
+   * así que ese campo se muestra a cualquiera que llegue a esta pantalla.
+   * En modo `create`, correo y rol siempre se muestran — esa regla no
+   * aplica ahí, es una pantalla distinta.
+   */
+  const isSystemUser = isSystem(currentUser?.role);
+  const showEmailField = mode === 'create' || isSystemUser;
+  const showRoleField = mode === 'create' || isSystemUser;
+  const showStatusField = mode === 'edit';
 
   const {
     register,
@@ -76,10 +96,14 @@ function UserFormDialogContent({
       lastName: user?.lastName ?? '',
       email: user?.email ?? '',
       role: user?.role ?? '',
+      isActive: user?.isActive ?? true,
     },
   });
 
-  const isPending = mode === 'create' ? createUser.isPending : updateUser.isPending;
+  const isPending =
+    mode === 'create'
+      ? createUser.isPending
+      : updateUser.isPending || updateRole.isPending || updateStatus.isPending;
 
   const onSubmit = handleSubmit(async (values) => {
     setServerError(null);
@@ -94,14 +118,37 @@ function UserFormDialogContent({
           role: values.role as UserRole,
         });
       } else if (user) {
+        // PATCH /users/:id, /role y /status son endpoints separados en
+        // el backend (confirmado: el primero rechaza role/isActive con
+        // 400 "property X should not exist"), así que cada campo con
+        // permiso viaja por su propia llamada. Solo se dispara rol/status
+        // si de verdad cambiaron, para no generar escrituras (ni una
+        // eventual entrada de auditoría futura) sin cambio real.
         await updateUser.mutateAsync({
           id: user.id,
           payload: {
             firstName: values.firstName,
             lastName: values.lastName,
-            email: values.email,
+            // ADMIN nunca puede cambiar el correo: se omite del payload
+            // por completo (no solo se oculta el campo), sin depender de
+            // que el formulario nunca haya mostrado el input.
+            ...(showEmailField ? { email: values.email } : {}),
           },
         });
+
+        if (showRoleField && values.role && values.role !== user.role) {
+          await updateRole.mutateAsync({
+            id: user.id,
+            payload: { role: values.role as UserRole },
+          });
+        }
+
+        if (showStatusField && values.isActive !== undefined && values.isActive !== user.isActive) {
+          await updateStatus.mutateAsync({
+            id: user.id,
+            payload: { isActive: values.isActive },
+          });
+        }
       }
       onClose();
     } catch (error) {
@@ -129,7 +176,9 @@ function UserFormDialogContent({
         description={
           mode === 'create'
             ? 'El sistema generará una contraseña temporal para este usuario.'
-            : undefined
+            : !showEmailField
+              ? 'Puedes editar el nombre, el apellido y el estado de este usuario.'
+              : undefined
         }
         onClose={isPending ? undefined : onClose}
       />
@@ -153,16 +202,18 @@ function UserFormDialogContent({
               helperText={errors.lastName?.message}
               {...register('lastName')}
             />
-            <TextField
-              label="Correo electrónico"
-              type="email"
-              fullWidth
-              error={!!errors.email}
-              helperText={errors.email?.message}
-              {...register('email')}
-            />
+            {showEmailField && (
+              <TextField
+                label="Correo electrónico"
+                type="email"
+                fullWidth
+                error={!!errors.email}
+                helperText={errors.email?.message}
+                {...register('email')}
+              />
+            )}
 
-            {mode === 'create' && (
+            {showRoleField && (
               <Controller
                 control={control}
                 name="role"
@@ -175,6 +226,13 @@ function UserFormDialogContent({
                     helperText={errors.role?.message}
                     {...field}
                   >
+                    {/*
+                      VISIBLE_USER_ROLES ya excluye SYSTEM (definido en
+                      user.types.ts) — mismo arreglo que usa el modo
+                      `create`, así que "único SYSTEM" nunca aparece como
+                      opción aquí tampoco. El backend además lo rechaza
+                      con 403 si de todos modos se intentara.
+                    */}
                     {VISIBLE_USER_ROLES.map((role) => {
                       const Icon = roleIcon[role];
                       return (
@@ -185,6 +243,24 @@ function UserFormDialogContent({
                       );
                     })}
                   </TextField>
+                )}
+              />
+            )}
+
+            {showStatusField && (
+              <Controller
+                control={control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={!!field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                      />
+                    }
+                    label={field.value ? 'Usuario activo' : 'Usuario inactivo'}
+                  />
                 )}
               />
             )}

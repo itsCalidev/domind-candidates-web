@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -15,7 +15,14 @@ import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
 import { useCandidatesList } from '../hooks/useCandidatesList';
 import { CandidatesTable } from './CandidatesTable';
-import { CANDIDATE_STATUS_LABEL, type CandidateStatus, type CandidateListItem } from '../types/candidate.types';
+import { AssignRecruiterDialog } from './AssignRecruiterDialog';
+import {
+  ALL_CANDIDATE_STATUSES,
+  CANDIDATE_STATUS_LABEL,
+  RECRUITER_EDITABLE_STATUSES,
+  type CandidateStatus,
+  type CandidateListItem,
+} from '../types/candidate.types';
 import {
   CANDIDATE_EXPORT_COLUMNS,
   CANDIDATE_PDF_TABLE_COLUMNS,
@@ -29,8 +36,19 @@ import { useExport } from '@/shared/hooks/useExport';
 import { downloadCsv } from '@/shared/utils/csv';
 import { downloadTablePdf } from '@/shared/utils/pdf';
 import { extractApiErrorMessage } from '@/shared/utils/apiError';
+import { useAuth } from '@/features/auth/context/AuthContext';
+import { hasFullAccess } from '@/features/auth/types/role.enum';
 
 export function CandidatesListPage() {
+  const { user } = useAuth();
+  const canAssignRecruiter = hasFullAccess(user?.role);
+  // Mismo criterio que el diálogo de cambio de estado: un RECRUITER nunca
+  // ve "Archivado", ni siquiera como opción de filtro — archivar es un
+  // estado con efectos colaterales (ver RECRUITER_EDITABLE_STATUSES) que
+  // solo SYSTEM/ADMIN pueden alcanzar.
+  const visibleStatuses = canAssignRecruiter ? ALL_CANDIDATE_STATUSES : RECRUITER_EDITABLE_STATUSES;
+  const [candidateToAssign, setCandidateToAssign] = useState<CandidateListItem | null>(null);
+
   const {
     candidates,
     totalResults,
@@ -178,9 +196,9 @@ export function CandidatesListPage() {
           sx={{ minWidth: 180 }}
         >
           <MenuItem value="all">Todos</MenuItem>
-          {Object.entries(CANDIDATE_STATUS_LABEL).map(([value, label]) => (
-            <MenuItem key={value} value={value}>
-              {label}
+          {visibleStatuses.map((status) => (
+            <MenuItem key={status} value={status}>
+              {CANDIDATE_STATUS_LABEL[status]}
             </MenuItem>
           ))}
         </TextField>
@@ -231,6 +249,8 @@ export function CandidatesListPage() {
 
           <CandidatesTable
             candidates={candidates}
+            onAssignRecruiter={setCandidateToAssign}
+            canAssignRecruiter={canAssignRecruiter}
             headerState={selection.headerState}
             isSelected={selection.isSelected}
             toggleRow={selection.toggleRow}
@@ -250,6 +270,12 @@ export function CandidatesListPage() {
           />
         </>
       )}
+
+      <AssignRecruiterDialog
+        open={!!candidateToAssign}
+        candidate={candidateToAssign}
+        onClose={() => setCandidateToAssign(null)}
+      />
     </Box>
   );
 }

@@ -40,6 +40,7 @@ export function DialogHeader({
         <IconButton
           onClick={onClose}
           size="small"
+          aria-label="Cerrar"
           sx={{ position: 'absolute', top: 16, right: 16, color: 'text.secondary' }}
         >
           <CloseOutlinedIcon fontSize="small" />
