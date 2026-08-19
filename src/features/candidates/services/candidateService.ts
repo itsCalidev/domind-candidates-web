@@ -77,6 +77,12 @@ interface RawHealth {
   smokingExpensePerWeek?: number | null;
   usedDrugs?: boolean | null;
   drugsDetails?: string | null;
+  // Hábitos de vida: ver el comentario en CandidateHealth
+  // (candidate.types.ts) — no confirmados todavía en /docs-json.
+  dietQuality?: string | null;
+  physicalActivity?: string | null;
+  sedentaryHours?: number | null;
+  screenTimeHours?: number | null;
 }
 
 interface RawHousing {
@@ -236,6 +242,10 @@ export const candidatesService = {
         smokingExpensePerWeek: data.health?.smokingExpensePerWeek ?? null,
         usedDrugs: data.health?.usedDrugs ?? null,
         drugsDetails: data.health?.drugsDetails ?? null,
+        dietQuality: data.health?.dietQuality ?? null,
+        physicalActivity: data.health?.physicalActivity ?? null,
+        sedentaryHours: data.health?.sedentaryHours ?? null,
+        screenTimeHours: data.health?.screenTimeHours ?? null,
       },
       housing: {
         propertyOwner: data.housing?.propertyOwner ?? null,

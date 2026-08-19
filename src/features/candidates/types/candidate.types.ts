@@ -81,6 +81,18 @@ export interface CandidateHealth {
   smokingExpensePerWeek: number | null;
   usedDrugs: boolean | null;
   drugsDetails: string | null;
+  /**
+   * Hábitos de vida agregados al modelo de `health` (2026-08). No
+   * aparecen todavía en `UpdateCandidateHealthDto` de /docs-json — el
+   * backend puede no haber redesplegado Swagger. Se mapean igual porque
+   * el usuario confirmó el cambio de base de datos explícitamente, pero
+   * quedan opcionales y con `?? null` en candidateService.ts para no
+   * romper nada si el backend real todavía no los envía.
+   */
+  dietQuality: string | null;
+  physicalActivity: string | null;
+  sedentaryHours: number | null;
+  screenTimeHours: number | null;
 }
 
 export interface CandidateHousing {
