@@ -29,6 +29,17 @@ interface FamilyTabProps {
 }
 
 interface FamilyChartDatum {
+  /**
+   * Clave única para el <XAxis dataKey>. Recharts indexa el payload del
+   * Tooltip por el valor de esta clave — con `relationship` repetido
+   * (dos "Hijo(a)"), varias barras comparten la misma categoría y el
+   * tooltip mostraba siempre los datos de la PRIMERA que encontraba, sin
+   * importar sobre cuál barra real estaba el cursor. El índice del
+   * arreglo la vuelve única incluso si dos familiares tienen el mismo
+   * parentesco Y el mismo nombre.
+   */
+  uniqueKey: string;
+  /** Texto limpio para mostrar (eje y tooltip) — nunca `uniqueKey`, que lleva el índice pegado. */
   label: string;
   age: number;
   occupation: string | null;
@@ -39,13 +50,15 @@ interface FamilyChartDatum {
  * Tooltip a medida: el `payload` de Recharts trae por default solo el
  * valor graficado (`age`) — `payload[0].payload` es el ÚNICO camino para
  * llegar al resto del registro original (occupation/education), que es
- * justo lo que pidió el cliente mostrar al pasar el cursor.
+ * justo lo que pidió el cliente mostrar al pasar el cursor. Lee el
+ * nombre a mostrar desde `member.label` (no del `label` que Recharts
+ * pasa por separado, que ahora es `uniqueKey` y no se ve limpio).
  *
  * Usa `sx` de MUI (no `contentStyle` con hex) porque al ser un
  * componente propio puede apoyarse en los tokens del theme directamente
  * — se ve bien en oscuro sin tener que resolver colores a mano.
  */
-function FamilyAgeTooltip({ active, payload, label }: TooltipContentProps) {
+function FamilyAgeTooltip({ active, payload }: TooltipContentProps) {
   if (!active || !payload || payload.length === 0) return null;
   const member = payload[0].payload as FamilyChartDatum;
 
@@ -55,7 +68,7 @@ function FamilyAgeTooltip({ active, payload, label }: TooltipContentProps) {
       sx={{ p: 1.5, borderRadius: 2, border: '1px solid', borderColor: 'divider', minWidth: 180 }}
     >
       <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-        {label}
+        {member.label}
       </Typography>
       <Typography variant="body2" color="text.secondary">
         Edad: <strong>{member.age}</strong>
@@ -90,12 +103,16 @@ export function FamilyTab({ family, familyMembers }: FamilyTabProps) {
 
   const chartData: FamilyChartDatum[] = familyMembers
     .filter((member) => member.age !== null)
-    .map((member) => ({
-      label: member.relationship ?? member.name,
-      age: member.age as number,
-      occupation: member.occupation,
-      education: member.education,
-    }));
+    .map((member, index) => {
+      const label = member.relationship ?? member.name;
+      return {
+        uniqueKey: `${label}-${index}`,
+        label,
+        age: member.age as number,
+        occupation: member.occupation,
+        education: member.education,
+      };
+    });
 
   const chartDescription = `Gráfica de barras con la edad de cada familiar registrado: ${chartData
     .map((entry) => `${entry.label}, ${entry.age} años`)
@@ -138,7 +155,8 @@ export function FamilyTab({ family, familyMembers }: FamilyTabProps) {
               <BarChart data={chartData} margin={{ left: 0, right: 16, top: 8 }}>
                 <CartesianGrid vertical={false} stroke={theme.palette.divider} />
                 <XAxis
-                  dataKey="label"
+                  dataKey="uniqueKey"
+                  tickFormatter={(_, index) => chartData[index]?.label ?? ''}
                   tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
                   axisLine={false}
                   tickLine={false}
