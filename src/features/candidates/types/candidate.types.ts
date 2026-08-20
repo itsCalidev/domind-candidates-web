@@ -1,9 +1,15 @@
+/**
+ * Renombrado 2026-08 para alinear con la terminología real de RH
+ * (confirmado en vivo contra /docs-json: el enum del backend ya usa
+ * estos nombres): IN_PROGRESS→IN_EVALUATION, APPROVED→RECOMMENDED,
+ * REJECTED→NOT_RECOMMENDED. Un candidato no se "aprueba", se "recomienda".
+ */
 export type CandidateStatus =
-  | 'IN_PROGRESS'
+  | 'IN_EVALUATION'
   | 'COMPLETED'
   | 'UNDER_REVIEW'
-  | 'APPROVED'
-  | 'REJECTED'
+  | 'RECOMMENDED'
+  | 'NOT_RECOMMENDED'
   | 'ARCHIVED';
 
 /**
@@ -181,11 +187,11 @@ export function recruiterFullName(recruiter: AssignedRecruiter | null): string {
 }
 
 export const CANDIDATE_STATUS_LABEL: Record<CandidateStatus, string> = {
-  IN_PROGRESS: 'En progreso',
+  IN_EVALUATION: 'En evaluación',
   COMPLETED: 'Completo',
   UNDER_REVIEW: 'En revisión',
-  APPROVED: 'Aprobado',
-  REJECTED: 'Rechazado',
+  RECOMMENDED: 'Recomendable',
+  NOT_RECOMMENDED: 'No recomendable',
   ARCHIVED: 'Archivado',
 };
 
@@ -201,26 +207,34 @@ export const ALL_CANDIDATE_STATUSES = Object.keys(CANDIDATE_STATUS_LABEL) as Can
  * registra finishedAt) que no corresponde exponer al flujo de RECRUITER.
  */
 export const RECRUITER_EDITABLE_STATUSES: CandidateStatus[] = [
-  'IN_PROGRESS',
+  'IN_EVALUATION',
   'UNDER_REVIEW',
   'COMPLETED',
-  'APPROVED',
-  'REJECTED',
+  'RECOMMENDED',
+  'NOT_RECOMMENDED',
 ];
 
 /**
  * Estados en los que un expediente se considera "cerrado" y puede
  * exportarse a Excel desde CandidateDetailPage — decisión de negocio:
  * el reporte solo tiene sentido una vez que el proceso terminó, no
- * mientras el candidato sigue En progreso/En revisión/Archivado.
+ * mientras el candidato sigue En evaluación/En revisión/Archivado.
  */
-export const EXCEL_REPORT_STATUSES: CandidateStatus[] = ['COMPLETED', 'APPROVED', 'REJECTED'];
+export const EXCEL_REPORT_STATUSES: CandidateStatus[] = ['COMPLETED', 'RECOMMENDED', 'NOT_RECOMMENDED'];
 
+/**
+ * IN_EVALUATION usa un azul distinto al de COMPLETED (que ya ocupaba el
+ * azul "info" del theme, #67B1E3) para que ambos estados sigan viéndose
+ * distinguibles en los Chips y en la gráfica del dashboard — no es el
+ * hex exacto de theme.palette.info.main, es una variante de la misma
+ * familia. RECOMMENDED/NOT_RECOMMENDED sí usan el verde/rojo exactos de
+ * theme.palette.success.main / error.main.
+ */
 export const CANDIDATE_STATUS_COLOR: Record<CandidateStatus, string> = {
-  IN_PROGRESS: '#F39200',
+  IN_EVALUATION: '#0083C1',
   COMPLETED: '#67B1E3',
   UNDER_REVIEW: '#69478E',
-  APPROVED: '#76B82A',
-  REJECTED: '#FF0000',
+  RECOMMENDED: '#76B82A',
+  NOT_RECOMMENDED: '#D32F2F',
   ARCHIVED: '#808080',
 };
