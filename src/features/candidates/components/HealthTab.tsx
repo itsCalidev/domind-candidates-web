@@ -1,4 +1,4 @@
-import { Alert, AlertTitle, Box, Chip, Grid, Paper, Stack, Typography } from '@mui/material';
+import { Alert, AlertTitle, Box, Chip, Grid, LinearProgress, Paper, Stack, Typography } from '@mui/material';
 import MedicalServicesOutlinedIcon from '@mui/icons-material/MedicalServicesOutlined';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import AccessibilityNewOutlinedIcon from '@mui/icons-material/AccessibilityNewOutlined';
@@ -7,10 +7,20 @@ import DirectionsRunOutlinedIcon from '@mui/icons-material/DirectionsRunOutlined
 import SmokingRoomsOutlinedIcon from '@mui/icons-material/SmokingRoomsOutlined';
 import MonitorWeightOutlinedIcon from '@mui/icons-material/MonitorWeightOutlined';
 import OpacityOutlinedIcon from '@mui/icons-material/OpacityOutlined';
+import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
+import HealthAndSafetyOutlinedIcon from '@mui/icons-material/HealthAndSafetyOutlined';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import type { ReactNode } from 'react';
 import { RiskGlass } from './RiskGlass';
 import { BmiGauge } from './BmiGauge';
 import { computeHealthRisk } from '../utils/healthRisk';
+import {
+  classifyCurrentHealth,
+  classifyPhysicalAspect,
+  isEmptyMedicalText,
+  splitMedicalEntries,
+} from '../utils/healthQualitative';
 import type { CandidateHealth } from '../types/candidate.types';
 
 interface HealthTabProps {
@@ -20,8 +30,49 @@ interface HealthTabProps {
 const NOT_SPECIFIED = 'No especificado';
 
 function formatBoolean(value: boolean | null): string {
-  if (value === null) return NOT_SPECIFIED;
+  if (value === null) return 'Sin registrar';
   return value ? 'Sí' : 'No';
+}
+
+/**
+ * Estado vacío "que transmita salud" para pastDiseases/surgeries/
+ * chronicDiseasesDetails cuando no hay nada que reportar — reemplaza el
+ * antiguo texto plano "No especificado", que el cliente pidió sacar de
+ * esta vista por completo.
+ */
+function CleanHistoryBadge({ label }: { label: string }) {
+  return (
+    <Stack direction="row" spacing={1} alignItems="center">
+      <HealthAndSafetyOutlinedIcon fontSize="small" color="success" />
+      <Typography variant="body2" fontWeight={600} color="success.main">
+        {label}
+      </Typography>
+    </Stack>
+  );
+}
+
+/**
+ * Convierte un campo de texto libre (ej. "Diabetes, Hipertensión") en
+ * chips individuales en vez de un párrafo — mismo ícono para todas las
+ * entradas de un mismo campo, instanciado fresco por cada Chip (no se
+ * reutiliza un único elemento de ícono entre varios Chips).
+ */
+function MedicalChipList({
+  entries,
+  color,
+  icon: Icon,
+}: {
+  entries: string[];
+  color: 'error' | 'warning';
+  icon: typeof MonitorHeartOutlinedIcon;
+}) {
+  return (
+    <Stack direction="row" flexWrap="wrap" gap={0.75}>
+      {entries.map((entry) => (
+        <Chip key={entry} label={entry} color={color} variant="outlined" size="small" icon={<Icon />} />
+      ))}
+    </Stack>
+  );
 }
 
 function SummaryCard({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
@@ -64,6 +115,8 @@ function InfoLine({ label, value }: { label: string; value: ReactNode }) {
 
 export function HealthTab({ health }: HealthTabProps) {
   const { total, factors } = computeHealthRisk(health);
+  const currentHealthMeter = classifyCurrentHealth(health.currentHealth);
+  const physicalAspectSeverity = classifyPhysicalAspect(health.physicalAspect);
   const riskSeverity = total > 60 ? 'error' : total > 0 ? 'warning' : 'success';
   const riskTitle =
     riskSeverity === 'error'
@@ -113,25 +166,103 @@ export function HealthTab({ health }: HealthTabProps) {
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <SummaryCard icon={<MedicalServicesOutlinedIcon fontSize="small" />} title="Enfermedades crónicas">
             <InfoLine label="Antecedentes familiares" value={formatBoolean(health.chronicDiseasesFamily)} />
-            <InfoLine
-              label="Detalle"
-              value={health.chronicDiseasesDetails ?? 'No se especificaron detalles.'}
-            />
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                Detalle
+              </Typography>
+              {isEmptyMedicalText(health.chronicDiseasesDetails) ? (
+                <CleanHistoryBadge label="Sin antecedentes" />
+              ) : (
+                <MedicalChipList
+                  entries={splitMedicalEntries(health.chronicDiseasesDetails)}
+                  color="warning"
+                  icon={MonitorHeartOutlinedIcon}
+                />
+              )}
+            </Box>
           </SummaryCard>
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <SummaryCard icon={<FactCheckOutlinedIcon fontSize="small" />} title="Historial médico">
-            <InfoLine label="Enfermedades pasadas" value={health.pastDiseases ?? NOT_SPECIFIED} />
-            <InfoLine label="Cirugías" value={health.surgeries ?? NOT_SPECIFIED} />
-            <InfoLine label="Estado de salud actual" value={health.currentHealth ?? NOT_SPECIFIED} />
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                Enfermedades pasadas
+              </Typography>
+              {isEmptyMedicalText(health.pastDiseases) ? (
+                <CleanHistoryBadge label="Historial limpio" />
+              ) : (
+                <MedicalChipList
+                  entries={splitMedicalEntries(health.pastDiseases)}
+                  color="warning"
+                  icon={MonitorHeartOutlinedIcon}
+                />
+              )}
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                Cirugías
+              </Typography>
+              {isEmptyMedicalText(health.surgeries) ? (
+                <CleanHistoryBadge label="Sin cirugías" />
+              ) : (
+                <MedicalChipList
+                  entries={splitMedicalEntries(health.surgeries)}
+                  color="error"
+                  icon={LocalHospitalOutlinedIcon}
+                />
+              )}
+            </Box>
           </SummaryCard>
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <SummaryCard icon={<AccessibilityNewOutlinedIcon fontSize="small" />} title="Aspecto físico">
-            <InfoLine label="Aspecto físico" value={health.physicalAspect ?? NOT_SPECIFIED} />
-            <InfoLine label="Usa lentes" value={formatBoolean(health.usesGlasses)} />
+          <SummaryCard icon={<AccessibilityNewOutlinedIcon fontSize="small" />} title="Aspecto físico y condiciones">
+            <Stack direction="row" spacing={1.25} alignItems="center">
+              {health.usesGlasses === true ? (
+                <VisibilityOutlinedIcon color="primary" fontSize="small" />
+              ) : (
+                <VisibilityOffOutlinedIcon sx={{ color: 'text.disabled' }} fontSize="small" />
+              )}
+              <Typography variant="body2">
+                Usa lentes: <strong>{formatBoolean(health.usesGlasses)}</strong>
+              </Typography>
+            </Stack>
+
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                Aspecto físico
+              </Typography>
+              {isEmptyMedicalText(health.physicalAspect) ? (
+                <Typography variant="body2" color="text.secondary">
+                  Sin registrar
+                </Typography>
+              ) : (
+                <Chip
+                  label={health.physicalAspect}
+                  size="small"
+                  color={physicalAspectSeverity === 'default' ? undefined : physicalAspectSeverity}
+                  variant={physicalAspectSeverity === 'default' ? 'outlined' : 'filled'}
+                />
+              )}
+            </Box>
+
+            <Box>
+              <Stack direction="row" justifyContent="space-between" alignItems="baseline">
+                <Typography variant="caption" color="text.secondary">
+                  Estado actual
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {isEmptyMedicalText(health.currentHealth) ? 'Sin registrar' : health.currentHealth}
+                </Typography>
+              </Stack>
+              <LinearProgress
+                variant="determinate"
+                value={currentHealthMeter.percent}
+                color={currentHealthMeter.color}
+                sx={{ mt: 0.5, height: 8, borderRadius: 4 }}
+              />
+            </Box>
           </SummaryCard>
         </Grid>
 
