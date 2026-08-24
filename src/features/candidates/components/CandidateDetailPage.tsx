@@ -133,14 +133,12 @@ export function CandidateDetailPage() {
   // archivar (canAssignRecruiter agrupa ambos, igual que en el resto de
   // esta página).
   const statusOptions = getValidStatusTransitions(candidate.status, canAssignRecruiter);
-  // Barra de progreso: solo tiene sentido para el reclutador asignado, y
-  // solo mientras la calificación sigue en curso — una vez que el
-  // backend completa el expediente (o ya se emitió/archivó el dictamen),
-  // el progreso de secciones deja de ser información accionable.
-  const showEvaluationProgress =
-    !canAssignRecruiter &&
-    canChangeStatus &&
-    (candidate.status === 'IN_EVALUATION' || candidate.status === 'UNDER_REVIEW');
+  // Barra de progreso: visible siempre para el reclutador asignado, sin
+  // importar el estado del candidato — un indicador de progreso nunca
+  // debería desaparecer al llegar al 100%, porque ahí es cuando más
+  // sirve como confirmación de que el trabajo de evaluación concluyó
+  // (ver el color/texto de éxito más abajo, con currentCount === required).
+  const showEvaluationProgress = !canAssignRecruiter && canChangeStatus;
   // El backend rechaza (400) asignar reclutador a un candidato archivado
   // y además lo desasigna automáticamente al archivarlo — la acción no
   // tiene sentido aquí, así que se deshabilita en vez de dejar que falle.
@@ -383,7 +381,7 @@ export function CandidateDetailPage() {
             color={allSectionsEvaluated ? 'success.main' : 'text.secondary'}
           >
             {allSectionsEvaluated
-              ? 'Todas las secciones evaluadas'
+              ? `Evaluación completa (${currentEvaluatedCount}/${requiredEvaluatedCount})`
               : `Faltan ${missingSectionsCount} sección${missingSectionsCount === 1 ? '' : 'es'} por evaluar antes de poder completar el dictamen.`}
           </Typography>
         </Box>
