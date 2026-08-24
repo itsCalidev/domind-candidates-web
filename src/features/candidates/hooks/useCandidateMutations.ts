@@ -73,6 +73,10 @@ export function useCandidateMutations() {
 
   // Sin toast de éxito propio: SectionGrader ya muestra su propio badge
   // "Sección evaluada" inline, un toast aparte sería ruido redundante.
+  // Invalida ['candidates','evaluations',id] (no solo detail/list): es
+  // la clave que usa useGetEvaluations, la fuente real del progreso —
+  // sin esto, la barra de la cabecera y el propio SectionGrader se
+  // quedarían mostrando el valor previo a guardar.
   const evaluateSection = useMutation({
     mutationFn: ({
       id,
@@ -85,7 +89,11 @@ export function useCandidateMutations() {
       rating: EvaluationRating;
       comments?: string;
     }) => candidatesService.evaluateSection(id, section, { rating, comments }),
-    onSuccess: () => invalidateCandidates(),
+    onSuccess: (_data, variables) =>
+      Promise.all([
+        invalidateCandidates(),
+        queryClient.invalidateQueries({ queryKey: ['candidates', 'evaluations', variables.id] }),
+      ]),
     onError: (error) => {
       showToast(extractApiErrorMessage(error, 'No se pudo guardar la calificación.'), 'error');
     },

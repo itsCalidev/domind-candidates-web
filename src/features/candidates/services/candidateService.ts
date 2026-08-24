@@ -153,14 +153,30 @@ interface BackendCandidateDetail extends DetailedCandidateList {
   vehicles?: Vehicle[];
   debts?: Debt[];
   bankCards?: BankCard[];
-  /**
-   * No confirmado si GET /candidates/:id ya incluye esto — PUT
-   * /candidates/:id/evaluations/:section es un endpoint nuevo y Swagger
-   * no documenta ninguno de los dos lados. Se mapea de forma defensiva
-   * (ver getById) por si el backend aún no lo envía.
-   */
-  evaluations?: SectionEvaluation[];
   // Identity vendrá después
+}
+
+/**
+ * Shape crudo de GET /candidates/:id/evaluations — endpoint dedicado,
+ * separado de GET /candidates/:id. `comments` llega como `string` (no
+ * `string | null`); se normaliza en getEvaluations().
+ */
+interface RawSectionEvaluation {
+  section: string;
+  rating: string;
+  comments: string;
+}
+
+interface RawEvaluationsResponse {
+  evaluations: RawSectionEvaluation[];
+  currentCount: number;
+  required: number;
+}
+
+export interface CandidateEvaluationsSummary {
+  evaluations: SectionEvaluation[];
+  currentCount: number;
+  required: number;
 }
 
 // 2. Query Params permitidos por nuestro Backend DTO
@@ -292,7 +308,6 @@ export const candidatesService = {
       vehicles: data.vehicles ?? [],
       debts: data.debts ?? [],
       bankCards: data.bankCards ?? [],
-      evaluations: data.evaluations ?? [],
     };
   },
 
@@ -342,5 +357,26 @@ export const candidatesService = {
     payload: { rating: EvaluationRating; comments?: string },
   ): Promise<void> {
     await apiClient.put(`/candidates/${id}/evaluations/${section}`, payload);
+  },
+
+  /**
+   * GET /candidates/:id/evaluations — contrato confirmado por el
+   * usuario en el chat (no documentado en /docs-json todavía):
+   * { evaluations: [{section, rating, comments}], currentCount, required }.
+   * `comments` llega como string (no string | null) en ese shape; se
+   * normaliza a `null` cuando viene vacío para que coincida con
+   * SectionEvaluation en el resto de la app.
+   */
+  async getEvaluations(id: string): Promise<CandidateEvaluationsSummary> {
+    const { data } = await apiClient.get<RawEvaluationsResponse>(`/candidates/${id}/evaluations`);
+    return {
+      evaluations: data.evaluations.map((evaluation) => ({
+        section: evaluation.section as EvaluationSection,
+        rating: evaluation.rating as EvaluationRating,
+        comments: evaluation.comments || null,
+      })),
+      currentCount: data.currentCount,
+      required: data.required,
+    };
   },
 };

@@ -20,9 +20,18 @@ import type { EvaluationRating, EvaluationSection, SectionEvaluation } from '../
 interface SectionGraderProps {
   candidateId: string;
   section: EvaluationSection;
+  /**
+   * Debe venir de useGetEvaluations (fuente única de verdad, no estado
+   * local levantado en el padre) — así, tras un guardado exitoso, la
+   * invalidación de esa query trae el valor fresco solo, sin que este
+   * componente tenga que reportar nada hacia arriba.
+   *
+   * IMPORTANTE: quien renderiza <SectionGrader> debe pasarle
+   * `key={section}` — sin eso, al cambiar de sub-pestaña React reutiliza
+   * la misma instancia (mismo tipo, misma posición en el árbol) y el
+   * rating/notas de la sección anterior se filtran a la nueva.
+   */
   initialEvaluation: SectionEvaluation | null;
-  /** CandidateDetailPage necesita enterarse del guardado para actualizar el progreso del dictamen. */
-  onSaved: (evaluation: SectionEvaluation) => void;
 }
 
 const RATING_OPTIONS: { value: EvaluationRating; label: string; icon: typeof CheckCircleOutlinedIcon }[] = [
@@ -44,33 +53,30 @@ const RATING_COLOR: Record<EvaluationRating, 'success' | 'warning' | 'error'> = 
  * Llama a PUT /candidates/:id/evaluations/:section — contrato confirmado
  * por el usuario: `{ rating: 'GREEN'|'YELLOW'|'RED', comments?: string }`.
  */
-export function SectionGrader({ candidateId, section, initialEvaluation, onSaved }: SectionGraderProps) {
+export function SectionGrader({ candidateId, section, initialEvaluation }: SectionGraderProps) {
   const { evaluateSection } = useCandidateMutations();
   const [rating, setRating] = useState<EvaluationRating | null>(initialEvaluation?.rating ?? null);
   const [comments, setComments] = useState(initialEvaluation?.comments ?? '');
-  const [savedEvaluation, setSavedEvaluation] = useState<SectionEvaluation | null>(initialEvaluation);
 
   const isPending = evaluateSection.isPending;
-  const hasUnsavedChanges =
-    rating !== (savedEvaluation?.rating ?? null) || comments.trim() !== (savedEvaluation?.comments ?? '');
+  const isAlreadyEvaluated = initialEvaluation !== null;
+  // Comparado contra la prop (la última evaluación confirmada por el
+  // servidor), no contra una copia en estado local: tras guardar, la
+  // invalidación de useGetEvaluations trae un `initialEvaluation` nuevo
+  // que coincide con lo recién guardado, así que esta comparación vuelve
+  // a `false` sola — sin necesidad de que el componente se entere "a mano".
+  const hasChanges =
+    rating !== (initialEvaluation?.rating ?? null) || comments.trim() !== (initialEvaluation?.comments ?? '');
 
   async function handleSave() {
     if (!rating) return;
-    const trimmedComments = comments.trim();
     try {
       await evaluateSection.mutateAsync({
         id: candidateId,
         section,
         rating,
-        comments: trimmedComments || undefined,
+        comments: comments.trim() || undefined,
       });
-      const evaluation: SectionEvaluation = {
-        section,
-        rating,
-        comments: trimmedComments || null,
-      };
-      setSavedEvaluation(evaluation);
-      onSaved(evaluation);
     } catch {
       // El toast de error ya lo emite useCandidateMutations.
     }
@@ -84,7 +90,7 @@ export function SectionGrader({ candidateId, section, initialEvaluation, onSaved
           <Typography variant="subtitle1">Calificación del evaluador</Typography>
         </Stack>
 
-        {savedEvaluation && !hasUnsavedChanges && (
+        {isAlreadyEvaluated && !hasChanges && (
           <Stack direction="row" alignItems="center" spacing={0.75} sx={{ color: 'success.main' }}>
             <TaskAltOutlinedIcon fontSize="small" />
             <Typography variant="caption" fontWeight={600}>
@@ -141,10 +147,10 @@ export function SectionGrader({ candidateId, section, initialEvaluation, onSaved
         <Button
           variant="contained"
           size="small"
-          disabled={!rating || isPending || !hasUnsavedChanges}
+          disabled={!rating || isPending || !hasChanges}
           onClick={handleSave}
         >
-          {isPending ? 'Guardando…' : 'Guardar calificación'}
+          {isPending ? 'Guardando…' : isAlreadyEvaluated ? 'Actualizar calificación' : 'Guardar calificación'}
         </Button>
       </Box>
     </Paper>

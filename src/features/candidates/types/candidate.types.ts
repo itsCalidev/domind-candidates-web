@@ -161,6 +161,19 @@ export interface CandidateEconomy {
  * de `family`/`economy` (no anidados dentro de ellos) — así lo modela la
  * base de datos relacional del backend, confirmado en vivo por el usuario.
  */
+export interface CandidateDetail extends CandidateListItem {
+  generalInfo: CandidateGeneralInfo;
+  family: CandidateFamily;
+  familyMembers: FamilyMember[];
+  health: CandidateHealth;
+  housing: CandidateHousing;
+  economy: CandidateEconomy;
+  incomes: Income[];
+  vehicles: Vehicle[];
+  debts: Debt[];
+  bankCards: BankCard[];
+}
+
 export type EvaluationRating = 'GREEN' | 'YELLOW' | 'RED';
 
 /**
@@ -187,28 +200,6 @@ export const REQUIRED_EVALUATION_SECTIONS: EvaluationSection[] = [
   'HOUSING',
   'ECONOMY',
 ];
-
-export interface CandidateDetail extends CandidateListItem {
-  generalInfo: CandidateGeneralInfo;
-  family: CandidateFamily;
-  familyMembers: FamilyMember[];
-  health: CandidateHealth;
-  housing: CandidateHousing;
-  economy: CandidateEconomy;
-  incomes: Income[];
-  vehicles: Vehicle[];
-  debts: Debt[];
-  bankCards: BankCard[];
-  /**
-   * No confirmado si GET /candidates/:id ya incluye esta lista (el
-   * endpoint de escritura es nuevo y Swagger no documenta ninguno de
-   * los dos lados). Se mapea defensivamente a `[]` si el backend no la
-   * envía — ver candidateService.ts. Mientras tanto, el progreso de
-   * calificación por sección vive en memoria en CandidateDetailPage y
-   * sobrevive solo mientras la página sigue montada, no a un F5.
-   */
-  evaluations: SectionEvaluation[];
-}
 
 /**
  * Texto del reclutador asignado. Una sola fuente para la tabla, el

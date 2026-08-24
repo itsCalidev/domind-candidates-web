@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   Box,
   Button,
@@ -24,6 +24,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCandidateDetail } from '../hooks/useCandidateDetail';
 import { useCandidateMutations } from '../hooks/useCandidateMutations';
+import { useGetEvaluations } from '../hooks/useCandidateEvaluations';
 import { CandidateStatusChip } from './CandidateStatusChip';
 import { GeneralInfoTab } from './GeneralInfoTab';
 import { ComingSoonTab } from './ComingSoonTab';
@@ -75,26 +76,11 @@ export function CandidateDetailPage() {
   const { user } = useAuth();
   const canAssignRecruiter = hasFullAccess(user?.role);
   const { exportExcel } = useCandidateMutations();
-  const [evaluations, setEvaluations] = useState<Partial<Record<EvaluationSection, SectionEvaluation>>>({});
-
-  // Se sincroniza SOLO cuando cambia el candidato (navegar a otro id),
-  // no en cada refetch/invalidación del mismo candidato: no hay forma
-  // confirmada de que GET /candidates/:id devuelva `evaluations`
-  // todavía (ver candidateService.ts), así que si dependiera de
-  // `candidate.evaluations` un refetch después de guardar podría borrar
-  // el progreso que SectionGrader acaba de reportar vía onSaved.
-  useEffect(() => {
-    if (!candidate) return;
-    const map: Partial<Record<EvaluationSection, SectionEvaluation>> = {};
-    for (const evaluation of candidate.evaluations) {
-      map[evaluation.section] = evaluation;
-    }
-    setEvaluations(map);
-  }, [candidate?.id]);
-
-  function handleSectionSaved(evaluation: SectionEvaluation) {
-    setEvaluations((prev) => ({ ...prev, [evaluation.section]: evaluation }));
-  }
+  // Fuente única de verdad del progreso de calificación: GET
+  // /candidates/:id/evaluations, no estado local — así sobrevive a un
+  // F5 (antes no, porque dependíamos de un campo `evaluations` que
+  // nunca se confirmó que GET /candidates/:id devolviera).
+  const evaluationsQuery = useGetEvaluations(id);
 
   if (isLoading) {
     return (
@@ -126,12 +112,23 @@ export function CandidateDetailPage() {
     canAssignRecruiter || (user?.role === UserRole.RECRUITER && isAssignedToCurrentUser);
 
   // Máquina de estados del dictamen: un RECRUITER no puede marcar
-  // Completo hasta calificar las 6 secciones, ni elegir Recomendable/No
-  // recomendable hasta que el expediente ya esté Completo. SYSTEM/ADMIN
-  // no tienen esta restricción (ALL_CANDIDATE_STATUSES, sin filtrar).
-  const evaluatedSections = REQUIRED_EVALUATION_SECTIONS.filter((section) => evaluations[section]);
-  const missingSectionsCount = REQUIRED_EVALUATION_SECTIONS.length - evaluatedSections.length;
-  const allSectionsEvaluated = missingSectionsCount === 0;
+  // Completo hasta calificar las secciones requeridas, ni elegir
+  // Recomendable/No recomendable hasta que el expediente ya esté
+  // Completo. SYSTEM/ADMIN no tienen esta restricción
+  // (ALL_CANDIDATE_STATUSES, sin filtrar).
+  //
+  // currentCount/required vienen del propio GET /candidates/:id/evaluations
+  // (no se recalculan del arreglo local): son la cuenta que ya hizo el
+  // backend, evita que un desajuste entre REQUIRED_EVALUATION_SECTIONS y
+  // lo que el servidor considera "requerido" bloquee o desbloquee mal.
+  const evaluationsBySection: Partial<Record<EvaluationSection, SectionEvaluation>> = {};
+  for (const evaluation of evaluationsQuery.data?.evaluations ?? []) {
+    evaluationsBySection[evaluation.section] = evaluation;
+  }
+  const currentEvaluatedCount = evaluationsQuery.data?.currentCount ?? 0;
+  const requiredEvaluatedCount = evaluationsQuery.data?.required ?? REQUIRED_EVALUATION_SECTIONS.length;
+  const missingSectionsCount = Math.max(0, requiredEvaluatedCount - currentEvaluatedCount);
+  const allSectionsEvaluated = requiredEvaluatedCount > 0 && missingSectionsCount === 0;
   const recruiterStatusOptions = RECRUITER_EDITABLE_STATUSES.filter((status) => {
     if (status === 'COMPLETED') return allSectionsEvaluated;
     if (status === 'RECOMMENDED' || status === 'NOT_RECOMMENDED') return candidate.status === 'COMPLETED';
@@ -175,16 +172,23 @@ export function CandidateDetailPage() {
    * del contenido (ver requerimiento) — las 3 de "Comportamiento y
    * Trayectoria" no, porque no tienen EvaluationSection correspondiente
    * (son cascarones sin datos reales que calificar todavía).
+   *
+   * `key={section}` es obligatorio aquí: sin él, todas las secciones
+   * renderizan el mismo tipo de elemento (<SectionGrader>) en la misma
+   * posición del árbol dentro de un <Stack> con la misma forma, así que
+   * al cambiar de sub-pestaña React reutiliza la instancia anterior en
+   * vez de desmontarla — el rating/notas de la sección previa se
+   * quedaban pegados en la nueva.
    */
   function withGrader(section: EvaluationSection, content: ReactNode) {
     return (
       <Stack spacing={3}>
         {content}
         <SectionGrader
+          key={section}
           candidateId={candidateId}
           section={section}
-          initialEvaluation={evaluations[section] ?? null}
-          onSaved={handleSectionSaved}
+          initialEvaluation={evaluationsBySection[section] ?? null}
         />
       </Stack>
     );
@@ -363,12 +367,12 @@ export function CandidateDetailPage() {
               Progreso de evaluación por sección
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {evaluatedSections.length}/{REQUIRED_EVALUATION_SECTIONS.length}
+              {currentEvaluatedCount}/{requiredEvaluatedCount}
             </Typography>
           </Stack>
           <LinearProgress
             variant="determinate"
-            value={(evaluatedSections.length / REQUIRED_EVALUATION_SECTIONS.length) * 100}
+            value={requiredEvaluatedCount > 0 ? (currentEvaluatedCount / requiredEvaluatedCount) * 100 : 0}
             color={allSectionsEvaluated ? 'success' : 'primary'}
             sx={{ height: 8, borderRadius: 4, mb: 0.75 }}
           />
@@ -378,7 +382,7 @@ export function CandidateDetailPage() {
             color={allSectionsEvaluated ? 'success.main' : 'text.secondary'}
           >
             {allSectionsEvaluated
-              ? 'Todas las secciones evaluadas — ya puedes marcar el expediente como Completo.'
+              ? 'Todas las secciones evaluadas'
               : `Faltan ${missingSectionsCount} sección${missingSectionsCount === 1 ? '' : 'es'} por evaluar antes de poder completar el dictamen.`}
           </Typography>
         </Box>
