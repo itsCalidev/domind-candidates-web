@@ -7,7 +7,10 @@ import type {
   CandidateListItem,
   CandidateStatus,
   Debt,
+  EvaluationRating,
+  EvaluationSection,
   Income,
+  SectionEvaluation,
   Vehicle,
 } from '../types/candidate.types';
 
@@ -150,6 +153,13 @@ interface BackendCandidateDetail extends DetailedCandidateList {
   vehicles?: Vehicle[];
   debts?: Debt[];
   bankCards?: BankCard[];
+  /**
+   * No confirmado si GET /candidates/:id ya incluye esto — PUT
+   * /candidates/:id/evaluations/:section es un endpoint nuevo y Swagger
+   * no documenta ninguno de los dos lados. Se mapea de forma defensiva
+   * (ver getById) por si el backend aún no lo envía.
+   */
+  evaluations?: SectionEvaluation[];
   // Identity vendrá después
 }
 
@@ -282,6 +292,7 @@ export const candidatesService = {
       vehicles: data.vehicles ?? [],
       debts: data.debts ?? [],
       bankCards: data.bankCards ?? [],
+      evaluations: data.evaluations ?? [],
     };
   },
 
@@ -317,5 +328,19 @@ export const candidatesService = {
       responseType: 'blob',
     });
     return data;
+  },
+
+  /**
+   * PUT /candidates/:id/evaluations/:section — body { rating, comments? }.
+   * Contrato confirmado por el usuario en el chat (no documentado en
+   * /docs-json todavía): rating es 'GREEN'|'YELLOW'|'RED', comments es
+   * opcional. `section` va en la URL, en mayúsculas (ver EvaluationSection).
+   */
+  async evaluateSection(
+    id: string,
+    section: EvaluationSection,
+    payload: { rating: EvaluationRating; comments?: string },
+  ): Promise<void> {
+    await apiClient.put(`/candidates/${id}/evaluations/${section}`, payload);
   },
 };

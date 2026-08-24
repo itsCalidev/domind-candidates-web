@@ -161,6 +161,33 @@ export interface CandidateEconomy {
  * de `family`/`economy` (no anidados dentro de ellos) — así lo modela la
  * base de datos relacional del backend, confirmado en vivo por el usuario.
  */
+export type EvaluationRating = 'GREEN' | 'YELLOW' | 'RED';
+
+/**
+ * IDs de sección tal como los espera PUT /candidates/:id/evaluations/:section
+ * en la URL — confirmados por el usuario en vivo (no hay DTO documentado
+ * en /docs-json todavía). Cubren las 6 sub-pestañas con datos reales;
+ * los 3 placeholders de "Comportamiento y Trayectoria" no tienen sección
+ * correspondiente porque no hay nada real que calificar ahí todavía.
+ */
+export type EvaluationSection = 'PERSONAL' | 'IDENTITY' | 'FAMILY' | 'HEALTH' | 'HOUSING' | 'ECONOMY';
+
+export interface SectionEvaluation {
+  section: EvaluationSection;
+  rating: EvaluationRating;
+  comments: string | null;
+}
+
+/** Mismo orden en el que aparecen sus sub-pestañas correspondientes en CandidateDetailPage. */
+export const REQUIRED_EVALUATION_SECTIONS: EvaluationSection[] = [
+  'PERSONAL',
+  'IDENTITY',
+  'FAMILY',
+  'HEALTH',
+  'HOUSING',
+  'ECONOMY',
+];
+
 export interface CandidateDetail extends CandidateListItem {
   generalInfo: CandidateGeneralInfo;
   family: CandidateFamily;
@@ -172,6 +199,15 @@ export interface CandidateDetail extends CandidateListItem {
   vehicles: Vehicle[];
   debts: Debt[];
   bankCards: BankCard[];
+  /**
+   * No confirmado si GET /candidates/:id ya incluye esta lista (el
+   * endpoint de escritura es nuevo y Swagger no documenta ninguno de
+   * los dos lados). Se mapea defensivamente a `[]` si el backend no la
+   * envía — ver candidateService.ts. Mientras tanto, el progreso de
+   * calificación por sección vive en memoria en CandidateDetailPage y
+   * sobrevive solo mientras la página sigue montada, no a un F5.
+   */
+  evaluations: SectionEvaluation[];
 }
 
 /**

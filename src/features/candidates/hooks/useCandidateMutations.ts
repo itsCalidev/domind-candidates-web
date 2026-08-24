@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { candidatesService } from '../services/candidateService';
 import { useToast } from '@/shared/context/ToastContext';
 import { extractApiErrorMessage } from '@/shared/utils/apiError';
-import type { CandidateStatus } from '../types/candidate.types';
+import type { CandidateStatus, EvaluationRating, EvaluationSection } from '../types/candidate.types';
 
 /**
  * Mutaciones de Candidates, siguiendo el mismo patrón que
@@ -71,5 +71,25 @@ export function useCandidateMutations() {
     },
   });
 
-  return { assignRecruiter, updateStatus, exportExcel };
+  // Sin toast de éxito propio: SectionGrader ya muestra su propio badge
+  // "Sección evaluada" inline, un toast aparte sería ruido redundante.
+  const evaluateSection = useMutation({
+    mutationFn: ({
+      id,
+      section,
+      rating,
+      comments,
+    }: {
+      id: string;
+      section: EvaluationSection;
+      rating: EvaluationRating;
+      comments?: string;
+    }) => candidatesService.evaluateSection(id, section, { rating, comments }),
+    onSuccess: () => invalidateCandidates(),
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo guardar la calificación.'), 'error');
+    },
+  });
+
+  return { assignRecruiter, updateStatus, exportExcel, evaluateSection };
 }
