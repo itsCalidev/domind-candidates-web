@@ -242,6 +242,43 @@ export const RECRUITER_EDITABLE_STATUSES: CandidateStatus[] = [
 ];
 
 /**
+ * Máquina de estados del diálogo "Cambiar estado" para RECRUITER: dado
+ * el estado ACTUAL del candidato, qué estados puede elegir a continuación.
+ * Distinto de RECRUITER_EDITABLE_STATUSES (que es la lista plana del
+ * filtro del listado, sin noción de "desde dónde") — este mapa es
+ * específico de la transición dentro de CandidateDetailPage.
+ *
+ * Reglas (2026-08, confirmadas por el usuario):
+ * - IN_EVALUATION y UNDER_REVIEW son 100% controlados por el sistema
+ *   (asignar reclutador → UNDER_REVIEW; terminar de calificar las 6
+ *   secciones → COMPLETED automático). El RECRUITER NUNCA puede
+ *   seleccionarlos manualmente como destino, desde ningún origen.
+ * - COMPLETED tampoco es un destino manual — lo pone el backend solo.
+ *   Por eso no aparece como target en ninguna entrada de este mapa
+ *   (UpdateCandidateStatusDialog ya sabe mostrar el estado actual con
+ *   "(actual)" aunque no esté en la lista, así que el <Select> no se
+ *   rompe visualmente cuando el candidato SÍ está en COMPLETED).
+ * - Desde UNDER_REVIEW, la única salida manual es abortar a ARCHIVED
+ *   (aún no ha terminado de calificarse — no hay dictamen que elegir).
+ * - Desde COMPLETED/RECOMMENDED/NOT_RECOMMENDED, el RECRUITER puede
+ *   alternar entre el dictamen o archivar.
+ *
+ * OJO: esto le da a RECRUITER la capacidad de archivar su propio
+ * candidato asignado, algo que el comentario histórico de
+ * RECRUITER_EDITABLE_STATUSES describía como "reservado a SYSTEM/ADMIN".
+ * Es una instrucción explícita de este cambio — si no era la intención,
+ * hay que ajustarlo.
+ */
+export const RECRUITER_STATUS_TRANSITIONS: Record<CandidateStatus, CandidateStatus[]> = {
+  IN_EVALUATION: [],
+  UNDER_REVIEW: ['ARCHIVED'],
+  COMPLETED: ['RECOMMENDED', 'NOT_RECOMMENDED', 'ARCHIVED'],
+  RECOMMENDED: ['NOT_RECOMMENDED', 'ARCHIVED'],
+  NOT_RECOMMENDED: ['RECOMMENDED', 'ARCHIVED'],
+  ARCHIVED: [],
+};
+
+/**
  * Estados en los que un expediente se considera "cerrado" y puede
  * exportarse a Excel desde CandidateDetailPage — decisión de negocio:
  * el reporte solo tiene sentido una vez que el proceso terminó, no

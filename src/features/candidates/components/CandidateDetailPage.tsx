@@ -40,7 +40,7 @@ import { UpdateCandidateStatusDialog } from './UpdateCandidateStatusDialog';
 import {
   ALL_CANDIDATE_STATUSES,
   EXCEL_REPORT_STATUSES,
-  RECRUITER_EDITABLE_STATUSES,
+  RECRUITER_STATUS_TRANSITIONS,
   REQUIRED_EVALUATION_SECTIONS,
   recruiterFullName,
   type EvaluationSection,
@@ -111,16 +111,11 @@ export function CandidateDetailPage() {
   const canChangeStatus =
     canAssignRecruiter || (user?.role === UserRole.RECRUITER && isAssignedToCurrentUser);
 
-  // Máquina de estados del dictamen: un RECRUITER no puede marcar
-  // Completo hasta calificar las secciones requeridas, ni elegir
-  // Recomendable/No recomendable hasta que el expediente ya esté
-  // Completo. SYSTEM/ADMIN no tienen esta restricción
-  // (ALL_CANDIDATE_STATUSES, sin filtrar).
-  //
-  // currentCount/required vienen del propio GET /candidates/:id/evaluations
-  // (no se recalculan del arreglo local): son la cuenta que ya hizo el
-  // backend, evita que un desajuste entre REQUIRED_EVALUATION_SECTIONS y
-  // lo que el servidor considera "requerido" bloquee o desbloquee mal.
+  // Progreso de calificación por sección — currentCount/required vienen
+  // del propio GET /candidates/:id/evaluations (no se recalculan del
+  // arreglo local): son la cuenta que ya hizo el backend, evita que un
+  // desajuste entre REQUIRED_EVALUATION_SECTIONS y lo que el servidor
+  // considera "requerido" muestre un progreso incorrecto.
   const evaluationsBySection: Partial<Record<EvaluationSection, SectionEvaluation>> = {};
   for (const evaluation of evaluationsQuery.data?.evaluations ?? []) {
     evaluationsBySection[evaluation.section] = evaluation;
@@ -129,17 +124,23 @@ export function CandidateDetailPage() {
   const requiredEvaluatedCount = evaluationsQuery.data?.required ?? REQUIRED_EVALUATION_SECTIONS.length;
   const missingSectionsCount = Math.max(0, requiredEvaluatedCount - currentEvaluatedCount);
   const allSectionsEvaluated = requiredEvaluatedCount > 0 && missingSectionsCount === 0;
-  const recruiterStatusOptions = RECRUITER_EDITABLE_STATUSES.filter((status) => {
-    if (status === 'COMPLETED') return allSectionsEvaluated;
-    if (status === 'RECOMMENDED' || status === 'NOT_RECOMMENDED') return candidate.status === 'COMPLETED';
-    return true;
-  });
+
+  // Máquina de estados del diálogo "Cambiar estado": para RECRUITER, el
+  // destino disponible depende del estado ACTUAL (ver
+  // RECRUITER_STATUS_TRANSITIONS) — ya no de allSectionsEvaluated, porque
+  // el backend pone COMPLETED automáticamente al terminar de calificar;
+  // el reclutador nunca lo elige a mano. SYSTEM/ADMIN no tienen esta
+  // restricción (ALL_CANDIDATE_STATUSES, sin filtrar).
+  const recruiterStatusOptions = RECRUITER_STATUS_TRANSITIONS[candidate.status];
   const statusOptions = canAssignRecruiter ? ALL_CANDIDATE_STATUSES : recruiterStatusOptions;
   // Barra de progreso: solo tiene sentido para el reclutador asignado, y
-  // solo mientras el dictamen no se haya emitido — una vez
-  // Recomendable/No recomendable, calificar secciones ya no aplica.
+  // solo mientras la calificación sigue en curso — una vez que el
+  // backend completa el expediente (o ya se emitió/archivó el dictamen),
+  // el progreso de secciones deja de ser información accionable.
   const showEvaluationProgress =
-    !canAssignRecruiter && canChangeStatus && candidate.status !== 'RECOMMENDED' && candidate.status !== 'NOT_RECOMMENDED';
+    !canAssignRecruiter &&
+    canChangeStatus &&
+    (candidate.status === 'IN_EVALUATION' || candidate.status === 'UNDER_REVIEW');
   // El backend rechaza (400) asignar reclutador a un candidato archivado
   // y además lo desasigna automáticamente al archivarlo — la acción no
   // tiene sentido aquí, así que se deshabilita en vez de dejar que falle.
