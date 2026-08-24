@@ -242,41 +242,70 @@ export const RECRUITER_EDITABLE_STATUSES: CandidateStatus[] = [
 ];
 
 /**
- * Máquina de estados del diálogo "Cambiar estado" para RECRUITER: dado
- * el estado ACTUAL del candidato, qué estados puede elegir a continuación.
- * Distinto de RECRUITER_EDITABLE_STATUSES (que es la lista plana del
- * filtro del listado, sin noción de "desde dónde") — este mapa es
- * específico de la transición dentro de CandidateDetailPage.
+ * Máquina de estados del diálogo "Cambiar estado", dado el estado
+ * ACTUAL del candidato — una versión por rol, porque los destinos
+ * válidos dependen de si quien pregunta es RECRUITER o SYSTEM/ADMIN
+ * (ver getValidStatusTransitions, más abajo). Distintas de
+ * RECRUITER_EDITABLE_STATUSES (la lista plana del filtro del listado,
+ * sin noción de "desde dónde" ni de rol).
  *
- * Reglas (2026-08, confirmadas por el usuario):
- * - IN_EVALUATION y UNDER_REVIEW son 100% controlados por el sistema
- *   (asignar reclutador → UNDER_REVIEW; terminar de calificar las 6
- *   secciones → COMPLETED automático). El RECRUITER NUNCA puede
- *   seleccionarlos manualmente como destino, desde ningún origen.
- * - COMPLETED tampoco es un destino manual — lo pone el backend solo.
- *   Por eso no aparece como target en ninguna entrada de este mapa
- *   (UpdateCandidateStatusDialog ya sabe mostrar el estado actual con
- *   "(actual)" aunque no esté en la lista, así que el <Select> no se
- *   rompe visualmente cuando el candidato SÍ está en COMPLETED).
- * - Desde UNDER_REVIEW, la única salida manual es abortar a ARCHIVED
- *   (aún no ha terminado de calificarse — no hay dictamen que elegir).
- * - Desde COMPLETED/RECOMMENDED/NOT_RECOMMENDED, el RECRUITER puede
- *   alternar entre el dictamen o archivar.
+ * Reglas confirmadas por el usuario (corrigen una versión anterior de
+ * este mismo mapa que le daba ARCHIVED a RECRUITER — era un error,
+ * archivar sigue siendo exclusivo de SYSTEM/ADMIN):
  *
- * OJO: esto le da a RECRUITER la capacidad de archivar su propio
- * candidato asignado, algo que el comentario histórico de
- * RECRUITER_EDITABLE_STATUSES describía como "reservado a SYSTEM/ADMIN".
- * Es una instrucción explícita de este cambio — si no era la intención,
- * hay que ajustarlo.
+ * - IN_EVALUATION, UNDER_REVIEW y COMPLETED son "intocables": el
+ *   sistema los asigna solo (asignar reclutador → UNDER_REVIEW;
+ *   terminar de calificar las 6 secciones → COMPLETED automático).
+ *   NINGÚN rol puede seleccionarlos como destino manual, sin importar
+ *   el estado de origen — por eso no aparecen como target en ninguna
+ *   entrada de ninguno de los dos mapas. UpdateCandidateStatusDialog ya
+ *   sabe mostrar el estado actual con "(actual)" aunque no esté en la
+ *   lista, así que el <Select> no se rompe visualmente cuando el
+ *   candidato SÍ está en uno de estos tres estados.
+ * - RECRUITER: desde COMPLETED solo puede emitir el dictamen
+ *   (RECOMMENDED/NOT_RECOMMENDED); desde uno de esos dos, solo puede
+ *   alternar al otro. Nunca ve ARCHIVED.
+ * - SYSTEM/ADMIN: mismas opciones de dictamen que RECRUITER, más
+ *   ARCHIVED disponible desde COMPLETED, RECOMMENDED o NOT_RECOMMENDED.
+ *
+ * Ninguno de los dos mapas define una salida manual desde
+ * IN_EVALUATION/UNDER_REVIEW/ARCHIVED (quedan en `[]`): el usuario no
+ * describió esa transición para ningún rol, así que no se inventa.
  */
 export const RECRUITER_STATUS_TRANSITIONS: Record<CandidateStatus, CandidateStatus[]> = {
   IN_EVALUATION: [],
-  UNDER_REVIEW: ['ARCHIVED'],
+  UNDER_REVIEW: [],
+  COMPLETED: ['RECOMMENDED', 'NOT_RECOMMENDED'],
+  RECOMMENDED: ['NOT_RECOMMENDED'],
+  NOT_RECOMMENDED: ['RECOMMENDED'],
+  ARCHIVED: [],
+};
+
+/** Ver RECRUITER_STATUS_TRANSITIONS — misma idea, para SYSTEM/ADMIN (hasFullAccess). */
+export const ADMIN_STATUS_TRANSITIONS: Record<CandidateStatus, CandidateStatus[]> = {
+  IN_EVALUATION: [],
+  UNDER_REVIEW: [],
   COMPLETED: ['RECOMMENDED', 'NOT_RECOMMENDED', 'ARCHIVED'],
   RECOMMENDED: ['NOT_RECOMMENDED', 'ARCHIVED'],
   NOT_RECOMMENDED: ['RECOMMENDED', 'ARCHIVED'],
   ARCHIVED: [],
 };
+
+/**
+ * Único punto que decide "qué puede elegir este usuario" en el diálogo
+ * de cambio de estado — recibe el rol ya resuelto a un booleano
+ * (`hasFullAccessRole`, ver role.enum.ts) en vez de un `UserRole` crudo,
+ * para no acoplar este archivo de tipos de dominio a la jerarquía de
+ * roles de auth.
+ */
+export function getValidStatusTransitions(
+  currentStatus: CandidateStatus,
+  hasFullAccessRole: boolean,
+): CandidateStatus[] {
+  return hasFullAccessRole
+    ? ADMIN_STATUS_TRANSITIONS[currentStatus]
+    : RECRUITER_STATUS_TRANSITIONS[currentStatus];
+}
 
 /**
  * Estados en los que un expediente se considera "cerrado" y puede

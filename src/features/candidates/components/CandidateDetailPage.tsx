@@ -38,9 +38,8 @@ import { SectionGrader } from './SectionGrader';
 import { AssignRecruiterDialog } from './AssignRecruiterDialog';
 import { UpdateCandidateStatusDialog } from './UpdateCandidateStatusDialog';
 import {
-  ALL_CANDIDATE_STATUSES,
   EXCEL_REPORT_STATUSES,
-  RECRUITER_STATUS_TRANSITIONS,
+  getValidStatusTransitions,
   REQUIRED_EVALUATION_SECTIONS,
   recruiterFullName,
   type EvaluationSection,
@@ -125,14 +124,15 @@ export function CandidateDetailPage() {
   const missingSectionsCount = Math.max(0, requiredEvaluatedCount - currentEvaluatedCount);
   const allSectionsEvaluated = requiredEvaluatedCount > 0 && missingSectionsCount === 0;
 
-  // Máquina de estados del diálogo "Cambiar estado": para RECRUITER, el
-  // destino disponible depende del estado ACTUAL (ver
-  // RECRUITER_STATUS_TRANSITIONS) — ya no de allSectionsEvaluated, porque
+  // Máquina de estados del diálogo "Cambiar estado": el destino
+  // disponible depende del estado ACTUAL Y del rol (ver
+  // getValidStatusTransitions) — ya no de allSectionsEvaluated, porque
   // el backend pone COMPLETED automáticamente al terminar de calificar;
-  // el reclutador nunca lo elige a mano. SYSTEM/ADMIN no tienen esta
-  // restricción (ALL_CANDIDATE_STATUSES, sin filtrar).
-  const recruiterStatusOptions = RECRUITER_STATUS_TRANSITIONS[candidate.status];
-  const statusOptions = canAssignRecruiter ? ALL_CANDIDATE_STATUSES : recruiterStatusOptions;
+  // nadie lo elige a mano. COMPLETED/IN_EVALUATION/UNDER_REVIEW nunca
+  // son destino manual para ningún rol; solo SYSTEM/ADMIN pueden
+  // archivar (canAssignRecruiter agrupa ambos, igual que en el resto de
+  // esta página).
+  const statusOptions = getValidStatusTransitions(candidate.status, canAssignRecruiter);
   // Barra de progreso: solo tiene sentido para el reclutador asignado, y
   // solo mientras la calificación sigue en curso — una vez que el
   // backend completa el expediente (o ya se emitió/archivó el dictamen),
