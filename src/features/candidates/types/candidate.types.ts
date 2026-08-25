@@ -172,6 +172,8 @@ export interface CandidateDetail extends CandidateListItem {
   vehicles: Vehicle[];
   debts: Debt[];
   bankCards: BankCard[];
+  /** Arreglo raíz `workHistories` (plural) — nombre de campo confirmado por el usuario. */
+  workHistories: WorkHistoryEntry[];
 }
 
 export type EvaluationRating = 'GREEN' | 'YELLOW' | 'RED';
@@ -224,11 +226,13 @@ export const REQUIRED_EVALUATION_SECTIONS: EvaluationSection[] = [
  * confirmados por el usuario (modelo de Prisma) — el backend expone
  * POST/PUT/DELETE /candidates/:id/work-history(/:workId), pero sus DTOs
  * llegan vacíos en /docs-json (CreateWorkHistoryDto/UpdateWorkHistoryDto
- * sin `@ApiProperty`), así que no hay forma de confirmarlos ahí.
+ * sin `@ApiProperty`), así que no hay forma de confirmarlos ahí. Los
+ * registros existentes llegan embebidos en GET /candidates/:id bajo
+ * `workHistories` (también confirmado por el usuario, no documentado).
  *
  * `id: null` marca un registro capturado en el navegador que todavía no
- * se guardó en el backend — hoy WorkHistoryTab es 100% local (no llama
- * a estos endpoints todavía, por decisión explícita de esta entrega).
+ * se guardó en el backend (dispara POST al guardar); con `id` presente,
+ * guardar dispara PUT sobre ese `workId`.
  */
 export interface WorkHistoryEntry {
   id: string | null;
@@ -248,6 +252,9 @@ export interface WorkHistoryEntry {
   companySeparation: string;
   companyComments: string;
 }
+
+/** Body de POST/PUT /candidates/:id/work-history(/:workId) — WorkHistoryEntry sin `id`, que nunca se envía. */
+export type WorkHistoryPayload = Omit<WorkHistoryEntry, 'id'>;
 
 /**
  * Texto del reclutador asignado. Una sola fuente para la tabla, el

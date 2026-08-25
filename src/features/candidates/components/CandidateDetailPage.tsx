@@ -236,7 +236,10 @@ export function CandidateDetailPage() {
       subTabs: [
         {
           label: 'Antecedentes Laborales',
-          content: withGrader('WORK_HISTORY', <WorkHistoryTab />),
+          content: withGrader(
+            'WORK_HISTORY',
+            <WorkHistoryTab candidateId={candidateId} workHistories={candidate.workHistories} />,
+          ),
         },
         {
           label: 'Referencias Personales',

@@ -2,7 +2,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { candidatesService } from '../services/candidateService';
 import { useToast } from '@/shared/context/ToastContext';
 import { extractApiErrorMessage } from '@/shared/utils/apiError';
-import type { CandidateStatus, EvaluationRating, EvaluationSection } from '../types/candidate.types';
+import type {
+  CandidateStatus,
+  EvaluationRating,
+  EvaluationSection,
+  WorkHistoryPayload,
+} from '../types/candidate.types';
 
 /**
  * Mutaciones de Candidates, siguiendo el mismo patrón que
@@ -99,5 +104,62 @@ export function useCandidateMutations() {
     },
   });
 
-  return { assignRecruiter, updateStatus, exportExcel, evaluateSection };
+  // Las 3 mutaciones de work-history no necesitan patch manual del
+  // resultado en la caché: WorkHistoryTab ya actualiza su tarjeta
+  // directo con la respuesta resuelta de mutateAsync (ver ese
+  // componente) — invalidar aquí solo mantiene fresco `candidate` para
+  // la próxima vez que se monte la pestaña, no lo que se ve en pantalla
+  // ahora mismo.
+  const createWorkHistory = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: WorkHistoryPayload }) =>
+      candidatesService.createWorkHistory(id, payload),
+    onSuccess: () => {
+      showToast('Antecedente laboral guardado exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo guardar el antecedente laboral.'), 'error');
+    },
+  });
+
+  const updateWorkHistory = useMutation({
+    mutationFn: ({
+      id,
+      workId,
+      payload,
+    }: {
+      id: string;
+      workId: string;
+      payload: WorkHistoryPayload;
+    }) => candidatesService.updateWorkHistory(id, workId, payload),
+    onSuccess: () => {
+      showToast('Antecedente laboral actualizado exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo actualizar el antecedente laboral.'), 'error');
+    },
+  });
+
+  const deleteWorkHistory = useMutation({
+    mutationFn: ({ id, workId }: { id: string; workId: string }) =>
+      candidatesService.deleteWorkHistory(id, workId),
+    onSuccess: () => {
+      showToast('Antecedente laboral eliminado exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo eliminar el antecedente laboral.'), 'error');
+    },
+  });
+
+  return {
+    assignRecruiter,
+    updateStatus,
+    exportExcel,
+    evaluateSection,
+    createWorkHistory,
+    updateWorkHistory,
+    deleteWorkHistory,
+  };
 }

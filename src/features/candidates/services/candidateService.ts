@@ -12,6 +12,8 @@ import type {
   Income,
   SectionEvaluation,
   Vehicle,
+  WorkHistoryEntry,
+  WorkHistoryPayload,
 } from '../types/candidate.types';
 
 interface DetailedCandidateList {
@@ -130,6 +132,32 @@ interface RawFamilyMember {
   maritalStatus?: string | null;
 }
 
+/**
+ * Shape crudo de cada antecedente laboral bajo `workHistories` (nombre
+ * de campo confirmado por el usuario, no documentado en /docs-json).
+ * Todos opcionales/nullable por seguridad — se normalizan a `''` en
+ * getById() porque WorkHistoryEntry los tipa como `string`, no
+ * `string | null` (son campos de formulario, no datos de solo lectura).
+ */
+interface RawWorkHistoryEntry {
+  id: string;
+  companyName?: string | null;
+  address?: string | null;
+  activity?: string | null;
+  contactNamePhone?: string | null;
+  candidatePosition?: string | null;
+  companyPosition?: string | null;
+  candidatePeriod?: string | null;
+  companyPeriod?: string | null;
+  candidateBoss?: string | null;
+  companyBoss?: string | null;
+  candidateSalary?: string | null;
+  companySalary?: string | null;
+  candidateSeparation?: string | null;
+  companySeparation?: string | null;
+  companyComments?: string | null;
+}
+
 // 1. La estructura exacta del Detalle que nos devuelve NestJS (Prisma)
 interface BackendCandidateDetail extends DetailedCandidateList {
   personal?: {
@@ -153,6 +181,7 @@ interface BackendCandidateDetail extends DetailedCandidateList {
   vehicles?: Vehicle[];
   debts?: Debt[];
   bankCards?: BankCard[];
+  workHistories?: RawWorkHistoryEntry[];
   // Identity vendrá después
 }
 
@@ -308,6 +337,24 @@ export const candidatesService = {
       vehicles: data.vehicles ?? [],
       debts: data.debts ?? [],
       bankCards: data.bankCards ?? [],
+      workHistories: (data.workHistories ?? []).map((entry) => ({
+        id: entry.id,
+        companyName: entry.companyName ?? '',
+        address: entry.address ?? '',
+        activity: entry.activity ?? '',
+        contactNamePhone: entry.contactNamePhone ?? '',
+        candidatePosition: entry.candidatePosition ?? '',
+        companyPosition: entry.companyPosition ?? '',
+        candidatePeriod: entry.candidatePeriod ?? '',
+        companyPeriod: entry.companyPeriod ?? '',
+        candidateBoss: entry.candidateBoss ?? '',
+        companyBoss: entry.companyBoss ?? '',
+        candidateSalary: entry.candidateSalary ?? '',
+        companySalary: entry.companySalary ?? '',
+        candidateSeparation: entry.candidateSeparation ?? '',
+        companySeparation: entry.companySeparation ?? '',
+        companyComments: entry.companyComments ?? '',
+      })),
     };
   },
 
@@ -378,5 +425,38 @@ export const candidatesService = {
       currentCount: data.currentCount,
       required: data.required,
     };
+  },
+
+  /**
+   * POST /candidates/:id/work-history — el shape de la respuesta 201 no
+   * está documentado en /docs-json. Se combina defensivamente: lo
+   * enviado como piso, lo que el backend devuelva como override, y el
+   * `id` siempre tomado de la respuesta (es lo único que el cliente no
+   * puede conocer de antemano).
+   */
+  async createWorkHistory(id: string, payload: WorkHistoryPayload): Promise<WorkHistoryEntry> {
+    const { data } = await apiClient.post<Partial<WorkHistoryEntry> & { id: string }>(
+      `/candidates/${id}/work-history`,
+      payload,
+    );
+    return { ...payload, ...data, id: data.id };
+  },
+
+  /** PUT /candidates/:id/work-history/:workId — mismo criterio defensivo que createWorkHistory. */
+  async updateWorkHistory(
+    id: string,
+    workId: string,
+    payload: WorkHistoryPayload,
+  ): Promise<WorkHistoryEntry> {
+    const { data } = await apiClient.put<Partial<WorkHistoryEntry> & { id?: string }>(
+      `/candidates/${id}/work-history/${workId}`,
+      payload,
+    );
+    return { ...payload, ...data, id: data.id ?? workId };
+  },
+
+  /** DELETE /candidates/:id/work-history/:workId */
+  async deleteWorkHistory(id: string, workId: string): Promise<void> {
+    await apiClient.delete(`/candidates/${id}/work-history/${workId}`);
   },
 };
