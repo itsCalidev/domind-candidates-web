@@ -179,11 +179,20 @@ export type EvaluationRating = 'GREEN' | 'YELLOW' | 'RED';
 /**
  * IDs de sección tal como los espera PUT /candidates/:id/evaluations/:section
  * en la URL — confirmados por el usuario en vivo (no hay DTO documentado
- * en /docs-json todavía). Cubren las 6 sub-pestañas con datos reales;
- * los 3 placeholders de "Comportamiento y Trayectoria" no tienen sección
- * correspondiente porque no hay nada real que calificar ahí todavía.
+ * en /docs-json todavía). `WORK_HISTORY` (Antecedentes Laborales) se
+ * agregó cuando se construyó esa sub-pestaña; las otras dos de
+ * "Comportamiento y Trayectoria" (Referencias Personales, Redes
+ * Sociales) siguen sin sección propia porque no hay nada real que
+ * calificar ahí todavía.
  */
-export type EvaluationSection = 'PERSONAL' | 'IDENTITY' | 'FAMILY' | 'HEALTH' | 'HOUSING' | 'ECONOMY';
+export type EvaluationSection =
+  | 'PERSONAL'
+  | 'IDENTITY'
+  | 'FAMILY'
+  | 'HEALTH'
+  | 'HOUSING'
+  | 'ECONOMY'
+  | 'WORK_HISTORY';
 
 export interface SectionEvaluation {
   section: EvaluationSection;
@@ -191,7 +200,14 @@ export interface SectionEvaluation {
   comments: string | null;
 }
 
-/** Mismo orden en el que aparecen sus sub-pestañas correspondientes en CandidateDetailPage. */
+/**
+ * Las 6 secciones que el backend exige para el dictamen (ver
+ * GET /candidates/:id/evaluations → `required`). WORK_HISTORY tiene
+ * SectionGrader propio pero el usuario no confirmó que sea obligatoria
+ * para completar el expediente, así que no se agrega aquí — este
+ * arreglo solo se usa como valor de respaldo antes de que cargue esa
+ * consulta, nunca como la cuenta real (esa siempre viene del backend).
+ */
 export const REQUIRED_EVALUATION_SECTIONS: EvaluationSection[] = [
   'PERSONAL',
   'IDENTITY',
@@ -200,6 +216,38 @@ export const REQUIRED_EVALUATION_SECTIONS: EvaluationSection[] = [
   'HOUSING',
   'ECONOMY',
 ];
+
+/**
+ * Antecedente laboral — formato de validación cruzada: cada rubro
+ * dividido candidateX/companyX compara lo que dijo el candidato contra
+ * lo que confirmó (o no) la empresa al verificarlo. Nombres de campo
+ * confirmados por el usuario (modelo de Prisma) — el backend expone
+ * POST/PUT/DELETE /candidates/:id/work-history(/:workId), pero sus DTOs
+ * llegan vacíos en /docs-json (CreateWorkHistoryDto/UpdateWorkHistoryDto
+ * sin `@ApiProperty`), así que no hay forma de confirmarlos ahí.
+ *
+ * `id: null` marca un registro capturado en el navegador que todavía no
+ * se guardó en el backend — hoy WorkHistoryTab es 100% local (no llama
+ * a estos endpoints todavía, por decisión explícita de esta entrega).
+ */
+export interface WorkHistoryEntry {
+  id: string | null;
+  companyName: string;
+  address: string;
+  activity: string;
+  contactNamePhone: string;
+  candidatePosition: string;
+  companyPosition: string;
+  candidatePeriod: string;
+  companyPeriod: string;
+  candidateBoss: string;
+  companyBoss: string;
+  candidateSalary: string;
+  companySalary: string;
+  candidateSeparation: string;
+  companySeparation: string;
+  companyComments: string;
+}
 
 /**
  * Texto del reclutador asignado. Una sola fuente para la tabla, el

@@ -17,7 +17,6 @@ import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
 import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined';
 import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
-import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
 import ContactsOutlinedIcon from '@mui/icons-material/ContactsOutlined';
 import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -33,6 +32,7 @@ import { FamilyTab } from './FamilyTab';
 import { HealthTab } from './HealthTab';
 import { HousingTab } from './HousingTab';
 import { EconomyTab } from './EconomyTab';
+import { WorkHistoryTab } from './WorkHistoryTab';
 import { CandidateSubTabs, type SubTabDefinition } from './CandidateSubTabs';
 import { SectionGrader } from './SectionGrader';
 import { AssignRecruiterDialog } from './AssignRecruiterDialog';
@@ -236,12 +236,7 @@ export function CandidateDetailPage() {
       subTabs: [
         {
           label: 'Antecedentes Laborales',
-          content: (
-            <ComingSoonTab
-              sectionName="Antecedentes Laborales"
-              icon={<WorkOutlineOutlinedIcon />}
-            />
-          ),
+          content: withGrader('WORK_HISTORY', <WorkHistoryTab />),
         },
         {
           label: 'Referencias Personales',
