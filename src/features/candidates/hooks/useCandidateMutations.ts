@@ -6,6 +6,8 @@ import type {
   CandidateStatus,
   EvaluationRating,
   EvaluationSection,
+  NeighborhoodReferencePayload,
+  PersonalReferencePayload,
   WorkHistoryPayload,
 } from '../types/candidate.types';
 
@@ -153,6 +155,95 @@ export function useCandidateMutations() {
     },
   });
 
+  // Mismo criterio que las 3 de work-history: ReferencesTab parchea su
+  // propia tarjeta con la respuesta resuelta, invalidar aquí solo
+  // mantiene fresco `candidate` para la próxima vez que se monte la pestaña.
+  const createPersonalReference = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: PersonalReferencePayload }) =>
+      candidatesService.createPersonalReference(id, payload),
+    onSuccess: () => {
+      showToast('Referencia personal guardada exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo guardar la referencia personal.'), 'error');
+    },
+  });
+
+  const updatePersonalReference = useMutation({
+    mutationFn: ({
+      id,
+      refId,
+      payload,
+    }: {
+      id: string;
+      refId: string;
+      payload: PersonalReferencePayload;
+    }) => candidatesService.updatePersonalReference(id, refId, payload),
+    onSuccess: () => {
+      showToast('Referencia personal actualizada exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo actualizar la referencia personal.'), 'error');
+    },
+  });
+
+  const deletePersonalReference = useMutation({
+    mutationFn: ({ id, refId }: { id: string; refId: string }) =>
+      candidatesService.deletePersonalReference(id, refId),
+    onSuccess: () => {
+      showToast('Referencia personal eliminada exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo eliminar la referencia personal.'), 'error');
+    },
+  });
+
+  const createNeighborhoodReference = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: NeighborhoodReferencePayload }) =>
+      candidatesService.createNeighborhoodReference(id, payload),
+    onSuccess: () => {
+      showToast('Referencia vecinal guardada exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo guardar la referencia vecinal.'), 'error');
+    },
+  });
+
+  const updateNeighborhoodReference = useMutation({
+    mutationFn: ({
+      id,
+      refId,
+      payload,
+    }: {
+      id: string;
+      refId: string;
+      payload: NeighborhoodReferencePayload;
+    }) => candidatesService.updateNeighborhoodReference(id, refId, payload),
+    onSuccess: () => {
+      showToast('Referencia vecinal actualizada exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo actualizar la referencia vecinal.'), 'error');
+    },
+  });
+
+  const deleteNeighborhoodReference = useMutation({
+    mutationFn: ({ id, refId }: { id: string; refId: string }) =>
+      candidatesService.deleteNeighborhoodReference(id, refId),
+    onSuccess: () => {
+      showToast('Referencia vecinal eliminada exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo eliminar la referencia vecinal.'), 'error');
+    },
+  });
+
   return {
     assignRecruiter,
     updateStatus,
@@ -161,5 +252,11 @@ export function useCandidateMutations() {
     createWorkHistory,
     updateWorkHistory,
     deleteWorkHistory,
+    createPersonalReference,
+    updatePersonalReference,
+    deletePersonalReference,
+    createNeighborhoodReference,
+    updateNeighborhoodReference,
+    deleteNeighborhoodReference,
   };
 }

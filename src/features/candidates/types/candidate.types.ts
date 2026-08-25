@@ -174,6 +174,9 @@ export interface CandidateDetail extends CandidateListItem {
   bankCards: BankCard[];
   /** Arreglo raíz `workHistories` (plural) — nombre de campo confirmado por el usuario. */
   workHistories: WorkHistoryEntry[];
+  /** Arreglos raíz `personalReferences`/`neighborhoodReferences` — nombres confirmados por el usuario. */
+  personalReferences: PersonalReferenceEntry[];
+  neighborhoodReferences: NeighborhoodReferenceEntry[];
 }
 
 export type EvaluationRating = 'GREEN' | 'YELLOW' | 'RED';
@@ -181,11 +184,10 @@ export type EvaluationRating = 'GREEN' | 'YELLOW' | 'RED';
 /**
  * IDs de sección tal como los espera PUT /candidates/:id/evaluations/:section
  * en la URL — confirmados por el usuario en vivo (no hay DTO documentado
- * en /docs-json todavía). `WORK_HISTORY` (Antecedentes Laborales) se
- * agregó cuando se construyó esa sub-pestaña; las otras dos de
- * "Comportamiento y Trayectoria" (Referencias Personales, Redes
- * Sociales) siguen sin sección propia porque no hay nada real que
- * calificar ahí todavía.
+ * en /docs-json todavía). `WORK_HISTORY` (Antecedentes Laborales) y
+ * `REFERENCES` (Referencias Personales/Vecinales) se agregaron cuando se
+ * construyó cada sub-pestaña; "Redes Sociales" sigue sin sección propia
+ * porque no hay nada real que calificar ahí todavía.
  */
 export type EvaluationSection =
   | 'PERSONAL'
@@ -194,7 +196,8 @@ export type EvaluationSection =
   | 'HEALTH'
   | 'HOUSING'
   | 'ECONOMY'
-  | 'WORK_HISTORY';
+  | 'WORK_HISTORY'
+  | 'REFERENCES';
 
 export interface SectionEvaluation {
   section: EvaluationSection;
@@ -255,6 +258,45 @@ export interface WorkHistoryEntry {
 
 /** Body de POST/PUT /candidates/:id/work-history(/:workId) — WorkHistoryEntry sin `id`, que nunca se envía. */
 export type WorkHistoryPayload = Omit<WorkHistoryEntry, 'id'>;
+
+/**
+ * Referencia personal — contacto que da fe del candidato (no confundir
+ * con `neighborhoodReferences`, que además captura una `opinion` sobre
+ * el vecino). Campos y endpoints (POST/PUT/DELETE
+ * /candidates/:id/personal-references(/:refId)) confirmados por el
+ * usuario directamente en el chat, junto con el nombre del arreglo raíz
+ * `personalReferences` en GET /candidates/:id.
+ */
+export interface PersonalReferenceEntry {
+  id: string | null;
+  name: string;
+  occupation: string;
+  timeKnown: string;
+  phone: string;
+}
+
+/** Body de POST/PUT /candidates/:id/personal-references(/:refId) — sin `id`, que nunca se envía. */
+export type PersonalReferencePayload = Omit<PersonalReferenceEntry, 'id'>;
+
+/**
+ * Referencia vecinal — mismos datos base que una referencia personal más
+ * `address` (domicilio del vecino) y `opinion` (lo que opina del
+ * candidato). Campos y endpoints (POST/PUT/DELETE
+ * /candidates/:id/neighborhood-references(/:refId)) confirmados por el
+ * usuario, junto con el nombre del arreglo raíz `neighborhoodReferences`
+ * en GET /candidates/:id.
+ */
+export interface NeighborhoodReferenceEntry {
+  id: string | null;
+  name: string;
+  occupation: string;
+  timeKnown: string;
+  address: string;
+  opinion: string;
+}
+
+/** Body de POST/PUT /candidates/:id/neighborhood-references(/:refId) — sin `id`, que nunca se envía. */
+export type NeighborhoodReferencePayload = Omit<NeighborhoodReferenceEntry, 'id'>;
 
 /**
  * Texto del reclutador asignado. Una sola fuente para la tabla, el

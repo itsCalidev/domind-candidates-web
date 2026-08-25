@@ -10,6 +10,10 @@ import type {
   EvaluationRating,
   EvaluationSection,
   Income,
+  NeighborhoodReferenceEntry,
+  NeighborhoodReferencePayload,
+  PersonalReferenceEntry,
+  PersonalReferencePayload,
   SectionEvaluation,
   Vehicle,
   WorkHistoryEntry,
@@ -158,6 +162,29 @@ interface RawWorkHistoryEntry {
   companyComments?: string | null;
 }
 
+/**
+ * Shape crudo de cada referencia bajo `personalReferences`/
+ * `neighborhoodReferences` (nombres confirmados por el usuario, no
+ * documentados en /docs-json). Igual que RawWorkHistoryEntry, todos
+ * opcionales/nullable salvo `id`, normalizados a `''` en getById().
+ */
+interface RawPersonalReferenceEntry {
+  id: string;
+  name?: string | null;
+  occupation?: string | null;
+  timeKnown?: string | null;
+  phone?: string | null;
+}
+
+interface RawNeighborhoodReferenceEntry {
+  id: string;
+  name?: string | null;
+  occupation?: string | null;
+  timeKnown?: string | null;
+  address?: string | null;
+  opinion?: string | null;
+}
+
 // 1. La estructura exacta del Detalle que nos devuelve NestJS (Prisma)
 interface BackendCandidateDetail extends DetailedCandidateList {
   personal?: {
@@ -182,6 +209,8 @@ interface BackendCandidateDetail extends DetailedCandidateList {
   debts?: Debt[];
   bankCards?: BankCard[];
   workHistories?: RawWorkHistoryEntry[];
+  personalReferences?: RawPersonalReferenceEntry[];
+  neighborhoodReferences?: RawNeighborhoodReferenceEntry[];
   // Identity vendrá después
 }
 
@@ -355,6 +384,21 @@ export const candidatesService = {
         companySeparation: entry.companySeparation ?? '',
         companyComments: entry.companyComments ?? '',
       })),
+      personalReferences: (data.personalReferences ?? []).map((entry) => ({
+        id: entry.id,
+        name: entry.name ?? '',
+        occupation: entry.occupation ?? '',
+        timeKnown: entry.timeKnown ?? '',
+        phone: entry.phone ?? '',
+      })),
+      neighborhoodReferences: (data.neighborhoodReferences ?? []).map((entry) => ({
+        id: entry.id,
+        name: entry.name ?? '',
+        occupation: entry.occupation ?? '',
+        timeKnown: entry.timeKnown ?? '',
+        address: entry.address ?? '',
+        opinion: entry.opinion ?? '',
+      })),
     };
   },
 
@@ -458,5 +502,69 @@ export const candidatesService = {
   /** DELETE /candidates/:id/work-history/:workId */
   async deleteWorkHistory(id: string, workId: string): Promise<void> {
     await apiClient.delete(`/candidates/${id}/work-history/${workId}`);
+  },
+
+  /**
+   * POST /candidates/:id/personal-references — mismo criterio defensivo
+   * que createWorkHistory: la respuesta no está documentada, así que se
+   * combina lo enviado con lo que devuelva el backend.
+   */
+  async createPersonalReference(
+    id: string,
+    payload: PersonalReferencePayload,
+  ): Promise<PersonalReferenceEntry> {
+    const { data } = await apiClient.post<Partial<PersonalReferenceEntry> & { id: string }>(
+      `/candidates/${id}/personal-references`,
+      payload,
+    );
+    return { ...payload, ...data, id: data.id };
+  },
+
+  /** PUT /candidates/:id/personal-references/:refId */
+  async updatePersonalReference(
+    id: string,
+    refId: string,
+    payload: PersonalReferencePayload,
+  ): Promise<PersonalReferenceEntry> {
+    const { data } = await apiClient.put<Partial<PersonalReferenceEntry> & { id?: string }>(
+      `/candidates/${id}/personal-references/${refId}`,
+      payload,
+    );
+    return { ...payload, ...data, id: data.id ?? refId };
+  },
+
+  /** DELETE /candidates/:id/personal-references/:refId */
+  async deletePersonalReference(id: string, refId: string): Promise<void> {
+    await apiClient.delete(`/candidates/${id}/personal-references/${refId}`);
+  },
+
+  /** POST /candidates/:id/neighborhood-references — mismo criterio defensivo que createPersonalReference. */
+  async createNeighborhoodReference(
+    id: string,
+    payload: NeighborhoodReferencePayload,
+  ): Promise<NeighborhoodReferenceEntry> {
+    const { data } = await apiClient.post<Partial<NeighborhoodReferenceEntry> & { id: string }>(
+      `/candidates/${id}/neighborhood-references`,
+      payload,
+    );
+    return { ...payload, ...data, id: data.id };
+  },
+
+  /** PUT /candidates/:id/neighborhood-references/:refId */
+  async updateNeighborhoodReference(
+    id: string,
+    refId: string,
+    payload: NeighborhoodReferencePayload,
+  ): Promise<NeighborhoodReferenceEntry> {
+    const { data } = await apiClient.put<Partial<NeighborhoodReferenceEntry> & { id?: string }>(
+      `/candidates/${id}/neighborhood-references/${refId}`,
+      payload,
+    );
+    return { ...payload, ...data, id: data.id ?? refId };
+  },
+
+  /** DELETE /candidates/:id/neighborhood-references/:refId */
+  async deleteNeighborhoodReference(id: string, refId: string): Promise<void> {
+    await apiClient.delete(`/candidates/${id}/neighborhood-references/${refId}`);
   },
 };
