@@ -47,11 +47,20 @@ export function Sidebar() {
         sx={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: isSidebarCollapsed ? 'center' : 'flex-end',
+          justifyContent: isSidebarCollapsed ? 'center' : 'space-between',
           px: isSidebarCollapsed ? 1 : 2.5,
           py: 2.5,
         }}
       >
+        {!isSidebarCollapsed && (
+          <Typography
+            variant="subtitle2"
+            noWrap
+            sx={{ letterSpacing: 0.3, opacity: 0.9, overflow: 'hidden', textOverflow: 'ellipsis' }}
+          >
+            Powered by Domind
+          </Typography>
+        )}
         <IconButton
           onClick={toggleSidebar}
           size="small"
@@ -153,14 +162,6 @@ export function Sidebar() {
             <ListItemText primary="Cerrar sesión" slotProps={{ primary: { fontSize: 14 } }} />
           )}
         </ListItemButton>
-        {!isSidebarCollapsed && (
-          <Typography
-            variant="caption"
-            sx={{ display: 'block', textAlign: 'center', color: 'rgba(255,255,255,0.5)', mt: 1.5 }}
-          >
-            Powered by Domind
-          </Typography>
-        )}
       </Box>
     </Box>
   );

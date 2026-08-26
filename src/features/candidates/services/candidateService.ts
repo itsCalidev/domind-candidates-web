@@ -5,6 +5,7 @@ import type {
   BankCard,
   CandidateDetail,
   CandidateListItem,
+  CandidateSocialNetwork,
   CandidateStatus,
   Debt,
   EvaluationRating,
@@ -15,6 +16,7 @@ import type {
   PersonalReferenceEntry,
   PersonalReferencePayload,
   SectionEvaluation,
+  SocialNetworkPayload,
   Vehicle,
   WorkHistoryEntry,
   WorkHistoryPayload,
@@ -185,6 +187,21 @@ interface RawNeighborhoodReferenceEntry {
   opinion?: string | null;
 }
 
+/**
+ * Shape crudo de `socialNetwork` (nombre de campo confirmado por el
+ * usuario, no documentado en /docs-json). Puede traer campos de control
+ * (`id`/`createdAt`/`updatedAt`) que el mapeo campo por campo de
+ * getById() nunca copia — a diferencia de workHistories/referencias,
+ * aquí no hace falta "limpiarlos" en el componente porque nunca entran
+ * al estado local.
+ */
+interface RawCandidateSocialNetwork {
+  facebook?: string | null;
+  linkedin?: string | null;
+  instagram?: string | null;
+  profileComments?: string | null;
+}
+
 // 1. La estructura exacta del Detalle que nos devuelve NestJS (Prisma)
 interface BackendCandidateDetail extends DetailedCandidateList {
   personal?: {
@@ -211,6 +228,7 @@ interface BackendCandidateDetail extends DetailedCandidateList {
   workHistories?: RawWorkHistoryEntry[];
   personalReferences?: RawPersonalReferenceEntry[];
   neighborhoodReferences?: RawNeighborhoodReferenceEntry[];
+  socialNetwork?: RawCandidateSocialNetwork | null;
   // Identity vendrá después
 }
 
@@ -399,6 +417,12 @@ export const candidatesService = {
         address: entry.address ?? '',
         opinion: entry.opinion ?? '',
       })),
+      socialNetwork: {
+        facebook: data.socialNetwork?.facebook ?? '',
+        linkedin: data.socialNetwork?.linkedin ?? '',
+        instagram: data.socialNetwork?.instagram ?? '',
+        profileComments: data.socialNetwork?.profileComments ?? '',
+      },
     };
   },
 
@@ -566,5 +590,26 @@ export const candidatesService = {
   /** DELETE /candidates/:id/neighborhood-references/:refId */
   async deleteNeighborhoodReference(id: string, refId: string): Promise<void> {
     await apiClient.delete(`/candidates/${id}/neighborhood-references/${refId}`);
+  },
+
+  /**
+   * PUT /candidates/:id/social-network — upsert (crea o actualiza según
+   * exista o no el registro, sin distinguir en la URL). Igual que el
+   * resto, la respuesta no está documentada en /docs-json; se reconstruye
+   * campo por campo (no un spread crudo) para que el resultado nunca
+   * pueda traer campos de control colados, sin importar qué devuelva el
+   * backend.
+   */
+  async upsertSocialNetwork(id: string, payload: SocialNetworkPayload): Promise<CandidateSocialNetwork> {
+    const { data } = await apiClient.put<Partial<CandidateSocialNetwork>>(
+      `/candidates/${id}/social-network`,
+      payload,
+    );
+    return {
+      facebook: data.facebook ?? payload.facebook,
+      linkedin: data.linkedin ?? payload.linkedin,
+      instagram: data.instagram ?? payload.instagram,
+      profileComments: data.profileComments ?? payload.profileComments,
+    };
   },
 };

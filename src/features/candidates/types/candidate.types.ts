@@ -177,6 +177,8 @@ export interface CandidateDetail extends CandidateListItem {
   /** Arreglos raíz `personalReferences`/`neighborhoodReferences` — nombres confirmados por el usuario. */
   personalReferences: PersonalReferenceEntry[];
   neighborhoodReferences: NeighborhoodReferenceEntry[];
+  /** Objeto raíz `socialNetwork` (singular) — nombre confirmado por el usuario, mismo patrón que family/health/housing. */
+  socialNetwork: CandidateSocialNetwork;
 }
 
 export type EvaluationRating = 'GREEN' | 'YELLOW' | 'RED';
@@ -184,10 +186,10 @@ export type EvaluationRating = 'GREEN' | 'YELLOW' | 'RED';
 /**
  * IDs de sección tal como los espera PUT /candidates/:id/evaluations/:section
  * en la URL — confirmados por el usuario en vivo (no hay DTO documentado
- * en /docs-json todavía). `WORK_HISTORY` (Antecedentes Laborales) y
- * `REFERENCES` (Referencias Personales/Vecinales) se agregaron cuando se
- * construyó cada sub-pestaña; "Redes Sociales" sigue sin sección propia
- * porque no hay nada real que calificar ahí todavía.
+ * en /docs-json todavía). `WORK_HISTORY`, `REFERENCES` y `SOCIAL_NETWORK`
+ * se agregaron cuando se construyó cada sub-pestaña de "Comportamiento y
+ * Trayectoria" — ya no queda ninguna sub-pestaña de ese grupo sin
+ * evaluador propio.
  */
 export type EvaluationSection =
   | 'PERSONAL'
@@ -197,7 +199,8 @@ export type EvaluationSection =
   | 'HOUSING'
   | 'ECONOMY'
   | 'WORK_HISTORY'
-  | 'REFERENCES';
+  | 'REFERENCES'
+  | 'SOCIAL_NETWORK';
 
 export interface SectionEvaluation {
   section: EvaluationSection;
@@ -297,6 +300,26 @@ export interface NeighborhoodReferenceEntry {
 
 /** Body de POST/PUT /candidates/:id/neighborhood-references(/:refId) — sin `id`, que nunca se envía. */
 export type NeighborhoodReferencePayload = Omit<NeighborhoodReferenceEntry, 'id'>;
+
+/**
+ * Redes sociales del candidato — relación 1 a 1 (no un arreglo): el
+ * backend expone un único PUT /candidates/:id/social-network que crea o
+ * actualiza el registro (upsert), confirmado por el usuario. El registro
+ * existente llega embebido en GET /candidates/:id bajo `socialNetwork`
+ * (objeto singular, confirmado por el usuario, mismo patrón que
+ * family/health/housing). Sin campo `id`: a diferencia de los antecedentes
+ * laborales o las referencias, aquí no hay lista que editar/borrar, así
+ * que no hace falta distinguir "nuevo" de "existente".
+ */
+export interface CandidateSocialNetwork {
+  facebook: string;
+  linkedin: string;
+  instagram: string;
+  profileComments: string;
+}
+
+/** Body de PUT /candidates/:id/social-network — mismos campos, todos opcionales según el DTO del backend. */
+export type SocialNetworkPayload = CandidateSocialNetwork;
 
 /**
  * Texto del reclutador asignado. Una sola fuente para la tabla, el

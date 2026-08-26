@@ -8,6 +8,7 @@ import type {
   EvaluationSection,
   NeighborhoodReferencePayload,
   PersonalReferencePayload,
+  SocialNetworkPayload,
   WorkHistoryPayload,
 } from '../types/candidate.types';
 
@@ -244,6 +245,18 @@ export function useCandidateMutations() {
     },
   });
 
+  const upsertSocialNetwork = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: SocialNetworkPayload }) =>
+      candidatesService.upsertSocialNetwork(id, payload),
+    onSuccess: () => {
+      showToast('Redes sociales guardadas exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudieron guardar las redes sociales.'), 'error');
+    },
+  });
+
   return {
     assignRecruiter,
     updateStatus,
@@ -258,5 +271,6 @@ export function useCandidateMutations() {
     createNeighborhoodReference,
     updateNeighborhoodReference,
     deleteNeighborhoodReference,
+    upsertSocialNetwork,
   };
 }

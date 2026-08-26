@@ -17,7 +17,6 @@ import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
 import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined';
 import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
-import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCandidateDetail } from '../hooks/useCandidateDetail';
@@ -25,7 +24,6 @@ import { useCandidateMutations } from '../hooks/useCandidateMutations';
 import { useGetEvaluations } from '../hooks/useCandidateEvaluations';
 import { CandidateStatusChip } from './CandidateStatusChip';
 import { GeneralInfoTab } from './GeneralInfoTab';
-import { ComingSoonTab } from './ComingSoonTab';
 import { DocumentationTab } from './DocumentationTab';
 import { FamilyTab } from './FamilyTab';
 import { HealthTab } from './HealthTab';
@@ -33,6 +31,7 @@ import { HousingTab } from './HousingTab';
 import { EconomyTab } from './EconomyTab';
 import { WorkHistoryTab } from './WorkHistoryTab';
 import { ReferencesTab } from './ReferencesTab';
+import { SocialNetworkTab } from './SocialNetworkTab';
 import { CandidateSubTabs, type SubTabDefinition } from './CandidateSubTabs';
 import { SectionGrader } from './SectionGrader';
 import { AssignRecruiterDialog } from './AssignRecruiterDialog';
@@ -254,7 +253,10 @@ export function CandidateDetailPage() {
         },
         {
           label: 'Redes Sociales',
-          content: <ComingSoonTab sectionName="Redes Sociales" icon={<ShareOutlinedIcon />} />,
+          content: withGrader(
+            'SOCIAL_NETWORK',
+            <SocialNetworkTab candidateId={candidateId} socialNetwork={candidate.socialNetwork} />,
+          ),
         },
       ],
     },
