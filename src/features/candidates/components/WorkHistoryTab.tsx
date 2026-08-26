@@ -11,6 +11,16 @@ import type { WorkHistoryEntry } from '../types/candidate.types';
 
 const NOT_SPECIFIED = 'No especificado';
 
+/**
+ * Límites de longitud reflejando las reglas de class-validator del
+ * backend (el usuario las confirmó explícitamente): "Empresa" cae en el
+ * mismo límite que "name" en Referencias (150), los demás campos de
+ * texto normales usan 255, y los comentarios largos usan 500.
+ */
+const COMPANY_NAME_MAX_LENGTH = 150;
+const FIELD_MAX_LENGTH = 255;
+const COMMENTS_MAX_LENGTH = 500;
+
 interface WorkHistoryTabProps {
   candidateId: string;
   workHistories: WorkHistoryEntry[];
@@ -246,6 +256,7 @@ function WorkHistoryCard({
             fullWidth
             disabled={isSaving}
             value={entry.data.companyName}
+            slotProps={{ htmlInput: { maxLength: COMPANY_NAME_MAX_LENGTH } }}
             onChange={(e) => onFieldChange(entry.localKey, 'companyName', e.target.value)}
             onClear={() => onFieldChange(entry.localKey, 'companyName', '')}
           />
@@ -256,6 +267,7 @@ function WorkHistoryCard({
             fullWidth
             disabled={isSaving}
             value={entry.data.address}
+            slotProps={{ htmlInput: { maxLength: FIELD_MAX_LENGTH } }}
             onChange={(e) => onFieldChange(entry.localKey, 'address', e.target.value)}
             onClear={() => onFieldChange(entry.localKey, 'address', '')}
           />
@@ -266,6 +278,7 @@ function WorkHistoryCard({
             fullWidth
             disabled={isSaving}
             value={entry.data.activity}
+            slotProps={{ htmlInput: { maxLength: FIELD_MAX_LENGTH } }}
             onChange={(e) => onFieldChange(entry.localKey, 'activity', e.target.value)}
             onClear={() => onFieldChange(entry.localKey, 'activity', '')}
           />
@@ -276,6 +289,7 @@ function WorkHistoryCard({
             fullWidth
             disabled={isSaving}
             value={entry.data.contactNamePhone}
+            slotProps={{ htmlInput: { maxLength: FIELD_MAX_LENGTH } }}
             onChange={(e) => onFieldChange(entry.localKey, 'contactNamePhone', e.target.value)}
             onClear={() => onFieldChange(entry.localKey, 'contactNamePhone', '')}
           />
@@ -297,6 +311,7 @@ function WorkHistoryCard({
                 fullWidth
                 disabled={isSaving}
                 value={entry.data[field.candidateKey] as string}
+                slotProps={{ htmlInput: { maxLength: FIELD_MAX_LENGTH } }}
                 onChange={(e) => onFieldChange(entry.localKey, field.candidateKey, e.target.value)}
                 onClear={() => onFieldChange(entry.localKey, field.candidateKey, '')}
               />
@@ -315,6 +330,7 @@ function WorkHistoryCard({
                 fullWidth
                 disabled={isSaving}
                 value={entry.data[field.companyKey] as string}
+                slotProps={{ htmlInput: { maxLength: FIELD_MAX_LENGTH } }}
                 onChange={(e) => onFieldChange(entry.localKey, field.companyKey, e.target.value)}
                 onClear={() => onFieldChange(entry.localKey, field.companyKey, '')}
               />
@@ -330,6 +346,7 @@ function WorkHistoryCard({
         minRows={2}
         disabled={isSaving}
         value={entry.data.companyComments}
+        slotProps={{ htmlInput: { maxLength: COMMENTS_MAX_LENGTH } }}
         onChange={(e) => onFieldChange(entry.localKey, 'companyComments', e.target.value)}
         onClear={() => onFieldChange(entry.localKey, 'companyComments', '')}
         sx={{ mt: 2 }}

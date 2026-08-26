@@ -12,6 +12,32 @@ import type { NeighborhoodReferenceEntry, PersonalReferenceEntry } from '../type
 
 const NOT_SPECIFIED = 'No especificado';
 
+/**
+ * Límites de longitud reflejando las reglas de class-validator del
+ * backend (confirmadas por el usuario): "name" usa el mismo límite que
+ * "Empresa" en Antecedentes Laborales (150), los demás campos de texto
+ * normales usan 255, y las opiniones/comentarios largos usan 500.
+ */
+const NAME_MAX_LENGTH = 150;
+const FIELD_MAX_LENGTH = 255;
+const OPINION_MAX_LENGTH = 500;
+const PHONE_MAX_LENGTH = 15;
+
+/** Solo dígitos, espacios, guiones y "+" (para lada, ej. +52) — regla del backend. */
+const PHONE_CHARSET_REGEX = /^[0-9+\-\s]*$/;
+
+/** Vacío es válido (el campo no es obligatorio); solo se valida formato/longitud si el usuario escribió algo. */
+function validatePhone(value: string): string | null {
+  if (!value) return null;
+  if (!PHONE_CHARSET_REGEX.test(value)) {
+    return 'Formato inválido. Usa solo números, espacios, guiones o +52.';
+  }
+  if (value.length < 10 || value.length > 15) {
+    return 'Debe tener entre 10 y 15 caracteres.';
+  }
+  return null;
+}
+
 interface ReferencesTabProps {
   candidateId: string;
   personalReferences: PersonalReferenceEntry[];
@@ -146,17 +172,19 @@ interface ReferenceFieldConfig<T> {
   key: keyof T & string;
   label: string;
   multiline?: boolean;
+  maxLength: number;
+  validate?: (value: string) => string | null;
 }
 
 const PERSONAL_FIELDS: ReferenceFieldConfig<PersonalReferenceEntry>[] = [
-  { key: 'timeKnown', label: 'Tiempo de conocerlo' },
-  { key: 'phone', label: 'Teléfono' },
+  { key: 'timeKnown', label: 'Tiempo de conocerlo', maxLength: FIELD_MAX_LENGTH },
+  { key: 'phone', label: 'Teléfono', maxLength: PHONE_MAX_LENGTH, validate: validatePhone },
 ];
 
 const NEIGHBORHOOD_FIELDS: ReferenceFieldConfig<NeighborhoodReferenceEntry>[] = [
-  { key: 'timeKnown', label: 'Tiempo de conocerlo' },
-  { key: 'address', label: 'Domicilio' },
-  { key: 'opinion', label: 'Opinión sobre el candidato', multiline: true },
+  { key: 'timeKnown', label: 'Tiempo de conocerlo', maxLength: FIELD_MAX_LENGTH },
+  { key: 'address', label: 'Domicilio', maxLength: FIELD_MAX_LENGTH },
+  { key: 'opinion', label: 'Opinión sobre el candidato', multiline: true, maxLength: OPINION_MAX_LENGTH },
 ];
 
 function FieldRow({ label, value }: { label: string; value: string }) {
@@ -241,6 +269,9 @@ function ReferenceCard<T extends { id: string | null; name: string; occupation: 
   }
 
   const secondaryAction = getSecondaryAction(entry);
+  const hasFieldErrors = fields.some(
+    (field) => field.validate && field.validate(entry.data[field.key] as string) !== null,
+  );
 
   return (
     <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
@@ -256,6 +287,7 @@ function ReferenceCard<T extends { id: string | null; name: string; occupation: 
             fullWidth
             disabled={isSaving}
             value={entry.data.name}
+            slotProps={{ htmlInput: { maxLength: NAME_MAX_LENGTH } }}
             onChange={(e) => onFieldChange(entry.localKey, 'name', e.target.value)}
             onClear={() => onFieldChange(entry.localKey, 'name', '')}
           />
@@ -266,24 +298,32 @@ function ReferenceCard<T extends { id: string | null; name: string; occupation: 
             fullWidth
             disabled={isSaving}
             value={entry.data.occupation}
+            slotProps={{ htmlInput: { maxLength: FIELD_MAX_LENGTH } }}
             onChange={(e) => onFieldChange(entry.localKey, 'occupation', e.target.value)}
             onClear={() => onFieldChange(entry.localKey, 'occupation', '')}
           />
         </Grid>
-        {fields.map((field) => (
-          <Grid key={field.key} size={{ xs: 12, sm: field.multiline ? 12 : 6 }}>
-            <ClearableTextField
-              label={field.label}
-              fullWidth
-              multiline={field.multiline}
-              minRows={field.multiline ? 2 : undefined}
-              disabled={isSaving}
-              value={entry.data[field.key] as string}
-              onChange={(e) => onFieldChange(entry.localKey, field.key, e.target.value)}
-              onClear={() => onFieldChange(entry.localKey, field.key, '')}
-            />
-          </Grid>
-        ))}
+        {fields.map((field) => {
+          const value = entry.data[field.key] as string;
+          const errorMessage = field.validate ? field.validate(value) : null;
+          return (
+            <Grid key={field.key} size={{ xs: 12, sm: field.multiline ? 12 : 6 }}>
+              <ClearableTextField
+                label={field.label}
+                fullWidth
+                multiline={field.multiline}
+                minRows={field.multiline ? 2 : undefined}
+                disabled={isSaving}
+                value={value}
+                error={!!errorMessage}
+                helperText={errorMessage ?? undefined}
+                slotProps={{ htmlInput: { maxLength: field.maxLength } }}
+                onChange={(e) => onFieldChange(entry.localKey, field.key, e.target.value)}
+                onClear={() => onFieldChange(entry.localKey, field.key, '')}
+              />
+            </Grid>
+          );
+        })}
       </Grid>
 
       <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
@@ -299,7 +339,7 @@ function ReferenceCard<T extends { id: string | null; name: string; occupation: 
         <Button
           variant="contained"
           size="small"
-          disabled={isSaving || !entry.data.name.trim()}
+          disabled={isSaving || !entry.data.name.trim() || hasFieldErrors}
           onClick={() => onSave(entry.localKey)}
         >
           {isSaving ? 'Guardando…' : 'Guardar'}
