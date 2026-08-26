@@ -38,6 +38,18 @@ function validatePhone(value: string): string | null {
   return null;
 }
 
+/** Solo letras (con acentos/ñ) y espacios — nombres de personas, no razones sociales. */
+const NAME_CHARSET_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+
+/** Vacío es válido aquí (el "required" se exige aparte); solo se valida el charset si el usuario escribió algo. */
+function validateName(value: string): string | null {
+  if (!value) return null;
+  if (!NAME_CHARSET_REGEX.test(value)) {
+    return 'El nombre solo debe contener letras y espacios.';
+  }
+  return null;
+}
+
 interface ReferencesTabProps {
   candidateId: string;
   personalReferences: PersonalReferenceEntry[];
@@ -269,9 +281,10 @@ function ReferenceCard<T extends { id: string | null; name: string; occupation: 
   }
 
   const secondaryAction = getSecondaryAction(entry);
-  const hasFieldErrors = fields.some(
-    (field) => field.validate && field.validate(entry.data[field.key] as string) !== null,
-  );
+  const nameErrorMessage = validateName(entry.data.name);
+  const hasFieldErrors =
+    !!nameErrorMessage ||
+    fields.some((field) => field.validate && field.validate(entry.data[field.key] as string) !== null);
 
   return (
     <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
@@ -287,6 +300,8 @@ function ReferenceCard<T extends { id: string | null; name: string; occupation: 
             fullWidth
             disabled={isSaving}
             value={entry.data.name}
+            error={!!nameErrorMessage}
+            helperText={nameErrorMessage ?? undefined}
             slotProps={{ htmlInput: { maxLength: NAME_MAX_LENGTH } }}
             onChange={(e) => onFieldChange(entry.localKey, 'name', e.target.value)}
             onClear={() => onFieldChange(entry.localKey, 'name', '')}

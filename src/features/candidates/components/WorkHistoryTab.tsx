@@ -21,6 +21,18 @@ const COMPANY_NAME_MAX_LENGTH = 150;
 const FIELD_MAX_LENGTH = 255;
 const COMMENTS_MAX_LENGTH = 500;
 
+/** Letras/números Unicode, espacios y puntuación típica de razones sociales (&.,'’()-). */
+const COMPANY_NAME_CHARSET_REGEX = /^[\p{L}\p{N}\s&.,'’()-]+$/u;
+
+/** Vacío es válido aquí (el "required" se exige aparte); solo se valida el charset si el usuario escribió algo. */
+function validateCompanyName(value: string): string | null {
+  if (!value) return null;
+  if (!COMPANY_NAME_CHARSET_REGEX.test(value)) {
+    return 'El nombre de la empresa contiene caracteres no permitidos.';
+  }
+  return null;
+}
+
 interface WorkHistoryTabProps {
   candidateId: string;
   workHistories: WorkHistoryEntry[];
@@ -241,6 +253,7 @@ function WorkHistoryCard({
   }
 
   const secondaryAction = getSecondaryAction(entry);
+  const companyNameErrorMessage = validateCompanyName(entry.data.companyName);
 
   return (
     <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
@@ -256,6 +269,8 @@ function WorkHistoryCard({
             fullWidth
             disabled={isSaving}
             value={entry.data.companyName}
+            error={!!companyNameErrorMessage}
+            helperText={companyNameErrorMessage ?? undefined}
             slotProps={{ htmlInput: { maxLength: COMPANY_NAME_MAX_LENGTH } }}
             onChange={(e) => onFieldChange(entry.localKey, 'companyName', e.target.value)}
             onClear={() => onFieldChange(entry.localKey, 'companyName', '')}
@@ -365,7 +380,7 @@ function WorkHistoryCard({
         <Button
           variant="contained"
           size="small"
-          disabled={isSaving || !entry.data.companyName.trim()}
+          disabled={isSaving || !entry.data.companyName.trim() || !!companyNameErrorMessage}
           onClick={() => onSave(entry.localKey)}
         >
           {isSaving ? 'Guardando…' : 'Guardar'}

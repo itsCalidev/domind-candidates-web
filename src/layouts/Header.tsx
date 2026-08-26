@@ -47,7 +47,7 @@ export function Header() {
         <Box sx={{ minWidth: 0 }}>
           <Breadcrumbs sx={{ fontSize: 13 }}>
             <Typography variant="caption" color="text.secondary">
-              DOMIND Candidates
+              Panel administrativo
             </Typography>
             {activeItem && (
               <Typography variant="caption" color="text.primary" fontWeight={600}>

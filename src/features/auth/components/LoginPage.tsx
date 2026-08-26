@@ -71,9 +71,7 @@ export function LoginPage() {
           }}
         />
 
-        <Typography variant="h5" sx={{ position: 'relative', letterSpacing: 0.5 }}>
-          DOMIND
-        </Typography>
+        <Box />
 
         <Box sx={{ position: 'relative', maxWidth: 420 }}>
           <Typography variant="h3" sx={{ mb: 2, lineHeight: 1.25 }}>
@@ -86,7 +84,7 @@ export function LoginPage() {
         </Box>
 
         <Typography variant="caption" sx={{ position: 'relative', opacity: 0.6 }}>
-          © {new Date().getFullYear()} DOMIND Candidates Platform
+          Powered by Domind
         </Typography>
       </Box>
 
