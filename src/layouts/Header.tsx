@@ -2,11 +2,13 @@ import { Avatar, Box, Breadcrumbs, ButtonBase, IconButton, Stack, Tooltip, Typog
 import MenuIcon from '@mui/icons-material/Menu';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
+import RecordVoiceOverOutlinedIcon from '@mui/icons-material/RecordVoiceOverOutlined';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { navItems } from './navItems';
 import { useLayout } from './LayoutContext';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { useAccessibility } from '@/shared/context/AccessibilityContext';
+import { useTextReader } from '@/shared/hooks/useTextReader';
 import { paths } from '@/routes/paths';
 
 export const HEADER_HEIGHT = 72;
@@ -17,6 +19,7 @@ export function Header() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { darkMode, toggleDarkMode } = useAccessibility();
+  const { isReaderActive, toggleReader } = useTextReader();
 
   const activeItem = navItems.find((item) => location.pathname.startsWith(item.path));
 
@@ -62,6 +65,16 @@ export function Header() {
       </Stack>
 
       <Stack direction="row" alignItems="center" spacing={1.5}>
+        <Tooltip title={isReaderActive ? 'Desactivar modo de lectura' : 'Activar modo de lectura'}>
+          <IconButton
+            onClick={toggleReader}
+            color={isReaderActive ? 'primary' : 'default'}
+            aria-label={isReaderActive ? 'Desactivar modo de lectura' : 'Activar modo de lectura'}
+          >
+            <RecordVoiceOverOutlinedIcon />
+          </IconButton>
+        </Tooltip>
+
         <Tooltip title={darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}>
           <IconButton onClick={toggleDarkMode} aria-label={darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}>
             {darkMode ? <LightModeOutlinedIcon /> : <DarkModeOutlinedIcon />}

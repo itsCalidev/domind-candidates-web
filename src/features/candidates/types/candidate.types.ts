@@ -179,6 +179,8 @@ export interface CandidateDetail extends CandidateListItem {
   neighborhoodReferences: NeighborhoodReferenceEntry[];
   /** Objeto raíz `socialNetwork` (singular) — nombre confirmado por el usuario, mismo patrón que family/health/housing. */
   socialNetwork: CandidateSocialNetwork;
+  /** Objeto raíz `interviewerIntegration` (singular) — nombre confirmado por el usuario, mismo patrón que socialNetwork. */
+  interviewerIntegration: CandidateInterviewerIntegration;
 }
 
 export type EvaluationRating = 'GREEN' | 'YELLOW' | 'RED';
@@ -186,9 +188,9 @@ export type EvaluationRating = 'GREEN' | 'YELLOW' | 'RED';
 /**
  * IDs de sección tal como los espera PUT /candidates/:id/evaluations/:section
  * en la URL — confirmados por el usuario en vivo (no hay DTO documentado
- * en /docs-json todavía). `WORK_HISTORY`, `REFERENCES` y `SOCIAL_NETWORK`
- * se agregaron cuando se construyó cada sub-pestaña de "Comportamiento y
- * Trayectoria" — ya no queda ninguna sub-pestaña de ese grupo sin
+ * en /docs-json todavía). `WORK_HISTORY`, `REFERENCES`, `SOCIAL_NETWORK`
+ * e `INTERVIEWER_INTEGRATION` se agregaron cuando se construyó cada
+ * sub-pestaña — ya no queda ninguna sub-pestaña del sistema sin
  * evaluador propio.
  */
 export type EvaluationSection =
@@ -200,7 +202,8 @@ export type EvaluationSection =
   | 'ECONOMY'
   | 'WORK_HISTORY'
   | 'REFERENCES'
-  | 'SOCIAL_NETWORK';
+  | 'SOCIAL_NETWORK'
+  | 'INTERVIEWER_INTEGRATION';
 
 export interface SectionEvaluation {
   section: EvaluationSection;
@@ -320,6 +323,20 @@ export interface CandidateSocialNetwork {
 
 /** Body de PUT /candidates/:id/social-network — mismos campos, todos opcionales según el DTO del backend. */
 export type SocialNetworkPayload = CandidateSocialNetwork;
+
+/**
+ * Conclusión final del entrevistador — relación 1 a 1 igual que
+ * `CandidateSocialNetwork`: un único PUT /candidates/:id/interviewer-integration
+ * hace upsert, el registro existente llega embebido en GET /candidates/:id
+ * bajo `interviewerIntegration` (objeto singular). Ambos nombres
+ * confirmados por el usuario.
+ */
+export interface CandidateInterviewerIntegration {
+  comment: string;
+}
+
+/** Body de PUT /candidates/:id/interviewer-integration. */
+export type InterviewerIntegrationPayload = CandidateInterviewerIntegration;
 
 /**
  * Texto del reclutador asignado. Una sola fuente para la tabla, el

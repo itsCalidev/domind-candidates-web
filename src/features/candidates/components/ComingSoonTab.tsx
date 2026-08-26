@@ -1,17 +1,20 @@
 import { Box, Paper, Typography } from '@mui/material';
 import ConstructionOutlinedIcon from '@mui/icons-material/ConstructionOutlined';
+import type { ReactNode } from 'react';
 
 interface ComingSoonTabProps {
   sectionName: string;
+  /** Ícono representativo de la sección; construcción genérica por default. */
+  icon?: ReactNode;
 }
 
 /**
  * Placeholder para las secciones del expediente que se construirán a
- * fondo más adelante (Documentación, Familia, Salud, Vivienda, Economía).
- * Mantiene el recorrido del detalle visualmente completo sin adelantar
- * formularios grandes que aún no corresponden a esta fase.
+ * fondo más adelante. Se reutiliza tal cual para los 3 sub-tabs nuevos
+ * de "Comportamiento y Trayectoria" (Antecedentes, Referencias, Redes
+ * Sociales) — cada uno solo cambia el ícono, no la estructura.
  */
-export function ComingSoonTab({ sectionName }: ComingSoonTabProps) {
+export function ComingSoonTab({ sectionName, icon = <ConstructionOutlinedIcon /> }: ComingSoonTabProps) {
   return (
     <Paper
       elevation={0}
@@ -37,14 +40,14 @@ export function ComingSoonTab({ sectionName }: ComingSoonTabProps) {
           mb: 2,
         }}
       >
-        <ConstructionOutlinedIcon />
+        {icon}
       </Box>
       <Typography variant="subtitle1" sx={{ mb: 0.5 }}>
         {sectionName}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360 }}>
-        Esta sección se construirá cuando desarrollemos el expediente completo
-        del candidato.
+        Módulo en construcción. Esta sección se habilitará en una fase
+        posterior del expediente.
       </Typography>
     </Paper>
   );

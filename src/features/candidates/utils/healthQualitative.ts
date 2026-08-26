@@ -40,6 +40,48 @@ export function classifyPhysicalAspect(value: string | null): ChipSeverity {
   return 'default';
 }
 
+export type HabitSeverity = 'success' | 'warning' | 'error' | 'default';
+
+function classifyByKeywords(
+  value: string | null,
+  goodKeywords: string[],
+  moderateKeywords: string[],
+  poorKeywords: string[],
+): HabitSeverity {
+  if (isEmptyMedicalText(value)) return 'default';
+  const normalized = value!.toLowerCase();
+  // Se revisa "malo" antes que "bueno" a propósito: con textos libres,
+  // una coincidencia ambigua se resuelve hacia la lectura más cautelosa.
+  if (poorKeywords.some((keyword) => normalized.includes(keyword))) return 'error';
+  if (moderateKeywords.some((keyword) => normalized.includes(keyword))) return 'warning';
+  if (goodKeywords.some((keyword) => normalized.includes(keyword))) return 'success';
+  return 'default';
+}
+
+/** "Buena"→verde, "Regular"→naranja, "Mala"→rojo — igual que el resto de campos cualitativos de esta vista. */
+export function classifyDietQuality(value: string | null): HabitSeverity {
+  return classifyByKeywords(value, ['buena', 'excelente'], ['regular'], ['mala']);
+}
+
+/** "Frecuente"→verde, "Ocasional"→naranja, "Sedentario"→rojo. */
+export function classifyPhysicalActivity(value: string | null): HabitSeverity {
+  return classifyByKeywords(value, ['frecuente', 'activo'], ['ocasional', 'moderad'], ['sedentario']);
+}
+
+/**
+ * Mismas palabras clave que FREQUENT_ALCOHOL_KEYWORDS en healthRisk.ts
+ * (frecuente/diario/fines de semana pesan en el Vaso de Riesgo) — aquí
+ * solo deciden el color del Chip, no una bandera de riesgo.
+ */
+export function classifyAlcoholFrequency(value: string | null): 'warning' | 'info' | 'default' {
+  if (isEmptyMedicalText(value)) return 'default';
+  const normalized = value!.toLowerCase();
+  if (['frecuente', 'diario', 'fines de semana'].some((keyword) => normalized.includes(keyword))) {
+    return 'warning';
+  }
+  return 'info';
+}
+
 interface CurrentHealthLevel {
   keywords: string[];
   percent: number;

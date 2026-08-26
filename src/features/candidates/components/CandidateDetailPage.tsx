@@ -32,6 +32,7 @@ import { EconomyTab } from './EconomyTab';
 import { WorkHistoryTab } from './WorkHistoryTab';
 import { ReferencesTab } from './ReferencesTab';
 import { SocialNetworkTab } from './SocialNetworkTab';
+import { InterviewerIntegrationTab } from './InterviewerIntegrationTab';
 import { CandidateSubTabs, type SubTabDefinition } from './CandidateSubTabs';
 import { SectionGrader } from './SectionGrader';
 import { AssignRecruiterDialog } from './AssignRecruiterDialog';
@@ -260,6 +261,21 @@ export function CandidateDetailPage() {
         },
       ],
     },
+    {
+      label: 'Comentarios Finales',
+      subTabs: [
+        {
+          label: 'Comentarios Finales',
+          content: withGrader(
+            'INTERVIEWER_INTEGRATION',
+            <InterviewerIntegrationTab
+              candidateId={candidateId}
+              interviewerIntegration={candidate.interviewerIntegration}
+            />,
+          ),
+        },
+      ],
+    },
   ];
 
   function handleMainTabChange(index: number) {
@@ -404,11 +420,19 @@ export function CandidateDetailPage() {
         ))}
       </Tabs>
 
-      <CandidateSubTabs
-        tabs={mainTabGroups[activeMainTab].subTabs}
-        activeIndex={activeSubTab}
-        onChange={setActiveSubTab}
-      />
+      {/* "Comentarios Finales" es una pestaña principal con una sola sub-pestaña
+          (misma jerarquía interna que las demás para reutilizar withGrader) — sin
+          este `length > 1`, CandidateSubTabs mostraría una barra redundante con
+          un solo tab repitiendo el mismo label de la pestaña principal. */}
+      {mainTabGroups[activeMainTab].subTabs.length > 1 ? (
+        <CandidateSubTabs
+          tabs={mainTabGroups[activeMainTab].subTabs}
+          activeIndex={activeSubTab}
+          onChange={setActiveSubTab}
+        />
+      ) : (
+        mainTabGroups[activeMainTab].subTabs[0]?.content
+      )}
 
       <AssignRecruiterDialog
         open={isAssignOpen}

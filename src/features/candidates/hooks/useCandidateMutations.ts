@@ -6,6 +6,7 @@ import type {
   CandidateStatus,
   EvaluationRating,
   EvaluationSection,
+  InterviewerIntegrationPayload,
   NeighborhoodReferencePayload,
   PersonalReferencePayload,
   SocialNetworkPayload,
@@ -257,6 +258,18 @@ export function useCandidateMutations() {
     },
   });
 
+  const upsertInterviewerIntegration = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: InterviewerIntegrationPayload }) =>
+      candidatesService.upsertInterviewerIntegration(id, payload),
+    onSuccess: () => {
+      showToast('Conclusión guardada exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo guardar la conclusión.'), 'error');
+    },
+  });
+
   return {
     assignRecruiter,
     updateStatus,
@@ -272,5 +285,6 @@ export function useCandidateMutations() {
     updateNeighborhoodReference,
     deleteNeighborhoodReference,
     upsertSocialNetwork,
+    upsertInterviewerIntegration,
   };
 }

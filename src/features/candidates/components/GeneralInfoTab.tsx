@@ -1,5 +1,6 @@
-import { Grid, Paper, Typography } from '@mui/material';
-import type { CandidateGeneralInfo } from '../types/candidate.types';
+import { Grid, Paper, Typography } from "@mui/material";
+import type { CandidateGeneralInfo } from "../types/candidate.types";
+import { maritalStatusLabels } from "../utils/maritalStatus";
 
 interface GeneralInfoTabProps {
   info: CandidateGeneralInfo;
@@ -24,7 +25,10 @@ export function GeneralInfoTab({ info }: GeneralInfoTabProps) {
       <Grid container spacing={3}>
         <Field label="Nombre completo" value={info.fullName} />
         <Field label="Puesto solicitado" value={info.positionApplied} />
-        <Field label="Estado civil" value={info.civilStatus} />
+        <Field
+          label="Estado civil"
+          value={maritalStatusLabels[info.civilStatus] ?? info.civilStatus}
+        />{" "}
         <Field label="Domicilio" value={info.address} />
         <Field label="Colonia" value={info.neighborhood} />
         <Field label="Código postal" value={info.postalCode} />

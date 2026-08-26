@@ -80,3 +80,20 @@ body.high-contrast .MuiChip-outlined,
 body.high-contrast .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
   border-color: #ffff00 !important;
 }
+
+/*
+ * Modo de lectura por hover (ver useTextReader.ts). Reutiliza
+ * --a11y-focus-color (el mismo amarillo del anillo de foco por teclado)
+ * para el outline, así queda coherente si además está activo el alto
+ * contraste (esa variable ya cambia a amarillo puro ahí).
+ */
+body.reader-mode-active,
+body.reader-mode-active * {
+  cursor: help;
+}
+
+body.reader-mode-active *:hover {
+  outline: 2px solid var(--a11y-focus-color);
+  outline-offset: 1px;
+  border-radius: 4px;
+}

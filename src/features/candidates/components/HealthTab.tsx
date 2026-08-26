@@ -5,48 +5,92 @@ import AccessibilityNewOutlinedIcon from '@mui/icons-material/AccessibilityNewOu
 import LocalHospitalOutlinedIcon from '@mui/icons-material/LocalHospitalOutlined';
 import DirectionsRunOutlinedIcon from '@mui/icons-material/DirectionsRunOutlined';
 import SmokingRoomsOutlinedIcon from '@mui/icons-material/SmokingRoomsOutlined';
+import SmokeFreeOutlinedIcon from '@mui/icons-material/SmokeFreeOutlined';
+import WineBarOutlinedIcon from '@mui/icons-material/WineBarOutlined';
+import MedicationOutlinedIcon from '@mui/icons-material/MedicationOutlined';
+import WeekendOutlinedIcon from '@mui/icons-material/WeekendOutlined';
+import MonitorOutlinedIcon from '@mui/icons-material/MonitorOutlined';
+import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined';
 import MonitorWeightOutlinedIcon from '@mui/icons-material/MonitorWeightOutlined';
 import OpacityOutlinedIcon from '@mui/icons-material/OpacityOutlined';
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
 import HealthAndSafetyOutlinedIcon from '@mui/icons-material/HealthAndSafetyOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { RiskGlass } from './RiskGlass';
 import { BmiGauge } from './BmiGauge';
 import { computeHealthRisk } from '../utils/healthRisk';
 import {
+  classifyAlcoholFrequency,
   classifyCurrentHealth,
+  classifyDietQuality,
+  classifyPhysicalActivity,
   classifyPhysicalAspect,
   isEmptyMedicalText,
   splitMedicalEntries,
+  type HabitSeverity,
 } from '../utils/healthQualitative';
+import { CleanStateBadge } from '@/shared/components/CleanStateBadge';
 import type { CandidateHealth } from '../types/candidate.types';
 
 interface HealthTabProps {
   health: CandidateHealth;
 }
 
-const NOT_SPECIFIED = 'No especificado';
-
 function formatBoolean(value: boolean | null): string {
   if (value === null) return 'Sin registrar';
   return value ? 'Sí' : 'No';
 }
 
-/**
- * Estado vacío "que transmita salud" para pastDiseases/surgeries/
- * chronicDiseasesDetails cuando no hay nada que reportar — reemplaza el
- * antiguo texto plano "No especificado", que el cliente pidió sacar de
- * esta vista por completo.
- */
-function CleanHistoryBadge({ label }: { label: string }) {
+/** Chip de severidad reutilizado por dietQuality/physicalActivity/alcoholFrequency: mismo mapeo color↔severidad en los 3 campos. */
+function HabitChip({
+  label,
+  severity,
+  icon,
+}: {
+  label: string;
+  severity: HabitSeverity | 'info';
+  icon?: ReactElement;
+}) {
   return (
-    <Stack direction="row" spacing={1} alignItems="center">
-      <HealthAndSafetyOutlinedIcon fontSize="small" color="success" />
-      <Typography variant="body2" fontWeight={600} color="success.main">
-        {label}
-      </Typography>
+    <Chip
+      icon={icon}
+      label={label}
+      size="small"
+      color={severity === 'default' ? undefined : severity}
+      variant={severity === 'default' ? 'outlined' : 'filled'}
+    />
+  );
+}
+
+/** Ícono + número grande + subtítulo — para datos numéricos donde el valor en sí importa más que su color. */
+function QuickStat({ icon, value, label }: { icon: ReactNode; value: ReactNode; label: string }) {
+  return (
+    <Stack direction="row" spacing={1.5} alignItems="center">
+      <Box
+        sx={{
+          width: 40,
+          height: 40,
+          borderRadius: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: 'action.hover',
+          color: 'primary.main',
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </Box>
+      <Box>
+        <Typography variant="h6" fontWeight={700} sx={{ lineHeight: 1 }}>
+          {value}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          {label}
+        </Typography>
+      </Box>
     </Stack>
   );
 }
@@ -117,6 +161,12 @@ export function HealthTab({ health }: HealthTabProps) {
   const { total, factors } = computeHealthRisk(health);
   const currentHealthMeter = classifyCurrentHealth(health.currentHealth);
   const physicalAspectSeverity = classifyPhysicalAspect(health.physicalAspect);
+  const dietSeverity = classifyDietQuality(health.dietQuality);
+  const physicalActivitySeverity = classifyPhysicalActivity(health.physicalActivity);
+  const alcoholSeverity = classifyAlcoholFrequency(health.alcoholFrequency);
+  const isNonSmoker = health.smokes !== true || !health.cigarettesPerDay;
+  const hasNoDrugs = health.usedDrugs !== true;
+  const hasNoAlcohol = isEmptyMedicalText(health.alcoholFrequency) && health.alcoholTypes.length === 0;
   const riskSeverity = total > 60 ? 'error' : total > 0 ? 'warning' : 'success';
   const riskTitle =
     riskSeverity === 'error'
@@ -171,7 +221,7 @@ export function HealthTab({ health }: HealthTabProps) {
                 Detalle
               </Typography>
               {isEmptyMedicalText(health.chronicDiseasesDetails) ? (
-                <CleanHistoryBadge label="Sin antecedentes" />
+                <CleanStateBadge label="Sin antecedentes" />
               ) : (
                 <MedicalChipList
                   entries={splitMedicalEntries(health.chronicDiseasesDetails)}
@@ -190,7 +240,7 @@ export function HealthTab({ health }: HealthTabProps) {
                 Enfermedades pasadas
               </Typography>
               {isEmptyMedicalText(health.pastDiseases) ? (
-                <CleanHistoryBadge label="Historial limpio" />
+                <CleanStateBadge label="Historial limpio" />
               ) : (
                 <MedicalChipList
                   entries={splitMedicalEntries(health.pastDiseases)}
@@ -204,7 +254,7 @@ export function HealthTab({ health }: HealthTabProps) {
                 Cirugías
               </Typography>
               {isEmptyMedicalText(health.surgeries) ? (
-                <CleanHistoryBadge label="Sin cirugías" />
+                <CleanStateBadge label="Sin cirugías" />
               ) : (
                 <MedicalChipList
                   entries={splitMedicalEntries(health.surgeries)}
@@ -269,13 +319,20 @@ export function HealthTab({ health }: HealthTabProps) {
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <SummaryCard icon={<LocalHospitalOutlinedIcon fontSize="small" />} title="Acceso a servicios de salud">
             {health.healthcareAccess.length === 0 ? (
-              <Typography variant="body2" fontWeight={500}>
-                {NOT_SPECIFIED}
-              </Typography>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'text.secondary' }}>
+                <BusinessOutlinedIcon fontSize="small" />
+                <Typography variant="body2">Sin cobertura registrada</Typography>
+              </Stack>
             ) : (
               <Stack direction="row" flexWrap="wrap" gap={0.75}>
                 {health.healthcareAccess.map((service) => (
-                  <Chip key={service} label={service} size="small" variant="outlined" />
+                  <Chip
+                    key={service}
+                    icon={<HealthAndSafetyOutlinedIcon />}
+                    label={service}
+                    size="small"
+                    variant="outlined"
+                  />
                 ))}
               </Stack>
             )}
@@ -284,35 +341,111 @@ export function HealthTab({ health }: HealthTabProps) {
 
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <SummaryCard icon={<DirectionsRunOutlinedIcon fontSize="small" />} title="Hábitos de vida">
-            <InfoLine label="Calidad de la alimentación" value={health.dietQuality ?? NOT_SPECIFIED} />
-            <InfoLine label="Actividad física" value={health.physicalActivity ?? NOT_SPECIFIED} />
-            <InfoLine
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                Calidad de la alimentación
+              </Typography>
+              {isEmptyMedicalText(health.dietQuality) ? (
+                <Typography variant="body2" color="text.secondary">
+                  Sin registrar
+                </Typography>
+              ) : (
+                <HabitChip label={health.dietQuality!} severity={dietSeverity} />
+              )}
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                Actividad física
+              </Typography>
+              {isEmptyMedicalText(health.physicalActivity) ? (
+                <Typography variant="body2" color="text.secondary">
+                  Sin registrar
+                </Typography>
+              ) : (
+                <HabitChip label={health.physicalActivity!} severity={physicalActivitySeverity} />
+              )}
+            </Box>
+            <QuickStat
+              icon={<WeekendOutlinedIcon fontSize="small" />}
+              value={health.sedentaryHours !== null ? `${health.sedentaryHours}h` : '—'}
               label="Horas sedentarias al día"
-              value={health.sedentaryHours ?? NOT_SPECIFIED}
             />
-            <InfoLine
+            <QuickStat
+              icon={<MonitorOutlinedIcon fontSize="small" />}
+              value={health.screenTimeHours !== null ? `${health.screenTimeHours}h` : '—'}
               label="Horas de pantalla al día"
-              value={health.screenTimeHours ?? NOT_SPECIFIED}
             />
           </SummaryCard>
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <SummaryCard icon={<SmokingRoomsOutlinedIcon fontSize="small" />} title="Consumo de sustancias">
-            <InfoLine label="Frecuencia de alcohol" value={health.alcoholFrequency ?? NOT_SPECIFIED} />
-            {health.alcoholTypes.length > 0 && (
-              <Stack direction="row" flexWrap="wrap" gap={0.75}>
-                {health.alcoholTypes.map((type) => (
-                  <Chip key={type} label={type} size="small" variant="outlined" />
-                ))}
-              </Stack>
-            )}
-            <InfoLine label="Cigarros al día" value={health.cigarettesPerDay ?? NOT_SPECIFIED} />
-            <InfoLine
-              label="Gasto semanal en cigarros"
-              value={health.smokingExpensePerWeek ?? NOT_SPECIFIED}
-            />
-            <InfoLine label="Detalle de uso de drogas" value={health.drugsDetails ?? NOT_SPECIFIED} />
+            <Box>
+              <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.8 }}>
+                Alcohol
+              </Typography>
+              {hasNoAlcohol ? (
+                <CleanStateBadge label="No consume alcohol" />
+              ) : (
+                <Stack direction="row" flexWrap="wrap" gap={0.75}>
+                  {!isEmptyMedicalText(health.alcoholFrequency) && (
+                    <HabitChip
+                      label={health.alcoholFrequency!}
+                      severity={alcoholSeverity}
+                      icon={<WineBarOutlinedIcon />}
+                    />
+                  )}
+                  {health.alcoholTypes.map((type) => (
+                    <Chip key={type} icon={<WineBarOutlinedIcon />} label={type} size="small" variant="outlined" />
+                  ))}
+                </Stack>
+              )}
+            </Box>
+
+            <Box>
+              <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.8 }}>
+                Tabaco
+              </Typography>
+              {isNonSmoker ? (
+                <CleanStateBadge label="No fuma" icon={SmokeFreeOutlinedIcon} />
+              ) : (
+                <Stack direction="row" flexWrap="wrap" gap={0.75}>
+                  <Chip
+                    icon={<SmokingRoomsOutlinedIcon />}
+                    label={`${health.cigarettesPerDay} cigarros/día`}
+                    color="warning"
+                    size="small"
+                  />
+                  {health.smokingExpensePerWeek !== null && (
+                    <Chip
+                      icon={<SmokingRoomsOutlinedIcon />}
+                      label={`$${health.smokingExpensePerWeek}/semana`}
+                      variant="outlined"
+                      size="small"
+                    />
+                  )}
+                </Stack>
+              )}
+            </Box>
+
+            <Box>
+              <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.8 }}>
+                Drogas
+              </Typography>
+              {hasNoDrugs ? (
+                <CleanStateBadge label="Sin consumo de drogas" />
+              ) : (
+                <MedicalChipList
+                  entries={
+                    splitMedicalEntries(health.drugsDetails).length > 0
+                      ? splitMedicalEntries(health.drugsDetails)
+                      : ['Uso reportado']
+                  }
+                  color="error"
+                  icon={MedicationOutlinedIcon}
+                />
+              )}
+            </Box>
           </SummaryCard>
         </Grid>
       </Grid>

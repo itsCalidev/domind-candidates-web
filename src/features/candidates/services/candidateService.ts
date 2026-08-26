@@ -4,6 +4,7 @@ import type {
   AssignedRecruiter,
   BankCard,
   CandidateDetail,
+  CandidateInterviewerIntegration,
   CandidateListItem,
   CandidateSocialNetwork,
   CandidateStatus,
@@ -11,6 +12,7 @@ import type {
   EvaluationRating,
   EvaluationSection,
   Income,
+  InterviewerIntegrationPayload,
   NeighborhoodReferenceEntry,
   NeighborhoodReferencePayload,
   PersonalReferenceEntry,
@@ -202,6 +204,11 @@ interface RawCandidateSocialNetwork {
   profileComments?: string | null;
 }
 
+/** Shape crudo de `interviewerIntegration` — mismo criterio que RawCandidateSocialNetwork. */
+interface RawCandidateInterviewerIntegration {
+  comment?: string | null;
+}
+
 // 1. La estructura exacta del Detalle que nos devuelve NestJS (Prisma)
 interface BackendCandidateDetail extends DetailedCandidateList {
   personal?: {
@@ -229,6 +236,7 @@ interface BackendCandidateDetail extends DetailedCandidateList {
   personalReferences?: RawPersonalReferenceEntry[];
   neighborhoodReferences?: RawNeighborhoodReferenceEntry[];
   socialNetwork?: RawCandidateSocialNetwork | null;
+  interviewerIntegration?: RawCandidateInterviewerIntegration | null;
   // Identity vendrá después
 }
 
@@ -423,6 +431,9 @@ export const candidatesService = {
         instagram: data.socialNetwork?.instagram ?? '',
         profileComments: data.socialNetwork?.profileComments ?? '',
       },
+      interviewerIntegration: {
+        comment: data.interviewerIntegration?.comment ?? '',
+      },
     };
   },
 
@@ -611,5 +622,17 @@ export const candidatesService = {
       instagram: data.instagram ?? payload.instagram,
       profileComments: data.profileComments ?? payload.profileComments,
     };
+  },
+
+  /** PUT /candidates/:id/interviewer-integration — upsert, mismo criterio defensivo que upsertSocialNetwork. */
+  async upsertInterviewerIntegration(
+    id: string,
+    payload: InterviewerIntegrationPayload,
+  ): Promise<CandidateInterviewerIntegration> {
+    const { data } = await apiClient.put<Partial<CandidateInterviewerIntegration>>(
+      `/candidates/${id}/interviewer-integration`,
+      payload,
+    );
+    return { comment: data.comment ?? payload.comment };
   },
 };
