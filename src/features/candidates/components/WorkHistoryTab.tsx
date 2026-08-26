@@ -406,7 +406,13 @@ export function WorkHistoryTab({ candidateId, workHistories }: WorkHistoryTabPro
     const entry = entries.find((e) => e.localKey === localKey);
     if (!entry || !entry.data.companyName.trim()) return;
 
-    const { id, ...payload } = entry.data;
+    // El backend agrega candidateId/createdAt/updatedAt a los registros
+    // embebidos en GET /candidates/:id; como entry.data se guarda tal cual
+    // en el estado, hay que excluirlos explícitamente aquí — de lo
+    // contrario el PUT/POST los reenvía y el backend responde 400
+    // ("property candidateId/createdAt/updatedAt should not exist").
+    const { id, candidateId: _candidateId, createdAt: _createdAt, updatedAt: _updatedAt, ...payload } =
+      entry.data as WorkHistoryEntry & { candidateId?: unknown; createdAt?: unknown; updatedAt?: unknown };
     setSavingKey(localKey);
     try {
       const saved = id

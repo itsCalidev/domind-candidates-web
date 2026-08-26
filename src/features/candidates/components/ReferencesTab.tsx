@@ -333,7 +333,12 @@ export function ReferencesTab({ candidateId, personalReferences, neighborhoodRef
     const entry = personal.entries.find((e) => e.localKey === localKey);
     if (!entry || !entry.data.name.trim()) return;
 
-    const { id, ...payload } = entry.data;
+    // El backend agrega candidateId/createdAt/updatedAt a los registros
+    // embebidos en GET /candidates/:id; hay que excluirlos aquí o el
+    // PUT/POST los reenvía y el backend responde 400 ("property
+    // candidateId/createdAt/updatedAt should not exist").
+    const { id, candidateId: _candidateId, createdAt: _createdAt, updatedAt: _updatedAt, ...payload } =
+      entry.data as PersonalReferenceEntry & { candidateId?: unknown; createdAt?: unknown; updatedAt?: unknown };
     setSavingKey(localKey);
     try {
       const saved = id
@@ -352,7 +357,10 @@ export function ReferencesTab({ candidateId, personalReferences, neighborhoodRef
     const entry = neighborhood.entries.find((e) => e.localKey === localKey);
     if (!entry || !entry.data.name.trim()) return;
 
-    const { id, ...payload } = entry.data;
+    // Ídem: excluir los campos de control que el backend agrega a los
+    // registros embebidos, para no reenviarlos en el PUT/POST.
+    const { id, candidateId: _candidateId, createdAt: _createdAt, updatedAt: _updatedAt, ...payload } =
+      entry.data as NeighborhoodReferenceEntry & { candidateId?: unknown; createdAt?: unknown; updatedAt?: unknown };
     setSavingKey(localKey);
     try {
       const saved = id
