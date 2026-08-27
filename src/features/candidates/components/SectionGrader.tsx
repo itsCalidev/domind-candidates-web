@@ -133,7 +133,7 @@ export function SectionGrader({ candidateId, section, initialEvaluation }: Secti
       </ToggleButtonGroup>
 
       <TextField
-        label="Notas del evaluador (opcional)"
+        label="Notas del evaluador *"
         placeholder="Observaciones sobre esta sección…"
         multiline
         minRows={2}
@@ -147,7 +147,7 @@ export function SectionGrader({ candidateId, section, initialEvaluation }: Secti
         <Button
           variant="contained"
           size="small"
-          disabled={!rating || isPending || !hasChanges}
+          disabled={!rating || isPending || !hasChanges || !comments.trim()}
           onClick={handleSave}
         >
           {isPending ? 'Guardando…' : isAlreadyEvaluated ? 'Actualizar calificación' : 'Guardar calificación'}

@@ -271,6 +271,7 @@ export function CandidateDetailPage() {
             <InterviewerIntegrationTab
               candidateId={candidateId}
               interviewerIntegration={candidate.interviewerIntegration}
+              evaluations={evaluationsQuery.data?.evaluations ?? []}
             />,
           ),
         },

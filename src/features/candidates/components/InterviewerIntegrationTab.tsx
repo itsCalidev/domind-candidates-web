@@ -1,16 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Box, Button, Paper, Stack, Typography } from '@mui/material';
 import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
 import { ClearableTextField } from '@/shared/components/ClearableTextField';
 import { useCandidateMutations } from '../hooks/useCandidateMutations';
-import type { CandidateInterviewerIntegration } from '../types/candidate.types';
+import type { CandidateInterviewerIntegration, SectionEvaluation } from '../types/candidate.types';
 
 interface InterviewerIntegrationTabProps {
   candidateId: string;
   interviewerIntegration: CandidateInterviewerIntegration;
+  evaluations: SectionEvaluation[];
 }
 
 const COMMENT_MAX_LENGTH = 5000;
+
+/** Punto final si no lo trae ya — para que cada nota concatenada quede como una oración completa. */
+function formatEvaluatorComment(rawComment: string): string {
+  const trimmed = rawComment.trim();
+  return trimmed.endsWith('.') ? trimmed : `${trimmed}.`;
+}
 
 /**
  * Sin `maxLength` nativo a propósito: un tope HTML truncaría el texto al
@@ -33,10 +40,34 @@ function validateComment(value: string): string | null {
 export function InterviewerIntegrationTab({
   candidateId,
   interviewerIntegration,
+  evaluations,
 }: InterviewerIntegrationTabProps) {
   const { upsertInterviewerIntegration } = useCandidateMutations();
   const [form, setForm] = useState<CandidateInterviewerIntegration>(interviewerIntegration);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Solo al montar (CandidateSubTabs desmonta las pestañas inactivas, así
+  // que volver a entrar aquí vuelve a correr esto — si evaluationsQuery
+  // no había resuelto la primera vez, se completa solo al reintentar).
+  // INTERVIEWER_INTEGRATION se excluye a propósito: es la nota del propio
+  // SectionGrader de esta pestaña, copiarla aquí sería circular.
+  useEffect(() => {
+    const commentsToAppend = evaluations
+      .filter((evaluation) => evaluation.section !== 'INTERVIEWER_INTEGRATION' && evaluation.comments?.trim())
+      .map((evaluation) => formatEvaluatorComment(evaluation.comments as string));
+
+    if (commentsToAppend.length === 0) return;
+
+    setForm((prev) => {
+      let combined = prev.comment;
+      for (const formatted of commentsToAppend) {
+        if (combined.includes(formatted)) continue; // ya estaba (guardado antes o iba y volvía de pestaña)
+        combined = combined ? `${combined}\n${formatted}` : formatted;
+      }
+      return combined === prev.comment ? prev : { comment: combined };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const commentError = validateComment(form.comment);
 
