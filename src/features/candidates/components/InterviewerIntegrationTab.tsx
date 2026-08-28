@@ -1,9 +1,27 @@
 import { useEffect, useState } from 'react';
-import { Box, Button, Paper, Stack, Typography } from '@mui/material';
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Box,
+  Button,
+  List,
+  ListItem,
+  Paper,
+  Stack,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import SyncOutlinedIcon from '@mui/icons-material/SyncOutlined';
 import { ClearableTextField } from '@/shared/components/ClearableTextField';
 import { useCandidateMutations } from '../hooks/useCandidateMutations';
-import type { CandidateInterviewerIntegration, SectionEvaluation } from '../types/candidate.types';
+import {
+  EVALUATION_SECTION_LABEL,
+  type CandidateInterviewerIntegration,
+  type SectionEvaluation,
+} from '../types/candidate.types';
 
 interface InterviewerIntegrationTabProps {
   candidateId: string;
@@ -46,26 +64,25 @@ export function InterviewerIntegrationTab({
   const [form, setForm] = useState<CandidateInterviewerIntegration>(interviewerIntegration);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Solo al montar (CandidateSubTabs desmonta las pestañas inactivas, así
-  // que volver a entrar aquí vuelve a correr esto — si evaluationsQuery
-  // no había resuelto la primera vez, se completa solo al reintentar).
   // INTERVIEWER_INTEGRATION se excluye a propósito: es la nota del propio
-  // SectionGrader de esta pestaña, copiarla aquí sería circular.
+  // SectionGrader de esta pestaña, mostrarla/copiarla aquí sería circular.
+  const sectionsWithNotes = evaluations.filter(
+    (evaluation) => evaluation.section !== 'INTERVIEWER_INTEGRATION' && evaluation.comments?.trim(),
+  );
+
+  // Solo al montar Y solo si el reclutador todavía no escribió nada
+  // propio — si `form.comment` ya trae texto (guardado antes, o escrito y
+  // no guardado todavía), este efecto no lo toca; para traer notas nuevas
+  // en ese caso existe el botón "Importar notas" (control manual del
+  // usuario, ver handleImportNotes).
   useEffect(() => {
-    const commentsToAppend = evaluations
-      .filter((evaluation) => evaluation.section !== 'INTERVIEWER_INTEGRATION' && evaluation.comments?.trim())
-      .map((evaluation) => formatEvaluatorComment(evaluation.comments as string));
+    if (form.comment.trim()) return;
+    if (sectionsWithNotes.length === 0) return;
 
-    if (commentsToAppend.length === 0) return;
-
-    setForm((prev) => {
-      let combined = prev.comment;
-      for (const formatted of commentsToAppend) {
-        if (combined.includes(formatted)) continue; // ya estaba (guardado antes o iba y volvía de pestaña)
-        combined = combined ? `${combined}\n${formatted}` : formatted;
-      }
-      return combined === prev.comment ? prev : { comment: combined };
-    });
+    const combined = sectionsWithNotes
+      .map((evaluation) => formatEvaluatorComment(evaluation.comments as string))
+      .join('\n');
+    setForm({ comment: combined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -73,6 +90,24 @@ export function InterviewerIntegrationTab({
 
   function handleChange(value: string) {
     setForm({ comment: value });
+  }
+
+  /**
+   * A diferencia del auto-llenado de montaje, este botón SIEMPRE
+   * concatena al final lo que haya en las secciones — sin revisar si ya
+   * está incluido. El usuario asume la responsabilidad de borrar texto
+   * viejo/duplicado si vuelve a importar.
+   */
+  function handleImportNotes() {
+    if (sectionsWithNotes.length === 0) return;
+
+    const appended = sectionsWithNotes
+      .map((evaluation) => formatEvaluatorComment(evaluation.comments as string))
+      .join('\n');
+
+    setForm((prev) => ({
+      comment: prev.comment.trim() ? `${prev.comment}\n${appended}` : appended,
+    }));
   }
 
   async function handleSave() {
@@ -94,10 +129,56 @@ export function InterviewerIntegrationTab({
   return (
     <Stack spacing={3}>
       <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
-        <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 2 }}>
-          <RateReviewOutlinedIcon fontSize="small" color="action" />
-          <Typography variant="subtitle1">Comentarios Finales</Typography>
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          sx={{ mb: 2 }}
+          flexWrap="wrap"
+          gap={1}
+        >
+          <Stack direction="row" alignItems="center" spacing={1.25}>
+            <RateReviewOutlinedIcon fontSize="small" color="action" />
+            <Typography variant="subtitle1">Comentarios Finales</Typography>
+          </Stack>
+          <Tooltip title="Importar notas actualizadas">
+            <Button
+              variant="text"
+              size="small"
+              startIcon={<SyncOutlinedIcon fontSize="small" />}
+              onClick={handleImportNotes}
+              disabled={sectionsWithNotes.length === 0}
+            >
+              Importar notas
+            </Button>
+          </Tooltip>
         </Stack>
+
+        <Accordion variant="outlined" sx={{ mb: 2, '&:before': { display: 'none' } }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon fontSize="small" />}>
+            <Typography variant="body2">Ver notas de secciones anteriores</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            {sectionsWithNotes.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                Todavía no hay notas registradas en otras secciones.
+              </Typography>
+            ) : (
+              <List dense disablePadding>
+                {sectionsWithNotes.map((evaluation) => (
+                  <ListItem key={evaluation.section} sx={{ display: 'block', px: 0, py: 1 }}>
+                    <Typography variant="subtitle2" fontWeight={700}>
+                      {EVALUATION_SECTION_LABEL[evaluation.section]}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {evaluation.comments}
+                    </Typography>
+                  </ListItem>
+                ))}
+              </List>
+            )}
+          </AccordionDetails>
+        </Accordion>
 
         <ClearableTextField
           label="Comentarios e integración del entrevistador"

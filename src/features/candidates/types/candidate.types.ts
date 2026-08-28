@@ -211,6 +211,20 @@ export interface SectionEvaluation {
   comments: string | null;
 }
 
+/** Mismos textos que las sub-pestañas de CandidateDetailPage para cada sección — una sola fuente para no desalinearlos. */
+export const EVALUATION_SECTION_LABEL: Record<EvaluationSection, string> = {
+  PERSONAL: 'Información General',
+  IDENTITY: 'Documentación',
+  FAMILY: 'Estructura Familiar',
+  HEALTH: 'Estado de Salud',
+  HOUSING: 'Vivienda',
+  ECONOMY: 'Economía Familiar',
+  WORK_HISTORY: 'Antecedentes Laborales',
+  REFERENCES: 'Referencias',
+  SOCIAL_NETWORK: 'Redes Sociales',
+  INTERVIEWER_INTEGRATION: 'Comentarios Finales',
+};
+
 /**
  * Las 6 secciones que el backend exige para el dictamen (ver
  * GET /candidates/:id/evaluations → `required`). WORK_HISTORY tiene
