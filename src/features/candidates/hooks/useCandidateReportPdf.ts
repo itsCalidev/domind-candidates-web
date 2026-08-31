@@ -47,18 +47,20 @@ export function useCandidateReportPdf(candidateId: string | undefined) {
         await document.fonts.ready;
         const canvas = await html2canvas(node, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
         if (cancelled) return;
-        // Página del PDF del mismo tamaño exacto que el canvas (no A4
+        // Página del PDF del mismo tamaño exacto que el canvas (no A3
         // con escalado): como ambos números son literalmente los
         // mismos, no hay aritmética de "ajustar a la página" que se
         // pueda equivocar — geométricamente no puede recortarse ni
-        // deformarse. Correcto porque este reporte es un resumen
-        // acotado, no un documento paginado abierto.
-        // `orientation: 'landscape'` es obligatorio aquí: sin él, jsPDF
-        // asume 'portrait' por default y, como canvas.width (1123) es
-        // mayor que canvas.height (794), intercambia los dos números
-        // para forzar ancho<=alto — el PDF terminaba con una página
-        // angosta y la imagen (dibujada con las medidas originales)
-        // quedaba recortada.
+        // deformarse. El contenedor ya no tiene alto fijo (ver
+        // REPORT_MIN_HEIGHT_PX en CandidateReportTemplate), así que
+        // canvas.height crece solo si el contenido (ej. un Resumen
+        // Ejecutivo largo) lo necesita.
+        // `orientation: 'landscape'` es obligatorio: sin él, jsPDF asume
+        // 'portrait' por default y, como canvas.width (~1587×2 con el
+        // scale) es mayor que canvas.height, intercambia los dos
+        // números para forzar ancho<=alto — el PDF terminaba con una
+        // página angosta y la imagen (dibujada con las medidas
+        // originales) quedaba recortada.
         const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height] });
         doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
         // El folio sale de la respuesta, no de un prop aparte: ya viene

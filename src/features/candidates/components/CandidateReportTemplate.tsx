@@ -38,14 +38,15 @@ interface CandidateReportTemplateProps {
 const reportTheme = buildTheme('light');
 
 /**
- * A4 horizontal a 96dpi (297mm * 96/25.4 ≈ 1123, 210mm * 96/25.4 ≈ 794).
- * Alto FIJO (no minHeight): el reporte se diseña para caber en una sola
- * página — si el contenido creciera más allá de esto, html2canvas lo
- * recortaría en vez de estirar la página, así que el layout de abajo
- * debe mantenerse compacto.
+ * A3 horizontal a 96dpi (420mm * 96/25.4 ≈ 1587, 297mm * 96/25.4 ≈ 1123).
+ * `minHeight`, no alto fijo: el A4 fijo del diseño anterior recortaba
+ * textos largos (el Resumen Ejecutivo en particular) porque html2canvas
+ * captura exactamente el tamaño del contenedor — con minHeight + sin
+ * `overflow: hidden`, el contenido puede crecer hacia abajo y el canvas
+ * (y por lo tanto el PDF, ver useCandidateReportPdf.ts) crece con él.
  */
-const REPORT_WIDTH_PX = 1123;
-const REPORT_HEIGHT_PX = 794;
+const REPORT_WIDTH_PX = 1587;
+const REPORT_MIN_HEIGHT_PX = 1123;
 
 /**
  * Diccionario de mapeo comercial: el backend manda claves técnicas
@@ -75,10 +76,15 @@ const RATING_ICON: Record<EvaluationRating, typeof CheckCircleOutlinedIcon> = {
   RED: FlagOutlinedIcon,
 };
 
-/** Tarjeta corporativa reutilizada por cada bloque del dashboard — título en mayúsculas (variant="overline" ya lo hace), borde y radio consistentes. */
+/**
+ * Tarjeta corporativa reutilizada por cada bloque del dashboard — título
+ * en mayúsculas (variant="overline" ya lo hace), borde y radio
+ * consistentes. Sin `height`/`maxHeight`/`overflow`: el contenido interno
+ * es el que dicta la altura, a propósito (ver REPORT_MIN_HEIGHT_PX).
+ */
 function SectionCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <Paper variant="outlined" sx={{ borderRadius: 2, p: 2, height: '100%' }}>
+    <Paper variant="outlined" sx={{ borderRadius: 2, p: 2 }}>
       <Typography variant="overline" fontWeight={700} sx={{ color: '#37474F', display: 'block', mb: 1 }}>
         {title}
       </Typography>
@@ -150,11 +156,10 @@ export function CandidateReportTemplate({ data, ref }: CandidateReportTemplatePr
         ref={ref}
         sx={{
           width: REPORT_WIDTH_PX,
-          height: REPORT_HEIGHT_PX,
+          minHeight: REPORT_MIN_HEIGHT_PX,
           bgcolor: '#ffffff',
           color: '#1A1A1A',
           p: 3,
-          overflow: 'hidden',
         }}
       >
         {data && (
@@ -186,9 +191,9 @@ export function CandidateReportTemplate({ data, ref }: CandidateReportTemplatePr
 
             {/* Fila superior: Resumen Ejecutivo / Índice de Confiabilidad / Conclusión */}
             <Grid container spacing={2} sx={{ mb: 2 }}>
-              <Grid size={5}>
+              <Grid size={6}>
                 <SectionCard title="Resumen Ejecutivo">
-                  <Typography variant="body2">
+                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
                     {data.conclusion?.trim() || 'El evaluador aún no capturó una conclusión final.'}
                   </Typography>
                 </SectionCard>
@@ -198,7 +203,7 @@ export function CandidateReportTemplate({ data, ref }: CandidateReportTemplatePr
                   <ReliabilityGauge score={data.reliabilityScore} riskLevel={data.riskLevel} />
                 </SectionCard>
               </Grid>
-              <Grid size={4}>
+              <Grid size={3}>
                 <SectionCard title="Conclusión">
                   <Box
                     sx={{
