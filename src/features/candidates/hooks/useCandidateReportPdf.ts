@@ -53,7 +53,13 @@ export function useCandidateReportPdf(candidateId: string | undefined) {
         // pueda equivocar — geométricamente no puede recortarse ni
         // deformarse. Correcto porque este reporte es un resumen
         // acotado, no un documento paginado abierto.
-        const doc = new jsPDF({ unit: 'px', format: [canvas.width, canvas.height] });
+        // `orientation: 'landscape'` es obligatorio aquí: sin él, jsPDF
+        // asume 'portrait' por default y, como canvas.width (1123) es
+        // mayor que canvas.height (794), intercambia los dos números
+        // para forzar ancho<=alto — el PDF terminaba con una página
+        // angosta y la imagen (dibujada con las medidas originales)
+        // quedaba recortada.
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height] });
         doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
         // El folio sale de la respuesta, no de un prop aparte: ya viene
         // garantizado presente aquí (es el mismo dato que acaba de

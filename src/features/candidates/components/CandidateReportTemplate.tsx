@@ -1,14 +1,26 @@
-import type { Ref } from 'react';
-import { alpha, Box, Chip, Divider, Grid, Stack, ThemeProvider, Typography, useTheme } from '@mui/material';
+import type { ReactNode, Ref } from 'react';
+import { alpha, Box, Chip, Grid, Paper, Stack, ThemeProvider, Typography, useTheme } from '@mui/material';
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import FamilyRestroomOutlinedIcon from '@mui/icons-material/FamilyRestroomOutlined';
+import HealthAndSafetyOutlinedIcon from '@mui/icons-material/HealthAndSafetyOutlined';
+import MonetizationOnOutlinedIcon from '@mui/icons-material/MonetizationOnOutlined';
+import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
+import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
+import ContactsOutlinedIcon from '@mui/icons-material/ContactsOutlined';
+import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
+import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
+import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import { buildTheme } from '@/theme';
-import { RATING_COLOR, RATING_OPTIONS } from './SectionGrader';
+import { RATING_COLOR } from './SectionGrader';
 import {
   CANDIDATE_STATUS_COLOR,
   CANDIDATE_STATUS_LABEL,
-  EVALUATION_SECTION_LABEL,
   RISK_LEVEL_COLOR,
+  type EvaluationRating,
+  type EvaluationSection,
   type ReportSummaryResponse,
 } from '../types/candidate.types';
 
@@ -25,8 +37,55 @@ interface CandidateReportTemplateProps {
  */
 const reportTheme = buildTheme('light');
 
-/** A4 a 96dpi (210mm * 96/25.4) — html2canvas necesita dimensiones reales para rasterizar, y fija el punto de quiebre del texto. */
-const REPORT_WIDTH_PX = 794;
+/**
+ * A4 horizontal a 96dpi (297mm * 96/25.4 ≈ 1123, 210mm * 96/25.4 ≈ 794).
+ * Alto FIJO (no minHeight): el reporte se diseña para caber en una sola
+ * página — si el contenido creciera más allá de esto, html2canvas lo
+ * recortaría en vez de estirar la página, así que el layout de abajo
+ * debe mantenerse compacto.
+ */
+const REPORT_WIDTH_PX = 1123;
+const REPORT_HEIGHT_PX = 794;
+
+/**
+ * Diccionario de mapeo comercial: el backend manda claves técnicas
+ * (EvaluationSection) que nunca deben imprimirse crudas. El orden/número
+ * de cada apartado y sus 3 anclas (Identidad=1, Ingresos=5,
+ * Domicilio=6) fueron dados explícitamente; el resto de los números y
+ * textos son mi propuesta para completar las 10 secciones — ajústalos
+ * si el mockup real pide otro orden o redacción.
+ */
+const SECTION_REPORT_META: Record<EvaluationSection, { label: string; icon: typeof BadgeOutlinedIcon }> = {
+  IDENTITY: { label: '1. Identidad', icon: BadgeOutlinedIcon },
+  PERSONAL: { label: '2. Información Personal', icon: PersonOutlineOutlinedIcon },
+  FAMILY: { label: '3. Estructura Familiar', icon: FamilyRestroomOutlinedIcon },
+  HEALTH: { label: '4. Salud', icon: HealthAndSafetyOutlinedIcon },
+  ECONOMY: { label: '5. Ingresos', icon: MonetizationOnOutlinedIcon },
+  HOUSING: { label: '6. Domicilio', icon: HomeOutlinedIcon },
+  WORK_HISTORY: { label: '7. Antecedentes Laborales', icon: WorkOutlineOutlinedIcon },
+  REFERENCES: { label: '8. Referencias', icon: ContactsOutlinedIcon },
+  SOCIAL_NETWORK: { label: '9. Redes Sociales', icon: ShareOutlinedIcon },
+  INTERVIEWER_INTEGRATION: { label: '10. Comentarios Finales', icon: RateReviewOutlinedIcon },
+};
+
+/** Ícono de validación a la derecha de cada apartado — bandera roja (no el ícono "Report") para que combine con el bloque de Banderas Rojas. */
+const RATING_ICON: Record<EvaluationRating, typeof CheckCircleOutlinedIcon> = {
+  GREEN: CheckCircleOutlinedIcon,
+  YELLOW: WarningAmberOutlinedIcon,
+  RED: FlagOutlinedIcon,
+};
+
+/** Tarjeta corporativa reutilizada por cada bloque del dashboard — título en mayúsculas (variant="overline" ya lo hace), borde y radio consistentes. */
+function SectionCard({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <Paper variant="outlined" sx={{ borderRadius: 2, p: 2, height: '100%' }}>
+      <Typography variant="overline" fontWeight={700} sx={{ color: '#37474F', display: 'block', mb: 1 }}>
+        {title}
+      </Typography>
+      {children}
+    </Paper>
+  );
+}
 
 function ReliabilityGauge({ score, riskLevel }: { score: number; riskLevel: ReportSummaryResponse['riskLevel'] }) {
   const theme = useTheme();
@@ -38,21 +97,21 @@ function ReliabilityGauge({ score, riskLevel }: { score: number; riskLevel: Repo
   const clamped = Math.max(0, Math.min(100, score));
 
   return (
-    <Stack alignItems="center" spacing={1}>
-      <Box sx={{ position: 'relative', width: 140, height: 140 }}>
-        <svg width={140} height={140} viewBox="0 0 140 140">
-          <circle cx={70} cy={70} r={60} fill="none" stroke="#E0E0E0" strokeWidth={12} />
+    <Stack alignItems="center" spacing={0.5}>
+      <Box sx={{ position: 'relative', width: 110, height: 110 }}>
+        <svg width={110} height={110} viewBox="0 0 110 110">
+          <circle cx={55} cy={55} r={46} fill="none" stroke="#E0E0E0" strokeWidth={10} />
           <circle
-            cx={70}
-            cy={70}
-            r={60}
+            cx={55}
+            cy={55}
+            r={46}
             fill="none"
             stroke={strokeColor}
-            strokeWidth={12}
+            strokeWidth={10}
             strokeLinecap="round"
-            strokeDasharray={2 * Math.PI * 60}
-            strokeDashoffset={2 * Math.PI * 60 * (1 - clamped / 100)}
-            transform="rotate(-90 70 70)"
+            strokeDasharray={2 * Math.PI * 46}
+            strokeDashoffset={2 * Math.PI * 46 * (1 - clamped / 100)}
+            transform="rotate(-90 55 55)"
           />
         </svg>
         <Box
@@ -65,7 +124,7 @@ function ReliabilityGauge({ score, riskLevel }: { score: number; riskLevel: Repo
             justifyContent: 'center',
           }}
         >
-          <Typography variant="h4" fontWeight={700} sx={{ lineHeight: 1 }}>
+          <Typography variant="h5" fontWeight={700} sx={{ lineHeight: 1 }}>
             {clamped}
           </Typography>
           <Typography variant="caption" color="text.secondary">
@@ -73,46 +132,7 @@ function ReliabilityGauge({ score, riskLevel }: { score: number; riskLevel: Repo
           </Typography>
         </Box>
       </Box>
-      <Typography variant="body2" fontWeight={600} sx={{ color: strokeColor }}>
-        Índice de Confiabilidad
-      </Typography>
     </Stack>
-  );
-}
-
-function FindingsList({
-  title,
-  items,
-  icon: Icon,
-  color,
-  emptyLabel,
-}: {
-  title: string;
-  items: string[];
-  icon: typeof CheckCircleOutlinedIcon;
-  color: string;
-  emptyLabel: string;
-}) {
-  return (
-    <Box>
-      <Typography variant="h6" sx={{ mb: 1.5 }}>
-        {title}
-      </Typography>
-      {items.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">
-          {emptyLabel}
-        </Typography>
-      ) : (
-        <Stack spacing={1}>
-          {items.map((item, index) => (
-            <Stack key={index} direction="row" spacing={1} alignItems="flex-start">
-              <Icon fontSize="small" sx={{ color, mt: 0.25 }} />
-              <Typography variant="body2">{item}</Typography>
-            </Stack>
-          ))}
-        </Stack>
-      )}
-    </Box>
   );
 }
 
@@ -126,27 +146,35 @@ function FindingsList({
 export function CandidateReportTemplate({ data, ref }: CandidateReportTemplateProps) {
   return (
     <ThemeProvider theme={reportTheme}>
-      <Box ref={ref} sx={{ width: REPORT_WIDTH_PX, bgcolor: '#ffffff', color: '#1A1A1A', p: 5 }}>
+      <Box
+        ref={ref}
+        sx={{
+          width: REPORT_WIDTH_PX,
+          height: REPORT_HEIGHT_PX,
+          bgcolor: '#ffffff',
+          color: '#1A1A1A',
+          p: 3,
+          overflow: 'hidden',
+        }}
+      >
         {data && (
           <>
             <Stack
               direction="row"
               justifyContent="space-between"
               alignItems="flex-start"
-              sx={{ borderBottom: '3px solid #004A98', pb: 2, mb: 3 }}
+              sx={{ borderBottom: '3px solid #004A98', pb: 1, mb: 2 }}
             >
               <Box>
-                <Typography variant="h4" sx={{ color: '#004A98' }}>
+                <Typography variant="h5" sx={{ color: '#004A98' }}>
                   {data.firstName} {data.lastName}
                 </Typography>
-                <Typography variant="body2" sx={{ color: '#706F6F' }}>
-                  Folio {data.folio}
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#706F6F' }}>
-                  {data.positionName} — {data.companyName}
+                <Typography variant="caption" sx={{ color: '#706F6F' }}>
+                  Folio {data.folio} — {data.positionName} — {data.companyName}
                 </Typography>
               </Box>
               <Chip
+                size="small"
                 label={CANDIDATE_STATUS_LABEL[data.status]}
                 sx={{
                   bgcolor: alpha(CANDIDATE_STATUS_COLOR[data.status], 0.1),
@@ -156,64 +184,103 @@ export function CandidateReportTemplate({ data, ref }: CandidateReportTemplatePr
               />
             </Stack>
 
-            <Grid container spacing={4} sx={{ mb: 4 }}>
-              <Grid size={8}>
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  Resumen Ejecutivo
-                </Typography>
-                <Typography variant="body2">
-                  {data.conclusion?.trim() || 'El evaluador aún no capturó una conclusión final.'}
-                </Typography>
+            {/* Fila superior: Resumen Ejecutivo / Índice de Confiabilidad / Conclusión */}
+            <Grid container spacing={2} sx={{ mb: 2 }}>
+              <Grid size={5}>
+                <SectionCard title="Resumen Ejecutivo">
+                  <Typography variant="body2">
+                    {data.conclusion?.trim() || 'El evaluador aún no capturó una conclusión final.'}
+                  </Typography>
+                </SectionCard>
+              </Grid>
+              <Grid size={3}>
+                <SectionCard title="Índice de Confiabilidad">
+                  <ReliabilityGauge score={data.reliabilityScore} riskLevel={data.riskLevel} />
+                </SectionCard>
               </Grid>
               <Grid size={4}>
-                <ReliabilityGauge score={data.reliabilityScore} riskLevel={data.riskLevel} />
+                <SectionCard title="Conclusión">
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 1,
+                      textAlign: 'center',
+                      bgcolor: alpha(CANDIDATE_STATUS_COLOR[data.status], 0.1),
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight={700}
+                      sx={{ color: CANDIDATE_STATUS_COLOR[data.status] }}
+                    >
+                      {CANDIDATE_STATUS_LABEL[data.status]}
+                    </Typography>
+                  </Box>
+                </SectionCard>
               </Grid>
             </Grid>
 
-            <Divider sx={{ mb: 3 }} />
+            {/* Fila inferior: Verificación de Apartados / Banderas Rojas */}
+            <Grid container spacing={2}>
+              <Grid size={7}>
+                <SectionCard title="Verificación de Apartados">
+                  <Stack>
+                    {data.sections.map((s) => {
+                      const meta = SECTION_REPORT_META[s.section];
+                      const SectionIcon = meta.icon;
+                      const RatingIcon = RATING_ICON[s.rating];
+                      return (
+                        <Stack
+                          key={s.section}
+                          direction="row"
+                          alignItems="center"
+                          justifyContent="space-between"
+                          sx={{ py: 0.75, borderBottom: '1px solid', borderColor: 'divider' }}
+                        >
+                          <Stack direction="row" alignItems="center" spacing={1.25}>
+                            <Box
+                              sx={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: 1,
+                                bgcolor: '#37474F',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                              }}
+                            >
+                              <SectionIcon sx={{ fontSize: 16, color: '#ffffff' }} />
+                            </Box>
+                            <Typography variant="body2">{meta.label}</Typography>
+                          </Stack>
+                          <RatingIcon fontSize="small" color={RATING_COLOR[s.rating]} />
+                        </Stack>
+                      );
+                    })}
+                  </Stack>
+                </SectionCard>
+              </Grid>
 
-            <Typography variant="h6" sx={{ mb: 1.5 }}>
-              Verificación de Apartados
-            </Typography>
-            <Grid container spacing={1} sx={{ mb: 3 }}>
-              {data.sections.map((s) => {
-                const option = RATING_OPTIONS.find((o) => o.value === s.rating);
-                const Icon = option?.icon ?? CheckCircleOutlinedIcon;
-                return (
-                  <Grid key={s.section} size={6}>
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      alignItems="center"
-                      sx={{ p: 1, border: '1px solid #E0E0E0', borderRadius: 1 }}
-                    >
-                      <Icon fontSize="small" color={RATING_COLOR[s.rating]} />
-                      <Typography variant="body2">{EVALUATION_SECTION_LABEL[s.section]}</Typography>
-                    </Stack>
-                  </Grid>
-                );
-              })}
+              <Grid size={5}>
+                <SectionCard title="Banderas Rojas">
+                  {/* Mockup temporal: la lógica híbrida (mitad sistema, mitad
+                      evaluador) todavía no existe en el backend — placeholder
+                      estático mientras se implementa. */}
+                  <Stack
+                    alignItems="center"
+                    justifyContent="center"
+                    spacing={1}
+                    sx={{ p: 2, border: '1px dashed #E0E0E0', borderRadius: 1, minHeight: 100 }}
+                  >
+                    <FlagOutlinedIcon sx={{ color: '#BDBDBD' }} />
+                    <Typography variant="body2" color="text.secondary" textAlign="center">
+                      Sin banderas rojas registradas todavía.
+                    </Typography>
+                  </Stack>
+                </SectionCard>
+              </Grid>
             </Grid>
-
-            <Divider sx={{ mb: 3 }} />
-
-            <FindingsList
-              title="Hallazgos Relevantes"
-              items={data.relevantFindings}
-              icon={CheckCircleOutlinedIcon}
-              color="#2E7D32"
-              emptyLabel="Sin hallazgos relevantes registrados."
-            />
-
-            <Divider sx={{ my: 3 }} />
-
-            <FindingsList
-              title="Áreas de Atención"
-              items={data.attentionAreas}
-              icon={WarningAmberOutlinedIcon}
-              color="#ED6C02"
-              emptyLabel="Sin áreas de atención registradas."
-            />
           </>
         )}
       </Box>
