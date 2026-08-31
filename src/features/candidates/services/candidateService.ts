@@ -17,6 +17,7 @@ import type {
   NeighborhoodReferencePayload,
   PersonalReferenceEntry,
   PersonalReferencePayload,
+  ReportSummaryResponse,
   SectionEvaluation,
   SocialNetworkPayload,
   Vehicle,
@@ -458,16 +459,15 @@ export const candidatesService = {
   },
 
   /**
-   * GET /candidates/export/excel/:id — reporte pre-llenado del
-   * candidato, generado por el backend (no confundir con el Excel del
-   * LISTADO que arma candidateExport.ts en el cliente). `responseType:
-   * 'blob'` es obligatorio: sin esto, axios intenta parsear la
-   * respuesta binaria como JSON/texto y la corrompe.
+   * GET /candidates/:id/report-summary — resumen para el reporte PDF
+   * generado en el cliente (ver CandidateReportTemplate + html2canvas,
+   * en useCandidateReportPdf.ts). Contrato confirmado por el usuario en
+   * el chat (Swagger solo define ruta/método, no el shape de la
+   * respuesta). Reemplaza a exportExcel: el reporte ya no lo arma el
+   * backend como Excel, se arma en el cliente a partir de este JSON.
    */
-  async exportExcel(id: string): Promise<Blob> {
-    const { data } = await apiClient.get<Blob>(`/candidates/export/excel/${id}`, {
-      responseType: 'blob',
-    });
+  async getReportSummary(id: string): Promise<ReportSummaryResponse> {
+    const { data } = await apiClient.get<ReportSummaryResponse>(`/candidates/${id}/report-summary`);
     return data;
   },
 

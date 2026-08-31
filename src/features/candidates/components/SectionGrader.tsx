@@ -34,13 +34,14 @@ interface SectionGraderProps {
   initialEvaluation: SectionEvaluation | null;
 }
 
-const RATING_OPTIONS: { value: EvaluationRating; label: string; icon: typeof CheckCircleOutlinedIcon }[] = [
+/** Exportados: CandidateReportTemplate reutiliza el mismo lenguaje visual GREEN/YELLOW/RED, sin duplicar la paleta. */
+export const RATING_OPTIONS: { value: EvaluationRating; label: string; icon: typeof CheckCircleOutlinedIcon }[] = [
   { value: 'GREEN', label: 'Sin riesgo', icon: CheckCircleOutlinedIcon },
   { value: 'YELLOW', label: 'Precaución', icon: WarningAmberOutlinedIcon },
   { value: 'RED', label: 'Riesgo alto', icon: ReportOutlinedIcon },
 ];
 
-const RATING_COLOR: Record<EvaluationRating, 'success' | 'warning' | 'error'> = {
+export const RATING_COLOR: Record<EvaluationRating, 'success' | 'warning' | 'error'> = {
   GREEN: 'success',
   YELLOW: 'warning',
   RED: 'error',

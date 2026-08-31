@@ -460,11 +460,14 @@ export function getValidStatusTransitions(
 
 /**
  * Estados en los que un expediente se considera "cerrado" y puede
- * exportarse a Excel desde CandidateDetailPage — decisión de negocio:
- * el reporte solo tiene sentido una vez que el proceso terminó, no
- * mientras el candidato sigue En evaluación/En revisión/Archivado.
+ * descargarse el reporte PDF desde CandidateDetailPage — decisión de
+ * negocio: el reporte solo tiene sentido una vez que el proceso
+ * terminó, no mientras el candidato sigue En evaluación/En
+ * revisión/Archivado. Antes se llamaba EXCEL_REPORT_STATUSES, cuando el
+ * reporte era un .xlsx generado por el backend; el nombre ya no aplicaba
+ * al reemplazar esa exportación por un PDF generado en el cliente.
  */
-export const EXCEL_REPORT_STATUSES: CandidateStatus[] = ['COMPLETED', 'RECOMMENDED', 'NOT_RECOMMENDED'];
+export const REPORT_AVAILABLE_STATUSES: CandidateStatus[] = ['COMPLETED', 'RECOMMENDED', 'NOT_RECOMMENDED'];
 
 /**
  * IN_EVALUATION usa un azul distinto al de COMPLETED (que ya ocupaba el
@@ -482,3 +485,43 @@ export const CANDIDATE_STATUS_COLOR: Record<CandidateStatus, string> = {
   NOT_RECOMMENDED: '#D32F2F',
   ARCHIVED: '#808080',
 };
+
+/** Nivel de riesgo global del candidato (distinto de EvaluationRating: ese es por sección, este es el índice de confiabilidad agregado). */
+export type RiskLevel = 'ALTO' | 'MEDIO' | 'BAJO';
+
+export const RISK_LEVEL_COLOR: Record<RiskLevel, 'success' | 'warning' | 'error'> = {
+  BAJO: 'success',
+  MEDIO: 'warning',
+  ALTO: 'error',
+};
+
+export interface ReportSummarySection {
+  section: EvaluationSection;
+  rating: EvaluationRating;
+}
+
+/**
+ * GET /candidates/:id/report-summary — contrato dado directamente por el
+ * usuario en el chat (Swagger solo documenta ruta/método, no el shape de
+ * la respuesta). `status` llega como `string` genérico en el wire pero
+ * sus valores son un subconjunto de CandidateStatus, y `sections[].section`/
+ * `.rating` llegan como `string` genérico pero sus valores son
+ * EvaluationSection/EvaluationRating — se tipan aquí contra los unions ya
+ * existentes de la app para indexar EVALUATION_SECTION_LABEL/RATING_COLOR
+ * sin cast, mismos valores en tiempo de ejecución.
+ */
+export interface ReportSummaryResponse {
+  candidateId: string;
+  folio: string;
+  firstName: string;
+  lastName: string;
+  positionName: string;
+  companyName: string;
+  status: CandidateStatus;
+  conclusion: string | null;
+  reliabilityScore: number;
+  riskLevel: RiskLevel;
+  relevantFindings: string[];
+  attentionAreas: string[];
+  sections: ReportSummarySection[];
+}

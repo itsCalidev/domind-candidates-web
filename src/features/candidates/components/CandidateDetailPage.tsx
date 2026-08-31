@@ -16,12 +16,12 @@ import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
 import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
 import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined';
 import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
-import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
+import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCandidateDetail } from '../hooks/useCandidateDetail';
-import { useCandidateMutations } from '../hooks/useCandidateMutations';
 import { useGetEvaluations } from '../hooks/useCandidateEvaluations';
+import { useCandidateReportPdf } from '../hooks/useCandidateReportPdf';
 import { CandidateStatusChip } from './CandidateStatusChip';
 import { GeneralInfoTab } from './GeneralInfoTab';
 import { DocumentationTab } from './DocumentationTab';
@@ -33,13 +33,14 @@ import { WorkHistoryTab } from './WorkHistoryTab';
 import { ReferencesTab } from './ReferencesTab';
 import { SocialNetworkTab } from './SocialNetworkTab';
 import { InterviewerIntegrationTab } from './InterviewerIntegrationTab';
+import { CandidateReportTemplate } from './CandidateReportTemplate';
 import { CandidateSubTabs, type SubTabDefinition } from './CandidateSubTabs';
 import { SectionGrader } from './SectionGrader';
 import { AssignRecruiterDialog } from './AssignRecruiterDialog';
 import { UpdateCandidateStatusDialog } from './UpdateCandidateStatusDialog';
 import {
-  EXCEL_REPORT_STATUSES,
   getValidStatusTransitions,
+  REPORT_AVAILABLE_STATUSES,
   REQUIRED_EVALUATION_SECTIONS,
   recruiterFullName,
   type EvaluationSection,
@@ -47,7 +48,6 @@ import {
 } from '../types/candidate.types';
 import { paths } from '@/routes/paths';
 import { downloadPdf } from '@/shared/utils/pdf';
-import { downloadBlob } from '@/shared/utils/downloadBlob';
 import { transformCandidateDetailForPdf } from '../services/candidateExport';
 import { ExportButton } from '@/shared/components/ExportButton';
 import { useAuth } from '@/features/auth/context/AuthContext';
@@ -74,12 +74,17 @@ export function CandidateDetailPage() {
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const { user } = useAuth();
   const canAssignRecruiter = hasFullAccess(user?.role);
-  const { exportExcel } = useCandidateMutations();
   // Fuente única de verdad del progreso de calificación: GET
   // /candidates/:id/evaluations, no estado local — así sobrevive a un
   // F5 (antes no, porque dependíamos de un campo `evaluations` que
   // nunca se confirmó que GET /candidates/:id devolviera).
   const evaluationsQuery = useGetEvaluations(id);
+  // Llamado antes de los `return` tempranos de abajo (igual que
+  // useGetEvaluations): candidate.folio todavía no existe en este punto
+  // del render, por eso el hook toma el folio de la respuesta del
+  // reporte en vez de recibirlo como argumento — así puede montarse
+  // incondicionalmente, como exige React con los hooks.
+  const { containerRef, reportData, isGeneratingReport, downloadReport } = useCandidateReportPdf(id);
 
   if (isLoading) {
     return (
@@ -146,25 +151,14 @@ export function CandidateDetailPage() {
   const assignTooltip = isArchived ? 'No se puede asignar un candidato archivado' : '';
 
   // Regla de negocio: el reporte solo existe una vez que el expediente
-  // "cerró" (ver EXCEL_REPORT_STATUSES) — antes de eso no hay nada
+  // "cerró" (ver REPORT_AVAILABLE_STATUSES) — antes de eso no hay nada
   // definitivo que exportar.
-  const canDownloadReport = EXCEL_REPORT_STATUSES.includes(candidate.status);
-  const isDownloadingReport = exportExcel.isPending;
-  // Capturados como primitivos (no `candidate.id`/`candidate.folio`
-  // directo dentro del closure de abajo): TS no conserva el
-  // "candidate no es null" del guard de arriba dentro de una función
-  // declarada más adelante en el mismo cuerpo del componente.
+  const canDownloadReport = REPORT_AVAILABLE_STATUSES.includes(candidate.status);
+  // Capturado como primitivo (no `candidate.id` directo dentro de un
+  // closure más adelante): TS no conserva el "candidate no es null" del
+  // guard de arriba dentro de una función declarada más adelante en el
+  // mismo cuerpo del componente.
   const candidateId = candidate.id;
-  const candidateFolio = candidate.folio;
-
-  async function handleDownloadReport() {
-    try {
-      const blob = await exportExcel.mutateAsync(candidateId);
-      downloadBlob(blob, `Reporte_${candidateFolio}.xlsx`);
-    } catch {
-      // El toast de error ya lo emite useCandidateMutations.
-    }
-  }
 
   /**
    * Cada sub-pestaña con datos reales lleva su SectionGrader al final
@@ -369,14 +363,14 @@ export function CandidateDetailPage() {
           <ExportButton
             label="Descargar reporte"
             icon={
-              isDownloadingReport ? (
+              isGeneratingReport ? (
                 <CircularProgress size={16} color="inherit" />
               ) : (
-                <TableChartOutlinedIcon fontSize="small" />
+                <SummarizeOutlinedIcon fontSize="small" />
               )
             }
-            isExporting={isDownloadingReport}
-            onExport={handleDownloadReport}
+            isExporting={isGeneratingReport}
+            onExport={downloadReport}
           />
         )}
       </Stack>
@@ -447,6 +441,13 @@ export function CandidateDetailPage() {
         availableStatuses={statusOptions}
         onClose={() => setIsStatusDialogOpen(false)}
       />
+
+      {/* Fuera de pantalla a propósito (ver useCandidateReportPdf): html2canvas
+          necesita el nodo con layout real, así que no puede ser display:none ni
+          visibility:hidden, solo posicionado lejos del viewport. */}
+      <Box sx={{ position: 'fixed', left: -9999, top: 0, zIndex: -1 }} aria-hidden="true">
+        <CandidateReportTemplate ref={containerRef} data={reportData} />
+      </Box>
     </Box>
   );
 }

@@ -69,14 +69,14 @@ export function useCandidateMutations() {
     },
   });
 
-  // Sin onSuccess/invalidación a propósito: descargar el reporte no
-  // cambia nada en el servidor, así que no hay caché que refrescar. El
-  // Blob resuelto se resuelve directo al componente, que decide el
-  // nombre de archivo (necesita el folio) y dispara la descarga.
-  const exportExcel = useMutation({
-    mutationFn: (id: string) => candidatesService.exportExcel(id),
+  // Sin onSuccess/invalidación a propósito: leer el resumen no cambia
+  // nada en el servidor, así que no hay caché que refrescar. El JSON
+  // resuelto se lee directo del componente (useCandidateReportPdf), que
+  // dispara el flujo de html2canvas + jsPDF.
+  const getReportSummary = useMutation({
+    mutationFn: (id: string) => candidatesService.getReportSummary(id),
     onError: (error) => {
-      showToast(extractApiErrorMessage(error, 'No se pudo descargar el reporte.'), 'error');
+      showToast(extractApiErrorMessage(error, 'No se pudo generar el reporte.'), 'error');
     },
   });
 
@@ -273,7 +273,7 @@ export function useCandidateMutations() {
   return {
     assignRecruiter,
     updateStatus,
-    exportExcel,
+    getReportSummary,
     evaluateSection,
     createWorkHistory,
     updateWorkHistory,
