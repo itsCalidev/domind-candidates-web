@@ -1,11 +1,5 @@
 import type { CsvColumn } from '@/shared/utils/csv';
-import type { PdfRow } from '@/shared/utils/pdf';
-import {
-  CANDIDATE_STATUS_LABEL,
-  type CandidateDetail,
-  type CandidateListItem,
-  type CandidateStatus,
-} from '../types/candidate.types';
+import { CANDIDATE_STATUS_LABEL, type CandidateListItem, type CandidateStatus } from '../types/candidate.types';
 import type { CandidateActiveFilter } from '../hooks/useCandidatesList';
 
 // Cada columna se define una sola vez; CANDIDATE_EXPORT_COLUMNS (CSV) y
@@ -83,31 +77,4 @@ export function buildCandidatesPdfSubtitle(filters: {
   );
 
   return `Generado el ${generatedAt} · ${filtersText}`;
-}
-
-/**
- * Filas "Campo | Valor" para el PDF de UN candidato (vista de detalle),
- * no del listado. Misma información que ya muestra
- * GeneralInfoTab — es la capa de "transformación de datos" separada de
- * la de "generación de archivo" (ver shared/utils/pdf.ts), para que
- * cuando exista la plantilla institucional solo cambie esa última capa.
- */
-export function transformCandidateDetailForPdf(candidate: CandidateDetail): PdfRow[] {
-  const { generalInfo } = candidate;
-
-  return [
-    { label: 'Folio', value: candidate.folio },
-    { label: 'Nombre', value: generalInfo.fullName },
-    { label: 'Puesto solicitado', value: generalInfo.positionApplied },
-    { label: 'Empresa', value: candidate.companyName },
-    { label: 'Estado', value: CANDIDATE_STATUS_LABEL[candidate.status] },
-    { label: 'Domicilio', value: generalInfo.address },
-    { label: 'Colonia', value: generalInfo.neighborhood },
-    { label: 'Código postal', value: generalInfo.postalCode },
-    { label: 'Teléfono', value: generalInfo.phone },
-    { label: 'Correo', value: generalInfo.email },
-    { label: 'Fecha de nacimiento', value: generalInfo.birthDate },
-    { label: 'Lugar de nacimiento', value: generalInfo.birthPlace },
-    { label: 'Estado civil', value: generalInfo.civilStatus },
-  ];
 }

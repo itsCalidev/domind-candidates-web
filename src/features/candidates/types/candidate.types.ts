@@ -459,15 +459,17 @@ export function getValidStatusTransitions(
 }
 
 /**
- * Estados en los que un expediente se considera "cerrado" y puede
- * descargarse el reporte PDF desde CandidateDetailPage — decisión de
- * negocio: el reporte solo tiene sentido una vez que el proceso
- * terminó, no mientras el candidato sigue En evaluación/En
- * revisión/Archivado. Antes se llamaba EXCEL_REPORT_STATUSES, cuando el
- * reporte era un .xlsx generado por el backend; el nombre ya no aplicaba
- * al reemplazar esa exportación por un PDF generado en el cliente.
+ * Estados en los que puede descargarse el reporte PDF desde
+ * CandidateDetailPage — decisión de negocio: no basta con que el
+ * expediente "cierre" (COMPLETED), se exige que el reclutador ya haya
+ * emitido el dictamen final (RECOMMENDED/NOT_RECOMMENDED). Con
+ * COMPLETED el único botón de acción visible es "Cambiar estado", para
+ * forzar esa decisión antes de poder descargar el reporte. Antes se
+ * llamaba EXCEL_REPORT_STATUSES, cuando el reporte era un .xlsx
+ * generado por el backend; el nombre ya no aplicaba al reemplazar esa
+ * exportación por un PDF generado en el cliente.
  */
-export const REPORT_AVAILABLE_STATUSES: CandidateStatus[] = ['COMPLETED', 'RECOMMENDED', 'NOT_RECOMMENDED'];
+export const REPORT_AVAILABLE_STATUSES: CandidateStatus[] = ['RECOMMENDED', 'NOT_RECOMMENDED'];
 
 /**
  * IN_EVALUATION usa un azul distinto al de COMPLETED (que ya ocupaba el

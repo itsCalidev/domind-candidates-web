@@ -13,7 +13,6 @@ import {
   Typography,
 } from '@mui/material';
 import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
-import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
 import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined';
 import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
 import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined';
@@ -47,8 +46,6 @@ import {
   type SectionEvaluation,
 } from '../types/candidate.types';
 import { paths } from '@/routes/paths';
-import { downloadPdf } from '@/shared/utils/pdf';
-import { transformCandidateDetailForPdf } from '../services/candidateExport';
 import { ExportButton } from '@/shared/components/ExportButton';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { hasFullAccess, UserRole } from '@/features/auth/types/role.enum';
@@ -150,9 +147,12 @@ export function CandidateDetailPage() {
   const isArchived = candidate.status === 'ARCHIVED';
   const assignTooltip = isArchived ? 'No se puede asignar un candidato archivado' : '';
 
-  // Regla de negocio: el reporte solo existe una vez que el expediente
-  // "cerró" (ver REPORT_AVAILABLE_STATUSES) — antes de eso no hay nada
-  // definitivo que exportar.
+  // Regla de negocio: el reporte solo se puede descargar una vez que el
+  // reclutador emitió el dictamen final (ver REPORT_AVAILABLE_STATUSES).
+  // COMPLETED no basta — es el estado intermedio donde el expediente ya
+  // cerró pero todavía falta decidir RECOMMENDED/NOT_RECOMMENDED; el
+  // único botón de acción visible ahí es "Cambiar estado", para forzar
+  // esa decisión antes de poder descargar nada.
   const canDownloadReport = REPORT_AVAILABLE_STATUSES.includes(candidate.status);
   // Capturado como primitivo (no `candidate.id` directo dentro de un
   // closure más adelante): TS no conserva el "candidate no es null" del
@@ -344,21 +344,6 @@ export function CandidateDetailPage() {
             Cambiar estado
           </Button>
         )}
-        <Button
-          size="small"
-          variant="outlined"
-          color="inherit"
-          startIcon={<PictureAsPdfOutlinedIcon fontSize="small" />}
-          onClick={() =>
-            downloadPdf(
-              `candidate-${candidate.folio}-export.pdf`,
-              'Información del candidato',
-              transformCandidateDetailForPdf(candidate),
-            )
-          }
-        >
-          Exportar PDF
-        </Button>
         {canDownloadReport && (
           <ExportButton
             label="Descargar reporte"
