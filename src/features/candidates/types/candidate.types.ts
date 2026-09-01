@@ -525,5 +525,6 @@ export interface ReportSummaryResponse {
   riskLevel: RiskLevel;
   relevantFindings: string[];
   attentionAreas: string[];
+  redFlags: string[];
   sections: ReportSummarySection[];
 }
