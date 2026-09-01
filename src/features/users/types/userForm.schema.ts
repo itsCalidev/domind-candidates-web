@@ -1,13 +1,20 @@
 import { z } from 'zod';
 
-const userFormBaseSchema = z.object({
-  firstName: z.string().min(1, 'El nombre es obligatorio'),
-  lastName: z.string().min(1, 'El apellido es obligatorio'),
-  email: z.string().min(1, 'El correo es obligatorio').email('Ingresa un correo válido'),
-  role: z.string().optional(),
-  /** Solo se renderiza (y se envía a un endpoint real) en modo `edit`; ver UserFormDialog. */
-  isActive: z.boolean().optional(),
-});
+const userFormBaseSchema = z
+  .object({
+    firstName: z.string().trim().min(1, 'El nombre es obligatorio').max(100, 'Máximo 100 caracteres'),
+    lastName: z.string().trim().min(1, 'El apellido es obligatorio').max(100, 'Máximo 100 caracteres'),
+    email: z
+      .string()
+      .trim()
+      .min(1, 'El correo es obligatorio')
+      .max(255, 'Máximo 255 caracteres')
+      .email('Ingresa un correo válido'),
+    role: z.string().optional(),
+    /** Solo se renderiza (y se envía a un endpoint real) en modo `edit`; ver UserFormDialog. */
+    isActive: z.boolean().optional(),
+  })
+  .strict();
 
 export type UserFormMode = 'create' | 'edit';
 
