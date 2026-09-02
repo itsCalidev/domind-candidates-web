@@ -1,7 +1,7 @@
 import type { ReactNode, Ref } from 'react';
 import { alpha, Box, Chip, Grid, Paper, Stack, ThemeProvider, Typography, useTheme } from '@mui/material';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
-import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import FamilyRestroomOutlinedIcon from '@mui/icons-material/FamilyRestroomOutlined';
 import FavoriteBorderOutlinedIcon from '@mui/icons-material/FavoriteBorderOutlined';
 import MonetizationOnOutlinedIcon from '@mui/icons-material/MonetizationOnOutlined';
@@ -9,11 +9,6 @@ import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
 import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined';
 import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
-import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined';
-import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
-import PeopleOutlineOutlinedIcon from '@mui/icons-material/PeopleOutlineOutlined';
-import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
-import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
@@ -53,39 +48,30 @@ const REPORT_MIN_HEIGHT_PX = 1123;
 
 interface ReportSectionRow {
   id: number;
-  /**
-   * A qué sección de `data.sections` corresponde el semáforo de esta
-   * fila. Varias filas comparten el mismo `sourceKey` a propósito (ej.
-   * IDENTITY alimenta las filas 1, 8 y 14) — el backend todavía no
-   * discrimina esos 14 conceptos comerciales por separado, así que
-   * varias filas visuales leen la misma calificación de origen.
-   */
   sourceKey: EvaluationSection;
   label: string;
   icon: typeof BadgeOutlinedIcon;
 }
 
-/** Los 14 apartados del prototipo comercial, dados explícitamente por el usuario — orden y redacción exactos, no se infieren. */
+/**
+ * Los 9 apartados originales del reporte, dados explícitamente por el
+ * usuario en este orden y redacción exactos (revierte la expansión
+ * temporal a 14 puntos comerciales de un turno anterior). `sourceKey`
+ * corregido contra el union real de `EvaluationSection`
+ * (`candidate.types.ts`): el usuario escribió 'PERSONAL_INFO' y
+ * 'SOCIAL_NETWORKS', que no existen ahí — los valores reales son
+ * 'PERSONAL' y 'SOCIAL_NETWORK'.
+ */
 const REPORT_SECTIONS: ReportSectionRow[] = [
-  { id: 1, sourceKey: 'IDENTITY', label: '1. IDENTIDAD', icon: BadgeOutlinedIcon },
-  { id: 2, sourceKey: 'PERSONAL', label: '2. ESCOLARIDAD Y FORMACIÓN', icon: SchoolOutlinedIcon },
-  { id: 3, sourceKey: 'REFERENCES', label: '3. REFERENCIAS LABORALES', icon: AssignmentIndOutlinedIcon },
-  { id: 4, sourceKey: 'WORK_HISTORY', label: '4. EXPERIENCIA LABORAL', icon: WorkOutlineOutlinedIcon },
+  { id: 1, sourceKey: 'IDENTITY', label: '1. IDENTIDAD Y DOCUMENTACIÓN', icon: BadgeOutlinedIcon },
+  { id: 2, sourceKey: 'PERSONAL', label: '2. CONSISTENCIA DE INFORMACIÓN', icon: PersonOutlineOutlinedIcon },
+  { id: 3, sourceKey: 'WORK_HISTORY', label: '3. EXPERIENCIA Y TRAYECTORIA LABORAL', icon: WorkOutlineOutlinedIcon },
+  { id: 4, sourceKey: 'REFERENCES', label: '4. REFERENCIAS LABORALES Y DESEMPEÑO', icon: AssignmentIndOutlinedIcon },
   { id: 5, sourceKey: 'ECONOMY', label: '5. INGRESOS Y CAPACIDAD FINANCIERA', icon: MonetizationOnOutlinedIcon },
-  { id: 6, sourceKey: 'HOUSING', label: '6. DOMICILIO', icon: HomeOutlinedIcon },
-  { id: 7, sourceKey: 'SOCIAL_NETWORK', label: '7. REDES SOCIALES Y PRESENCIA DIGITAL', icon: ShareOutlinedIcon },
-  { id: 8, sourceKey: 'IDENTITY', label: '8. ANTECEDENTES LEGALES Y PENALES', icon: GavelOutlinedIcon },
-  {
-    id: 9,
-    sourceKey: 'ECONOMY',
-    label: '9. BURÓ DE CRÉDITO / HISTORIAL FINANCIERO',
-    icon: AccountBalanceOutlinedIcon,
-  },
-  { id: 10, sourceKey: 'HEALTH', label: '10. ESTILO DE VIDA Y ENTORNO', icon: FavoriteBorderOutlinedIcon },
-  { id: 11, sourceKey: 'REFERENCES', label: '11. ENTORNO VECINAL Y SOCIAL', icon: PeopleOutlineOutlinedIcon },
-  { id: 12, sourceKey: 'PERSONAL', label: '12. CONSISTENCIA DE INFORMACIÓN', icon: FactCheckOutlinedIcon },
-  { id: 13, sourceKey: 'FAMILY', label: '13. ESTRUCTURA FAMILIAR', icon: FamilyRestroomOutlinedIcon },
-  { id: 14, sourceKey: 'IDENTITY', label: '14. REPUTACIÓN Y MEDIOS PÚBLICOS', icon: PublicOutlinedIcon },
+  { id: 6, sourceKey: 'HOUSING', label: '6. DOMICILIO Y ENTORNO VECINAL', icon: HomeOutlinedIcon },
+  { id: 7, sourceKey: 'FAMILY', label: '7. ESTRUCTURA FAMILIAR', icon: FamilyRestroomOutlinedIcon },
+  { id: 8, sourceKey: 'HEALTH', label: '8. ESTILO DE VIDA Y SALUD', icon: FavoriteBorderOutlinedIcon },
+  { id: 9, sourceKey: 'SOCIAL_NETWORK', label: '9. REDES SOCIALES Y PRESENCIA DIGITAL', icon: ShareOutlinedIcon },
 ];
 
 function findSectionRating(sections: ReportSummaryResponse['sections'], sourceKey: EvaluationSection) {
@@ -265,7 +251,7 @@ export function CandidateReportTemplate({ data, ref }: CandidateReportTemplatePr
             <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid size={6}>
                 <SectionCard title="Resumen Ejecutivo">
-                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', textAlign: 'justify' }}>
                     {data.conclusion?.trim() || 'El evaluador aún no capturó una conclusión final.'}
                   </Typography>
                 </SectionCard>
