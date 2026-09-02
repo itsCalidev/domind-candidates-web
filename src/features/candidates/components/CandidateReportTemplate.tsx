@@ -1,5 +1,5 @@
 import type { ReactNode, Ref } from 'react';
-import { alpha, Box, Chip, Grid, Paper, Stack, ThemeProvider, Typography, useTheme } from '@mui/material';
+import { alpha, Box, Chip, Divider, Grid, Paper, Stack, ThemeProvider, Typography, useTheme } from '@mui/material';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import FamilyRestroomOutlinedIcon from '@mui/icons-material/FamilyRestroomOutlined';
@@ -378,6 +378,24 @@ export function CandidateReportTemplate({ data, ref }: CandidateReportTemplatePr
                 </SectionCard>
               </Grid>
             </Grid>
+
+            {/* Bloque de firmas — separado con margen superior generoso del resto del contenido. */}
+            <Box sx={{ mt: 20 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-around' }}>
+                <Box sx={{ width: '35%' }}>
+                  <Divider sx={{ borderColor: 'text.primary', borderBottomWidth: 1, mb: 1 }} />
+                  <Typography variant="body2" textAlign="center">
+                    Nombre y firma del evaluador
+                  </Typography>
+                </Box>
+                <Box sx={{ width: '35%' }}>
+                  <Divider sx={{ borderColor: 'text.primary', borderBottomWidth: 1, mb: 1 }} />
+                  <Typography variant="body2" textAlign="center">
+                    Vo.Bo. del responsable
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
           </>
         )}
       </Box>

@@ -5,8 +5,7 @@ import {
   AccordionSummary,
   Box,
   Button,
-  List,
-  ListItem,
+  Grid,
   Paper,
   Stack,
   Tooltip,
@@ -29,7 +28,16 @@ interface InterviewerIntegrationTabProps {
   evaluations: SectionEvaluation[];
 }
 
-const COMMENT_MAX_LENGTH = 5000;
+/**
+ * Bajado de 5000 a 1000 a pedido explícito del usuario: este es el campo
+ * de "Comentarios Finales" (el comentario de la entrevista/evaluación),
+ * candidato más plausible a alimentar `conclusion` en el reporte PDF
+ * (CandidateReportTemplate → "Resumen Ejecutivo", tarjeta de ancho fijo
+ * A3) — no hay forma de confirmar ese mapeo exacto desde este repo porque
+ * lo arma el backend, pero un tope más bajo aquí protege el layout de
+ * cualquier forma.
+ */
+const COMMENT_MAX_LENGTH = 1000;
 
 /** Punto final si no lo trae ya — para que cada nota concatenada quede como una oración completa. */
 function formatEvaluatorComment(rawComment: string): string {
@@ -38,15 +46,19 @@ function formatEvaluatorComment(rawComment: string): string {
 }
 
 /**
- * Sin `maxLength` nativo a propósito: un tope HTML truncaría el texto al
- * llegar a 5000 y el usuario nunca vería el error en tiempo real — en vez
- * de eso se deja escribir/pegar libremente y se valida en JS, igual que
- * `validateName`/`validatePhone` en ReferencesTab.
+ * A partir de este límite de 1000 caracteres el usuario pidió explícitamente
+ * que no se pueda escribir más allá del tope (no solo advertirlo después) —
+ * por eso el campo abajo SÍ lleva `slotProps.htmlInput.maxLength` nativo,
+ * a diferencia del diseño anterior con 5000. Esta validación en JS se
+ * conserva de todas formas porque `maxLength` nativo no cubre el
+ * auto-llenado/"Importar notas" (`handleImportNotes`), que concatena
+ * comentarios de otras secciones por código y puede superar el tope sin
+ * que el usuario haya tecleado nada.
  */
 function validateComment(value: string): string | null {
   if (!value.trim()) return null; // vacío ya lo cubre el disabled de Guardar, no es un error de formato
   if (value.length > COMMENT_MAX_LENGTH) {
-    return `El comentario no puede superar los ${COMMENT_MAX_LENGTH} caracteres.`;
+    return `El texto no debe exceder los ${COMMENT_MAX_LENGTH} caracteres para mantener el formato del reporte.`;
   }
   return null;
 }
@@ -164,18 +176,20 @@ export function InterviewerIntegrationTab({
                 Todavía no hay notas registradas en otras secciones.
               </Typography>
             ) : (
-              <List dense disablePadding>
+              <Grid container spacing={2}>
                 {sectionsWithNotes.map((evaluation) => (
-                  <ListItem key={evaluation.section} sx={{ display: 'block', px: 0, py: 1 }}>
-                    <Typography variant="subtitle2" fontWeight={700}>
+                  <Grid key={evaluation.section} size={{ xs: 12, sm: 6, md: 4 }} sx={{ minWidth: 0 }}>
+                    <Typography variant="subtitle2" fontWeight="bold">
                       {EVALUATION_SECTION_LABEL[evaluation.section]}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {evaluation.comments}
-                    </Typography>
-                  </ListItem>
+                    <Tooltip title={evaluation.comments}>
+                      <Typography variant="body2" color="text.secondary" noWrap>
+                        {evaluation.comments}
+                      </Typography>
+                    </Tooltip>
+                  </Grid>
                 ))}
-              </List>
+              </Grid>
             )}
           </AccordionDetails>
         </Accordion>
@@ -193,6 +207,7 @@ export function InterviewerIntegrationTab({
           helperText={commentError ?? `${form.comment.length} / ${COMMENT_MAX_LENGTH} caracteres`}
           onChange={(e) => handleChange(e.target.value)}
           onClear={() => handleChange('')}
+          slotProps={{ htmlInput: { maxLength: COMMENT_MAX_LENGTH } }}
         />
 
         <Box sx={{ mt: 2 }}>
