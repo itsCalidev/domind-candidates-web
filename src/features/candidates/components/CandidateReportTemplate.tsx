@@ -22,7 +22,6 @@ import { RATING_COLOR } from './SectionGrader';
 import {
   CANDIDATE_STATUS_COLOR,
   CANDIDATE_STATUS_LABEL,
-  RISK_LEVEL_COLOR,
   type EvaluationRating,
   type EvaluationSection,
   type ReportSummaryResponse,
@@ -100,27 +99,64 @@ const RATING_ICON: Record<EvaluationRating, typeof CheckCircleOutlinedIcon> = {
   RED: FlagOutlinedIcon,
 };
 
-/** Mensaje de la columna derecha del Índice de Confiabilidad — 3 franjas dadas explícitamente por el usuario. */
-function getReliabilityMessage(score: number): string {
+interface ReliabilityTier {
+  color: 'success' | 'warning' | 'error';
+  label: 'BAJO' | 'MEDIO' | 'ALTO';
+  message: string;
+}
+
+/**
+ * Color, Chip y texto del Índice de Confiabilidad se calculan ESTRICTAMENTE
+ * a partir de `reliabilityScore` (0-100) — `data.riskLevel` se ignora a
+ * propósito por instrucción explícita del usuario, para que nunca vuelva a
+ * pasar que un score de 90 se pinte de amarillo porque el veredicto crudo
+ * del backend diga MEDIO. Rangos y textos dados exactos por el usuario.
+ */
+function getReliabilityTier(score: number): ReliabilityTier {
   if (score >= 80) {
-    return 'El candidato muestra información consistente y sin hallazgos relevantes de riesgo.';
+    return {
+      color: 'success',
+      label: 'BAJO',
+      message: 'El candidato muestra información consistente y sin hallazgos relevantes de riesgo.',
+    };
   }
-  if (score >= 51) {
-    return 'Se identificaron algunas inconsistencias o áreas de atención que requieren supervisión, aunque no son críticas.';
+  if (score >= 60) {
+    return {
+      color: 'warning',
+      label: 'MEDIO',
+      message:
+        'Se identificaron algunas inconsistencias o áreas de atención que requieren supervisión, aunque no son críticas.',
+    };
   }
-  return 'El perfil presenta banderas rojas o riesgos significativos que comprometen la viabilidad para la posición.';
+  return {
+    color: 'error',
+    label: 'ALTO',
+    message: 'El perfil presenta banderas rojas o riesgos significativos que comprometen la viabilidad para la posición.',
+  };
 }
 
 /**
  * Tarjeta corporativa reutilizada por cada bloque del dashboard — título
- * en mayúsculas (variant="overline" ya lo hace), borde y radio
- * consistentes. Sin `height`/`maxHeight`/`overflow`: el contenido interno
- * es el que dicta la altura, a propósito (ver REPORT_MIN_HEIGHT_PX).
+ * en mayúsculas vía `textTransform` manual (no variant="overline": ese
+ * variant es demasiado tenue/pequeño para el contraste que pide el
+ * usuario), borde y radio consistentes. Sin `height`/`maxHeight`/`overflow`:
+ * el contenido interno es el que dicta la altura, a propósito (ver
+ * REPORT_MIN_HEIGHT_PX).
  */
 function SectionCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Paper variant="outlined" sx={{ borderRadius: 2, p: 2 }}>
-      <Typography variant="overline" fontWeight={700} sx={{ color: '#37474F', display: 'block', mb: 1 }}>
+      <Typography
+        variant="subtitle2"
+        sx={{
+          color: '#0F2A4A',
+          fontWeight: 800,
+          textTransform: 'uppercase',
+          letterSpacing: 0.5,
+          display: 'block',
+          mb: 1,
+        }}
+      >
         {title}
       </Typography>
       {children}
@@ -128,17 +164,14 @@ function SectionCard({ title, children }: { title: string; children: ReactNode }
   );
 }
 
-function ReliabilityGauge({ score, riskLevel }: { score: number; riskLevel: ReportSummaryResponse['riskLevel'] }) {
+function ReliabilityGauge({ score, color }: { score: number; color: ReliabilityTier['color'] }) {
   const theme = useTheme();
-  // El color del trazo sale exclusivamente de `riskLevel` (nunca del
-  // puntaje): BAJO/MEDIO/ALTO son un veredicto agregado del backend que
-  // puede no ser una función lineal de `reliabilityScore`, así que el
-  // círculo no debe "corregir" ese veredicto según qué tan alto sea el
-  // número. `stroke` es un atributo SVG plano (no `sx`), necesita el
-  // hex/rgb real del tema — no resuelve rutas de tema tipo "success.main"
-  // como string literal, a diferencia del prop `color` de un ícono/Chip de MUI.
-  const colorKey = RISK_LEVEL_COLOR[riskLevel];
-  const strokeColor = theme.palette[colorKey].main;
+  // `stroke` es un atributo SVG plano (no `sx`), necesita el hex/rgb real
+  // del tema — no resuelve rutas de tema tipo "success.main" como string
+  // literal, a diferencia del prop `color` de un ícono/Chip de MUI. El
+  // `color` que llega aquí ya viene calculado por rango desde
+  // `getReliabilityTier(score)`, nunca de `riskLevel`.
+  const strokeColor = theme.palette[color].main;
   const clamped = Math.max(0, Math.min(100, score));
 
   return (
@@ -187,6 +220,8 @@ function ReliabilityGauge({ score, riskLevel }: { score: number; riskLevel: Repo
  * ref estable, antes de que exista una respuesta.
  */
 export function CandidateReportTemplate({ data, ref }: CandidateReportTemplateProps) {
+  const reliabilityTier = data ? getReliabilityTier(data.reliabilityScore) : null;
+
   return (
     <ThemeProvider theme={reportTheme}>
       <Box
@@ -199,7 +234,7 @@ export function CandidateReportTemplate({ data, ref }: CandidateReportTemplatePr
           p: 3,
         }}
       >
-        {data && (
+        {data && reliabilityTier && (
           <>
             <Stack
               direction="row"
@@ -238,7 +273,7 @@ export function CandidateReportTemplate({ data, ref }: CandidateReportTemplatePr
               <Grid size={3}>
                 <SectionCard title="Índice de Confiabilidad">
                   <Stack direction="row" spacing={2} alignItems="center">
-                    <ReliabilityGauge score={data.reliabilityScore} riskLevel={data.riskLevel} />
+                    <ReliabilityGauge score={data.reliabilityScore} color={reliabilityTier.color} />
                     <Stack spacing={0.5} sx={{ minWidth: 0 }}>
                       <Typography variant="caption" fontWeight={700} sx={{ color: '#706F6F' }}>
                         NIVEL DE RIESGO
@@ -246,13 +281,13 @@ export function CandidateReportTemplate({ data, ref }: CandidateReportTemplatePr
                       <Box>
                         <Chip
                           size="small"
-                          label={data.riskLevel}
-                          color={RISK_LEVEL_COLOR[data.riskLevel]}
+                          label={reliabilityTier.label}
+                          color={reliabilityTier.color}
                           sx={{ fontWeight: 700 }}
                         />
                       </Box>
                       <Typography variant="caption" sx={{ color: '#37474F' }}>
-                        {getReliabilityMessage(data.reliabilityScore)}
+                        {reliabilityTier.message}
                       </Typography>
                     </Stack>
                   </Stack>
