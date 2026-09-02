@@ -11,6 +11,7 @@ import type {
   Debt,
   EvaluationRating,
   EvaluationSection,
+  EvidencePhoto,
   Income,
   InterviewerIntegrationPayload,
   NeighborhoodReferenceEntry,
@@ -634,5 +635,40 @@ export const candidatesService = {
       payload,
     );
     return { comment: data.comment ?? payload.comment };
+  },
+
+  /** GET /candidates/:id/evidence — contrato dado por el usuario en el chat. */
+  async getEvidence(id: string): Promise<EvidencePhoto[]> {
+    const { data } = await apiClient.get<EvidencePhoto[]>(`/candidates/${id}/evidence`);
+    return data;
+  },
+
+  /**
+   * POST /candidates/:id/evidence — multipart/form-data, contrato dado por
+   * el usuario en el chat. `Content-Type: undefined` es necesario porque
+   * `apiClient` fuerza 'application/json' por defecto (ver
+   * lib/http/apiClient.ts): con un body `FormData` el navegador debe poner
+   * su propio boundary, así que hay que quitar ese default explícitamente
+   * en esta llamada en vez de heredarlo.
+   */
+  async uploadEvidence(id: string, file: File, section: EvaluationSection): Promise<EvidencePhoto> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('section', section);
+    const { data } = await apiClient.post<EvidencePhoto>(`/candidates/${id}/evidence`, formData, {
+      headers: { 'Content-Type': undefined },
+    });
+    return data;
+  },
+
+  /**
+   * GET {url relativa} — la propiedad `url` de EvidencePhoto ya es la ruta
+   * completa a pedir (ej. `/candidates/evidence/1A2B3C`), requiere Bearer
+   * (que `apiClient` ya inyecta por su interceptor) y se pide como blob
+   * porque un `<img src>` no puede mandar ese header.
+   */
+  async getEvidenceImageBlob(relativeUrl: string): Promise<Blob> {
+    const { data } = await apiClient.get<Blob>(relativeUrl, { responseType: 'blob' });
+    return data;
   },
 };

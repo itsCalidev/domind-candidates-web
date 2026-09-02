@@ -270,6 +270,23 @@ export function useCandidateMutations() {
     },
   });
 
+  // Invalida solo ['candidates','evidence',id] (mismo criterio que
+  // evaluateSection con ['candidates','evaluations',id]): el listado/detalle
+  // del candidato no cambia, solo sus evidencias — useGetEvidence
+  // (useCandidateEvidence.ts) vuelve a pedir el arreglo solo, sin que
+  // EvidenceGallery necesite leer la respuesta resuelta a mano.
+  const uploadEvidence = useMutation({
+    mutationFn: ({ id, file, section }: { id: string; file: File; section: EvaluationSection }) =>
+      candidatesService.uploadEvidence(id, file, section),
+    onSuccess: (_data, variables) => {
+      showToast('Imagen de evidencia subida exitosamente.');
+      return queryClient.invalidateQueries({ queryKey: ['candidates', 'evidence', variables.id] });
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo subir la imagen de evidencia.'), 'error');
+    },
+  });
+
   return {
     assignRecruiter,
     updateStatus,
@@ -286,5 +303,6 @@ export function useCandidateMutations() {
     deleteNeighborhoodReference,
     upsertSocialNetwork,
     upsertInterviewerIntegration,
+    uploadEvidence,
   };
 }

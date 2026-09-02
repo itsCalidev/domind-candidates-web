@@ -3,6 +3,7 @@ import { Box, Button, Grid, Paper, Stack, Typography } from '@mui/material';
 import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
 import { ClearableTextField } from '@/shared/components/ClearableTextField';
 import { useCandidateMutations } from '../hooks/useCandidateMutations';
+import { EvidenceGallery } from './EvidenceGallery';
 import type { CandidateSocialNetwork } from '../types/candidate.types';
 
 interface SocialNetworkTabProps {
@@ -14,8 +15,10 @@ interface SocialNetworkTabProps {
  * A diferencia de WorkHistoryTab/ReferencesTab, aquí no hay una lista de
  * tarjetas — es una relación 1 a 1 contra PUT /candidates/:id/social-network
  * (upsert), así que el formulario es un solo objeto en estado local, sin
- * `EditableEntry`/`localKey` ni casos de botón. Por limitación técnica
- * actual se omite la sección de Fotografías.
+ * `EditableEntry`/`localKey` ni casos de botón. La galería de evidencias
+ * (EvidenceGallery) es independiente: sube directo a
+ * POST /candidates/:id/evidence por selección, no depende de este `form`
+ * ni del botón "Guardar" de abajo.
  */
 export function SocialNetworkTab({ candidateId, socialNetwork }: SocialNetworkTabProps) {
   const { upsertSocialNetwork } = useCandidateMutations();
@@ -99,6 +102,8 @@ export function SocialNetworkTab({ candidateId, socialNetwork }: SocialNetworkTa
             />
           </Grid>
         </Grid>
+
+        <EvidenceGallery candidateId={candidateId} />
 
         <Box sx={{ mt: 2 }}>
           <Button variant="contained" size="small" disabled={isSaving} onClick={handleSave}>

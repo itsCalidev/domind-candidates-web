@@ -339,6 +339,24 @@ export interface CandidateSocialNetwork {
 export type SocialNetworkPayload = CandidateSocialNetwork;
 
 /**
+ * Foto de evidencia subida vía POST /candidates/:id/evidence y listada vía
+ * GET /candidates/:id/evidence — contrato dado directamente por el usuario
+ * en el chat (multipart/form-data en la subida, JSON en la respuesta y en
+ * el listado). `section` se tipa contra `EvaluationSection` en vez de
+ * `string` genérico porque `'SOCIAL_NETWORK'` ya es uno de sus valores.
+ * `url` es la ruta relativa (no absoluta) que hay que pedir con Bearer y
+ * convertir a blob — ver `getEvidenceImageBlob` en candidateService.ts.
+ */
+export interface EvidencePhoto {
+  id: string;
+  candidateId: string;
+  section: EvaluationSection;
+  fileName: string;
+  driveFileId: string;
+  url: string;
+}
+
+/**
  * Conclusión final del entrevistador — relación 1 a 1 igual que
  * `CandidateSocialNetwork`: un único PUT /candidates/:id/interviewer-integration
  * hace upsert, el registro existente llega embebido en GET /candidates/:id
