@@ -111,13 +111,14 @@ function getReliabilityTier(score: number): ReliabilityTier {
       color: 'warning',
       label: 'MEDIO',
       message:
-        'Se identificaron algunas inconsistencias o áreas de atención que requieren supervisión, aunque no son críticas.',
+        'Se identificaron áreas de atención o factores de riesgo moderado. El perfil se considera viable con reservas, sugiriendo supervisión y apego a los controles internos de la posición.',
     };
   }
   return {
     color: 'error',
     label: 'ALTO',
-    message: 'El perfil presenta banderas rojas o riesgos significativos que comprometen la viabilidad para la posición.',
+    message:
+      'Se identificaron hallazgos determinantes en áreas críticas que incrementan el riesgo operativo, contraviniendo los estándares de confiabilidad requeridos y limitando la viabilidad del perfil para la posición.',
   };
 }
 
@@ -366,30 +367,53 @@ export function CandidateReportTemplate({ data, ref }: CandidateReportTemplatePr
               </Grid>
 
               <Grid size={5}>
-                <SectionCard title="Banderas Rojas">
-                  {data.redFlags.length > 0 ? (
-                    <Stack spacing={1}>
-                      {data.redFlags.map((flag, index) => (
-                        <Stack key={index} direction="row" alignItems="flex-start" spacing={1}>
-                          <FlagOutlinedIcon fontSize="small" color="error" sx={{ mt: 0.25, flexShrink: 0 }} />
-                          <Typography variant="body2">{flag}</Typography>
-                        </Stack>
-                      ))}
-                    </Stack>
-                  ) : (
-                    <Stack
-                      alignItems="center"
-                      justifyContent="center"
-                      spacing={1}
-                      sx={{ p: 2, border: '1px dashed #E0E0E0', borderRadius: 1, minHeight: 100 }}
-                    >
-                      <FlagOutlinedIcon sx={{ color: '#BDBDBD' }} />
-                      <Typography variant="body2" color="text.secondary" textAlign="center">
-                        Sin banderas rojas registradas todavía.
+                <Stack spacing={2}>
+                  <SectionCard title="Banderas Rojas">
+                    {data.redFlags.length > 0 ? (
+                      <Stack spacing={1}>
+                        {data.redFlags.map((flag, index) => (
+                          <Stack key={index} direction="row" alignItems="flex-start" spacing={1}>
+                            <FlagOutlinedIcon fontSize="small" color="error" sx={{ mt: 0.25, flexShrink: 0 }} />
+                            <Typography variant="body2">{flag}</Typography>
+                          </Stack>
+                        ))}
+                      </Stack>
+                    ) : (
+                      <Stack
+                        alignItems="center"
+                        justifyContent="center"
+                        spacing={1}
+                        sx={{ p: 2, border: '1px dashed #E0E0E0', borderRadius: 1, minHeight: 100 }}
+                      >
+                        <FlagOutlinedIcon sx={{ color: '#BDBDBD' }} />
+                        <Typography variant="body2" color="text.secondary" textAlign="center">
+                          Sin banderas rojas registradas todavía.
+                        </Typography>
+                      </Stack>
+                    )}
+                  </SectionCard>
+
+                  <SectionCard title="Áreas de Atención">
+                    {data.attentionAreas.length > 0 ? (
+                      <Stack spacing={1}>
+                        {data.attentionAreas.map((area, index) => (
+                          <Stack key={index} direction="row" alignItems="flex-start" spacing={1}>
+                            <WarningAmberOutlinedIcon
+                              fontSize="small"
+                              color="warning"
+                              sx={{ mt: 0.25, flexShrink: 0 }}
+                            />
+                            <Typography variant="body2">{area}</Typography>
+                          </Stack>
+                        ))}
+                      </Stack>
+                    ) : (
+                      <Typography variant="body2" color="text.disabled">
+                        No se identificaron áreas de oportunidad significativas que requieran atención especial.
                       </Typography>
-                    </Stack>
-                  )}
-                </SectionCard>
+                    )}
+                  </SectionCard>
+                </Stack>
               </Grid>
             </Grid>
 
