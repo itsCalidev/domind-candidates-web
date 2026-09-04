@@ -6,6 +6,7 @@ import type {
   CandidateStatus,
   EvaluationRating,
   EvaluationSection,
+  EvidenceCategory,
   InterviewerIntegrationPayload,
   NeighborhoodReferencePayload,
   PersonalReferencePayload,
@@ -274,16 +275,42 @@ export function useCandidateMutations() {
   // evaluateSection con ['candidates','evaluations',id]): el listado/detalle
   // del candidato no cambia, solo sus evidencias — useGetEvidence
   // (useCandidateEvidence.ts) vuelve a pedir el arreglo solo, sin que
-  // EvidenceGallery necesite leer la respuesta resuelta a mano.
+  // EvidenceGallery necesite leer la respuesta resuelta a mano. La key
+  // corta (sin `category`) alcanza por prefijo a las 3 variantes por
+  // categoría de la query — no hace falta saber cuál tocó esta mutación.
   const uploadEvidence = useMutation({
-    mutationFn: ({ id, file, section }: { id: string; file: File; section: EvaluationSection }) =>
-      candidatesService.uploadEvidence(id, file, section),
+    mutationFn: ({ id, file, category }: { id: string; file: File; category: EvidenceCategory }) =>
+      candidatesService.uploadEvidence(id, file, category),
     onSuccess: (_data, variables) => {
-      showToast('Imagen de evidencia subida exitosamente.');
+      showToast('Evidencia subida exitosamente.');
       return queryClient.invalidateQueries({ queryKey: ['candidates', 'evidence', variables.id] });
     },
     onError: (error) => {
-      showToast(extractApiErrorMessage(error, 'No se pudo subir la imagen de evidencia.'), 'error');
+      showToast(extractApiErrorMessage(error, 'No se pudo subir la evidencia.'), 'error');
+    },
+  });
+
+  const updateEvidence = useMutation({
+    mutationFn: ({ id, evidenceId, file }: { id: string; evidenceId: string; file: File }) =>
+      candidatesService.updateEvidence(id, evidenceId, file),
+    onSuccess: (_data, variables) => {
+      showToast('Evidencia actualizada exitosamente.');
+      return queryClient.invalidateQueries({ queryKey: ['candidates', 'evidence', variables.id] });
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo actualizar la evidencia.'), 'error');
+    },
+  });
+
+  const deleteEvidence = useMutation({
+    mutationFn: ({ id, evidenceId }: { id: string; evidenceId: string }) =>
+      candidatesService.deleteEvidence(id, evidenceId),
+    onSuccess: (_data, variables) => {
+      showToast('Evidencia eliminada exitosamente.');
+      return queryClient.invalidateQueries({ queryKey: ['candidates', 'evidence', variables.id] });
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo eliminar la evidencia.'), 'error');
     },
   });
 
@@ -304,5 +331,7 @@ export function useCandidateMutations() {
     upsertSocialNetwork,
     upsertInterviewerIntegration,
     uploadEvidence,
+    updateEvidence,
+    deleteEvidence,
   };
 }

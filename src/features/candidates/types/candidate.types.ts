@@ -339,18 +339,27 @@ export interface CandidateSocialNetwork {
 export type SocialNetworkPayload = CandidateSocialNetwork;
 
 /**
- * Foto de evidencia subida vía POST /candidates/:id/evidence y listada vía
- * GET /candidates/:id/evidence — contrato dado directamente por el usuario
- * en el chat (multipart/form-data en la subida, JSON en la respuesta y en
- * el listado). `section` se tipa contra `EvaluationSection` en vez de
- * `string` genérico porque `'SOCIAL_NETWORK'` ya es uno de sus valores.
- * `url` es la ruta relativa (no absoluta) que hay que pedir con Bearer y
- * convertir a blob — ver `getEvidenceImageBlob` en candidateService.ts.
+ * Categoría de una evidencia (Fase 3 del backend, S3) — enum propio y
+ * separado de `EvaluationSection`: `'SOCIAL_MEDIA'` no es uno de sus
+ * valores, a diferencia del `section` libre que reemplaza.
+ */
+export type EvidenceCategory = 'SOCIAL_MEDIA' | 'HOUSING' | 'DOCUMENT';
+
+/**
+ * Foto/documento de evidencia subido vía POST /candidates/:id/evidence,
+ * listado vía GET /candidates/:id/evidence (con `?category=` opcional),
+ * reemplazado vía PUT /candidates/:id/evidence/:evidenceId y borrado vía
+ * DELETE — contrato dado directamente por el usuario en el chat. `url` es
+ * la ruta relativa (no absoluta) que hay que pedir con Bearer y convertir
+ * a blob — ver `getEvidenceImageBlob` en candidateService.ts. El usuario
+ * no repitió el shape completo de la respuesta al migrar a S3, solo que
+ * `section` pasó a `category` (enum) — el resto de los campos se asume
+ * sin cambios respecto al contrato anterior.
  */
 export interface EvidencePhoto {
   id: string;
   candidateId: string;
-  section: EvaluationSection;
+  category: EvidenceCategory;
   fileName: string;
   driveFileId: string;
   url: string;

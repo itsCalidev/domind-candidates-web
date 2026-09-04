@@ -17,9 +17,11 @@ import type { ReactNode } from 'react';
 import { CleanStateBadge } from '@/shared/components/CleanStateBadge';
 import { formatCurrency } from '@/shared/utils/formatCurrency';
 import { assessArraigo } from '../utils/housingArraigo';
+import { EvidenceGallery } from './EvidenceGallery';
 import type { CandidateHousing } from '../types/candidate.types';
 
 interface HousingTabProps {
+  candidateId: string;
   housing: CandidateHousing;
 }
 
@@ -73,7 +75,7 @@ function hasServiceKeyword(services: string[], keywords: string[]): boolean {
   return services.some((service) => keywords.some((keyword) => service.toLowerCase().includes(keyword)));
 }
 
-export function HousingTab({ housing }: HousingTabProps) {
+export function HousingTab({ candidateId, housing }: HousingTabProps) {
   const arraigo = assessArraigo(housing.housingConditions, housing.hasInfonavitDebt);
 
   return (
@@ -205,6 +207,10 @@ export function HousingTab({ housing }: HousingTabProps) {
           <CleanStateBadge label="Sin deuda hipotecaria / Infonavit" />
         </Paper>
       )}
+
+      <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
+        <EvidenceGallery candidateId={candidateId} category="HOUSING" />
+      </Paper>
     </Stack>
   );
 }

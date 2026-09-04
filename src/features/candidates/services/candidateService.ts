@@ -11,6 +11,7 @@ import type {
   Debt,
   EvaluationRating,
   EvaluationSection,
+  EvidenceCategory,
   EvidencePhoto,
   Income,
   InterviewerIntegrationPayload,
@@ -637,28 +638,46 @@ export const candidatesService = {
     return { comment: data.comment ?? payload.comment };
   },
 
-  /** GET /candidates/:id/evidence — contrato dado por el usuario en el chat. */
-  async getEvidence(id: string): Promise<EvidencePhoto[]> {
-    const { data } = await apiClient.get<EvidencePhoto[]>(`/candidates/${id}/evidence`);
+  /** GET /candidates/:id/evidence — `?category=` opcional para filtrar (Fase 3, S3). */
+  async getEvidence(id: string, category?: EvidenceCategory): Promise<EvidencePhoto[]> {
+    const { data } = await apiClient.get<EvidencePhoto[]>(`/candidates/${id}/evidence`, {
+      params: category ? { category } : undefined,
+    });
     return data;
   },
 
   /**
    * POST /candidates/:id/evidence — multipart/form-data, contrato dado por
-   * el usuario en el chat. `Content-Type: undefined` es necesario porque
+   * el usuario en el chat (`category` reemplaza al `section` libre de la
+   * versión anterior). `Content-Type: undefined` es necesario porque
    * `apiClient` fuerza 'application/json' por defecto (ver
    * lib/http/apiClient.ts): con un body `FormData` el navegador debe poner
    * su propio boundary, así que hay que quitar ese default explícitamente
    * en esta llamada en vez de heredarlo.
    */
-  async uploadEvidence(id: string, file: File, section: EvaluationSection): Promise<EvidencePhoto> {
+  async uploadEvidence(id: string, file: File, category: EvidenceCategory): Promise<EvidencePhoto> {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('section', section);
+    formData.append('category', category);
     const { data } = await apiClient.post<EvidencePhoto>(`/candidates/${id}/evidence`, formData, {
       headers: { 'Content-Type': undefined },
     });
     return data;
+  },
+
+  /** PUT /candidates/:id/evidence/:evidenceId — reemplaza el archivo en S3. Mismo criterio de Content-Type que uploadEvidence. */
+  async updateEvidence(id: string, evidenceId: string, file: File): Promise<EvidencePhoto> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const { data } = await apiClient.put<EvidencePhoto>(`/candidates/${id}/evidence/${evidenceId}`, formData, {
+      headers: { 'Content-Type': undefined },
+    });
+    return data;
+  },
+
+  /** DELETE /candidates/:id/evidence/:evidenceId */
+  async deleteEvidence(id: string, evidenceId: string): Promise<void> {
+    await apiClient.delete(`/candidates/${id}/evidence/${evidenceId}`);
   },
 
   /**

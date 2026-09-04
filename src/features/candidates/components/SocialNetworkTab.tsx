@@ -103,7 +103,7 @@ export function SocialNetworkTab({ candidateId, socialNetwork }: SocialNetworkTa
           </Grid>
         </Grid>
 
-        <EvidenceGallery candidateId={candidateId} />
+        <EvidenceGallery candidateId={candidateId} category="SOCIAL_MEDIA" />
 
         <Box sx={{ mt: 2 }}>
           <Button variant="contained" size="small" disabled={isSaving} onClick={handleSave}>

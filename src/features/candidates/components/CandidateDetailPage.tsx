@@ -195,7 +195,10 @@ export function CandidateDetailPage() {
           label: 'Información General',
           content: withGrader('PERSONAL', <GeneralInfoTab info={candidate.generalInfo} />),
         },
-        { label: 'Documentación', content: withGrader('IDENTITY', <DocumentationTab />) },
+        {
+          label: 'Documentación',
+          content: withGrader('IDENTITY', <DocumentationTab candidateId={candidateId} />),
+        },
         {
           label: 'Estructura Familiar',
           content: withGrader(
@@ -209,7 +212,13 @@ export function CandidateDetailPage() {
       label: 'Estabilidad y Calidad de Vida',
       subTabs: [
         { label: 'Estado de Salud', content: withGrader('HEALTH', <HealthTab health={candidate.health} />) },
-        { label: 'Vivienda', content: withGrader('HOUSING', <HousingTab housing={candidate.housing} />) },
+        {
+          label: 'Vivienda',
+          content: withGrader(
+            'HOUSING',
+            <HousingTab candidateId={candidateId} housing={candidate.housing} />,
+          ),
+        },
         {
           label: 'Economía Familiar',
           content: withGrader(
