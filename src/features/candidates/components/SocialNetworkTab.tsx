@@ -16,14 +16,28 @@ interface SocialNetworkTabProps {
  * tarjetas — es una relación 1 a 1 contra PUT /candidates/:id/social-network
  * (upsert), así que el formulario es un solo objeto en estado local, sin
  * `EditableEntry`/`localKey` ni casos de botón. La galería de evidencias
- * (EvidenceGallery) es independiente: sube directo a
- * POST /candidates/:id/evidence por selección, no depende de este `form`
- * ni del botón "Guardar" de abajo.
+ * (EvidenceGallery) es independiente: sube/edita/borra directo contra el
+ * backend por selección, sin recibir `form`/`setForm` como prop — no
+ * tiene forma de tocar el estado de este formulario ni de "ensuciarlo",
+ * así que el botón "Guardar" (gateado por `isDirty` abajo) nunca puede
+ * activarse por una acción hecha ahí, solo por cambios en los campos de
+ * texto.
  */
 export function SocialNetworkTab({ candidateId, socialNetwork }: SocialNetworkTabProps) {
   const { upsertSocialNetwork } = useCandidateMutations();
   const [form, setForm] = useState<CandidateSocialNetwork>(socialNetwork);
+  // Última versión confirmada por el backend (o la inicial) — comparar
+  // `form` contra esto, no contra la prop `socialNetwork` a secas, para
+  // que el botón se desactive de nuevo justo después de un guardado
+  // exitoso en vez de quedar "sucio" para siempre en esta sesión.
+  const [savedForm, setSavedForm] = useState<CandidateSocialNetwork>(socialNetwork);
   const [isSaving, setIsSaving] = useState(false);
+
+  const isDirty =
+    form.facebook !== savedForm.facebook ||
+    form.linkedin !== savedForm.linkedin ||
+    form.instagram !== savedForm.instagram ||
+    form.profileComments !== savedForm.profileComments;
 
   function handleFieldChange(field: keyof CandidateSocialNetwork, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -42,6 +56,7 @@ export function SocialNetworkTab({ candidateId, socialNetwork }: SocialNetworkTa
         },
       });
       setForm(saved);
+      setSavedForm(saved);
     } catch {
       // El toast de error ya lo emite useCandidateMutations; el formulario
       // se queda con lo que el usuario escribió, para reintentar.
@@ -103,13 +118,13 @@ export function SocialNetworkTab({ candidateId, socialNetwork }: SocialNetworkTa
           </Grid>
         </Grid>
 
-        <EvidenceGallery candidateId={candidateId} category="SOCIAL_MEDIA" />
-
         <Box sx={{ mt: 2 }}>
-          <Button variant="contained" size="small" disabled={isSaving} onClick={handleSave}>
+          <Button variant="contained" size="small" disabled={isSaving || !isDirty} onClick={handleSave}>
             {isSaving ? 'Guardando…' : 'Guardar'}
           </Button>
         </Box>
+
+        <EvidenceGallery candidateId={candidateId} category="SOCIAL_MEDIA" />
       </Paper>
     </Stack>
   );
