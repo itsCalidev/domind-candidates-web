@@ -195,10 +195,7 @@ export function CandidateDetailPage() {
           label: 'Información General',
           content: withGrader('PERSONAL', <GeneralInfoTab info={candidate.generalInfo} />),
         },
-        {
-          label: 'Documentación',
-          content: withGrader('IDENTITY', <DocumentationTab candidateId={candidateId} />),
-        },
+        { label: 'Documentación', content: withGrader('IDENTITY', <DocumentationTab />) },
         {
           label: 'Estructura Familiar',
           content: withGrader(
