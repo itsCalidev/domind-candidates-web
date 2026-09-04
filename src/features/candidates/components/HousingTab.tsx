@@ -209,7 +209,12 @@ export function HousingTab({ candidateId, housing }: HousingTabProps) {
       )}
 
       <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
-        <EvidenceGallery candidateId={candidateId} category="HOUSING" />
+        <EvidenceGallery
+          candidateId={candidateId}
+          category="HOUSING"
+          readOnly
+          emptyMessage="El candidato no adjuntó evidencia fotográfica de la vivienda."
+        />
       </Paper>
     </Stack>
   );

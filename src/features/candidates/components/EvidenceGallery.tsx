@@ -16,6 +16,17 @@ import { SecureImage } from './SecureImage';
 interface EvidenceGalleryProps {
   candidateId: string;
   category: EvidenceCategory;
+  /**
+   * Cuando el candidato es quien sube el archivo por su cuenta en un
+   * formulario de registro al que no puede volver (ej. Vivienda), la
+   * vista del reclutador es 100% definitiva: sin '+', sin Editar/Eliminar,
+   * sin el marco de "zona para subir" — solo mirar/hacer zoom. Tampoco
+   * rellena con slots vacíos hasta 3: si el candidato subió 1 o 2, se
+   * muestran solo esas, nadie puede completar las que faltan.
+   */
+  readOnly?: boolean;
+  /** Solo aplica con `readOnly` y 0 evidencias — debe ser un texto definitivo, no uno que implique que todavía se puede subir algo. */
+  emptyMessage?: string;
 }
 
 const SLOT_COUNT = 3;
@@ -57,7 +68,12 @@ function validateFile(file: File): string | null {
  * derivan de `useGetEvidence(candidateId, category)`, no de estado local:
  * crear/editar/borrar invalida esa query y la cuadrícula se refresca sola.
  */
-export function EvidenceGallery({ candidateId, category }: EvidenceGalleryProps) {
+export function EvidenceGallery({
+  candidateId,
+  category,
+  readOnly = false,
+  emptyMessage = 'No hay evidencia registrada.',
+}: EvidenceGalleryProps) {
   const { showToast } = useToast();
   const { uploadEvidence, updateEvidence, deleteEvidence } = useCandidateMutations();
   const { data: evidenceList } = useGetEvidence(candidateId, category);
@@ -66,13 +82,16 @@ export function EvidenceGallery({ candidateId, category }: EvidenceGalleryProps)
   const [selectedImage, setSelectedImage] = useState<EvidencePhoto | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<EvidencePhoto | null>(null);
 
-  // Sin campo de posición/slot en EvidencePhoto: el índice del arreglo ES
-  // el índice del slot (elemento 0 → slot 0, etc.), tal como lo describió
-  // el usuario al dar este contrato.
-  const slots: (EvidencePhoto | null)[] = Array.from(
-    { length: SLOT_COUNT },
-    (_, index) => evidenceList?.[index] ?? null,
-  );
+  const items = evidenceList ?? [];
+  // En modo edición, sin campo de posición/slot en EvidencePhoto: el
+  // índice del arreglo ES el índice del slot (elemento 0 → slot 0, etc.),
+  // tal como lo describió el usuario al dar ese contrato — se rellena
+  // hasta SLOT_COUNT con huecos vacíos para poder subir hasta 3. En modo
+  // `readOnly` no aplica: nadie puede rellenar un hueco, así que solo se
+  // muestran las evidencias que de verdad existen.
+  const slots: (EvidencePhoto | null)[] = readOnly
+    ? items
+    : Array.from({ length: SLOT_COUNT }, (_, index) => items[index] ?? null);
 
   async function handleOpenPdf(photo: EvidencePhoto) {
     try {
@@ -136,93 +155,101 @@ export function EvidenceGallery({ candidateId, category }: EvidenceGalleryProps)
         Evidencias
       </Typography>
 
-      <input ref={fileInputRef} type="file" accept="image/*,application/pdf" hidden onChange={handleFileChange} />
+      {!readOnly && (
+        <input ref={fileInputRef} type="file" accept="image/*,application/pdf" hidden onChange={handleFileChange} />
+      )}
 
-      <Stack direction="row" spacing={2}>
-        {slots.map((photo, index) => (
-          <Box
-            key={index}
-            sx={{
-              width: SLOT_SIZE,
-              height: SLOT_SIZE,
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'divider',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: photo ? 'transparent' : 'action.hover',
-              p: photo && isPdf(photo.fileName) ? 1 : 0,
-            }}
-            onClick={() => handleSlotClick(index, photo)}
-          >
-            {photo ? (
-              isPdf(photo.fileName) ? (
-                <Stack alignItems="center" spacing={0.5} sx={{ width: '100%' }}>
-                  <PictureAsPdfOutlinedIcon color="error" fontSize="large" />
-                  <Typography variant="caption" noWrap sx={{ maxWidth: '100%', textAlign: 'center' }}>
-                    {photo.fileName}
-                  </Typography>
-                </Stack>
+      {readOnly && slots.length === 0 ? (
+        <Typography variant="body2" color="text.secondary">
+          {emptyMessage}
+        </Typography>
+      ) : (
+        <Stack direction="row" spacing={2}>
+          {slots.map((photo, index) => (
+            <Box
+              key={index}
+              sx={{
+                width: SLOT_SIZE,
+                height: SLOT_SIZE,
+                borderRadius: 2,
+                ...(readOnly
+                  ? {}
+                  : { border: '1px solid', borderColor: 'divider', bgcolor: photo ? 'transparent' : 'action.hover' }),
+                overflow: 'hidden',
+                cursor: 'pointer',
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                p: photo && isPdf(photo.fileName) ? 1 : 0,
+              }}
+              onClick={() => handleSlotClick(index, photo)}
+            >
+              {photo ? (
+                isPdf(photo.fileName) ? (
+                  <Stack alignItems="center" spacing={0.5} sx={{ width: '100%' }}>
+                    <PictureAsPdfOutlinedIcon color="error" fontSize="large" />
+                    <Typography variant="caption" noWrap sx={{ maxWidth: '100%', textAlign: 'center' }}>
+                      {photo.fileName}
+                    </Typography>
+                  </Stack>
+                ) : (
+                  <SecureImage
+                    url={photo.url}
+                    alt={photo.fileName}
+                    sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                )
               ) : (
-                <SecureImage
-                  url={photo.url}
-                  alt={photo.fileName}
-                  sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              )
-            ) : (
-              <AddPhotoAlternateOutlinedIcon color="action" fontSize="large" />
-            )}
+                <AddPhotoAlternateOutlinedIcon color="action" fontSize="large" />
+              )}
 
-            {photo && (
-              <Stack direction="row" spacing={0.5} sx={{ position: 'absolute', top: 4, right: 4 }}>
-                <IconButton
-                  size="small"
-                  aria-label="Reemplazar evidencia"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    handleEditClick(photo);
-                  }}
-                  sx={{ bgcolor: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: '#fff' } }}
-                >
-                  <EditOutlinedIcon sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  aria-label="Eliminar evidencia"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setDeleteTarget(photo);
-                  }}
-                  sx={{ bgcolor: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: '#fff' } }}
-                >
-                  <DeleteForeverOutlinedIcon sx={{ fontSize: 16, color: 'error.main' }} />
-                </IconButton>
-              </Stack>
-            )}
+              {!readOnly && photo && (
+                <Stack direction="row" spacing={0.5} sx={{ position: 'absolute', top: 4, right: 4 }}>
+                  <IconButton
+                    size="small"
+                    aria-label="Reemplazar evidencia"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleEditClick(photo);
+                    }}
+                    sx={{ bgcolor: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: '#fff' } }}
+                  >
+                    <EditOutlinedIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    aria-label="Eliminar evidencia"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setDeleteTarget(photo);
+                    }}
+                    sx={{ bgcolor: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: '#fff' } }}
+                  >
+                    <DeleteForeverOutlinedIcon sx={{ fontSize: 16, color: 'error.main' }} />
+                  </IconButton>
+                </Stack>
+              )}
 
-            {isSlotBusy(index, photo) && (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bgcolor: 'rgba(0,0,0,0.4)',
-                }}
-              >
-                <CircularProgress size={28} sx={{ color: '#fff' }} />
-              </Box>
-            )}
-          </Box>
-        ))}
-      </Stack>
+              {!readOnly && isSlotBusy(index, photo) && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: 'rgba(0,0,0,0.4)',
+                  }}
+                >
+                  <CircularProgress size={28} sx={{ color: '#fff' }} />
+                </Box>
+              )}
+            </Box>
+          ))}
+        </Stack>
+      )}
 
       <Dialog open={!!selectedImage} onClose={() => setSelectedImage(null)} maxWidth="lg">
         <IconButton
@@ -252,26 +279,28 @@ export function EvidenceGallery({ candidateId, category }: EvidenceGalleryProps)
         </DialogContent>
       </Dialog>
 
-      <ConfirmDialog
-        open={!!deleteTarget}
-        title="Eliminar evidencia"
-        description={
-          deleteTarget
-            ? `¿Confirmas que deseas eliminar "${deleteTarget.fileName}"? Esta acción no se puede deshacer.`
-            : ''
-        }
-        confirmText="Eliminar"
-        severity="error"
-        loading={deleteEvidence.isPending}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={() => {
-          if (!deleteTarget) return;
-          deleteEvidence.mutate(
-            { id: candidateId, evidenceId: deleteTarget.id },
-            { onSuccess: () => setDeleteTarget(null) },
-          );
-        }}
-      />
+      {!readOnly && (
+        <ConfirmDialog
+          open={!!deleteTarget}
+          title="Eliminar evidencia"
+          description={
+            deleteTarget
+              ? `¿Confirmas que deseas eliminar "${deleteTarget.fileName}"? Esta acción no se puede deshacer.`
+              : ''
+          }
+          confirmText="Eliminar"
+          severity="error"
+          loading={deleteEvidence.isPending}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={() => {
+            if (!deleteTarget) return;
+            deleteEvidence.mutate(
+              { id: candidateId, evidenceId: deleteTarget.id },
+              { onSuccess: () => setDeleteTarget(null) },
+            );
+          }}
+        />
+      )}
     </Box>
   );
 }
