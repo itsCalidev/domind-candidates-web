@@ -5,6 +5,27 @@ import { useToast } from '@/shared/context/ToastContext';
 import { useCandidateMutations } from './useCandidateMutations';
 
 /**
+ * Espera a que todos los `<img>` dentro de `node` terminen de cargar (o
+ * fallen) antes de rasterizar. Necesario desde que CandidateReportTemplate
+ * agregó el logo de la empresa como `<img>` real (antes todo lo "visual"
+ * del reporte era SVG/íconos de MUI, que no tienen esta carrera) — sin
+ * este espera, html2canvas podía capturar el nodo antes de que el logo
+ * terminara de descargar y el PDF salía con esa esquina en blanco.
+ */
+function waitForImages(node: HTMLElement): Promise<void> {
+  const images = Array.from(node.querySelectorAll('img'));
+  return Promise.all(
+    images.map((img) => {
+      if (img.complete) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        img.addEventListener('load', () => resolve(), { once: true });
+        img.addEventListener('error', () => resolve(), { once: true });
+      });
+    }),
+  ).then(() => undefined);
+}
+
+/**
  * Orquesta el flujo completo del reporte PDF generado en el cliente:
  * pedir el resumen (mutación, no query — es una acción explícita del
  * usuario, no algo que se precargue), esperar a que
@@ -45,6 +66,7 @@ export function useCandidateReportPdf(candidateId: string | undefined) {
       if (hadHighContrast) document.body.classList.remove('high-contrast');
       try {
         await document.fonts.ready;
+        await waitForImages(node);
         const canvas = await html2canvas(node, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
         if (cancelled) return;
         // Página del PDF del mismo tamaño exacto que el canvas (no A3

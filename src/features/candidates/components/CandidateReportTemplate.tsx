@@ -1,5 +1,5 @@
 import type { ReactNode, Ref } from 'react';
-import { alpha, Box, Chip, Divider, Grid, Paper, Stack, ThemeProvider, Typography, useTheme } from '@mui/material';
+import { alpha, Box, Divider, Grid, Paper, Stack, ThemeProvider, Typography, useTheme } from '@mui/material';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import FamilyRestroomOutlinedIcon from '@mui/icons-material/FamilyRestroomOutlined';
@@ -199,6 +199,30 @@ function ReliabilityGauge({ score, color }: { score: number; color: ReliabilityT
 }
 
 /**
+ * Reemplaza al `Chip` de MUI que había antes para "NIVEL DE RIESGO": en
+ * el PDF capturado por html2canvas el texto del Chip no se veía (solo el
+ * color de fondo), un problema conocido de html2canvas con la forma en
+ * que Emotion/MUI resuelven el color de contraste del label dentro de un
+ * Chip. Esta versión es texto y color explícitos y separados —
+ * `theme.palette[color].main` resuelto a mano, mismo criterio ya usado en
+ * `ReliabilityGauge` para el `stroke` del SVG — nada que dependa de cómo
+ * MUI arma internamente el Chip.
+ */
+function RiskLevelIndicator({ color, label }: { color: ReliabilityTier['color']; label: ReliabilityTier['label'] }) {
+  const theme = useTheme();
+  const resolvedColor = theme.palette[color].main;
+
+  return (
+    <Stack direction="row" spacing={1} alignItems="center">
+      <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: resolvedColor, flexShrink: 0 }} />
+      <Typography variant="body2" fontWeight={700} sx={{ color: resolvedColor }}>
+        {label}
+      </Typography>
+    </Stack>
+  );
+}
+
+/**
  * Hidden fuera de pantalla (ver el Box con position:fixed en
  * CandidateDetailPage) y rasterizado con html2canvas para producir el
  * PDF — ver useCandidateReportPdf.ts para la orquestación completa.
@@ -236,14 +260,11 @@ export function CandidateReportTemplate({ data, ref }: CandidateReportTemplatePr
                   Folio {data.folio} — {data.positionName} — {data.companyName}
                 </Typography>
               </Box>
-              <Chip
-                size="small"
-                label={CANDIDATE_STATUS_LABEL[data.status]}
-                sx={{
-                  bgcolor: alpha(CANDIDATE_STATUS_COLOR[data.status], 0.1),
-                  color: CANDIDATE_STATUS_COLOR[data.status],
-                  fontWeight: 600,
-                }}
+              <Box
+                component="img"
+                src="/logo/logo.png"
+                alt="Logo de la empresa"
+                sx={{ height: 44, width: 'auto', display: 'block' }}
               />
             </Stack>
 
@@ -264,14 +285,7 @@ export function CandidateReportTemplate({ data, ref }: CandidateReportTemplatePr
                       <Typography variant="caption" fontWeight={700} sx={{ color: '#706F6F' }}>
                         NIVEL DE RIESGO
                       </Typography>
-                      <Box>
-                        <Chip
-                          size="small"
-                          label={reliabilityTier.label}
-                          color={reliabilityTier.color}
-                          sx={{ fontWeight: 700 }}
-                        />
-                      </Box>
+                      <RiskLevelIndicator color={reliabilityTier.color} label={reliabilityTier.label} />
                       <Typography variant="caption" sx={{ color: '#37474F' }}>
                         {reliabilityTier.message}
                       </Typography>
