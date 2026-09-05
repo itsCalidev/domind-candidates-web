@@ -71,14 +71,16 @@ export function DashboardPage() {
       </Grid>
 
       {/* Actividad reciente (el backend ya la limita a la propia del
-          RECRUITER, sin cambios de este lado) + Acciones rápidas. */}
+          RECRUITER, sin cambios de este lado) + Acciones rápidas.
+          RecentActivity pide su propia GET /dashboard/summary con
+          from/to según el filtro de fecha que elija el usuario, así que
+          ya no depende de `data`/`isLoading` de este hook — se monta
+          siempre y maneja su propio loading/error internamente, lo que
+          además deja que su petición salga en paralelo con la de arriba
+          en vez de esperarla. */}
       <Grid container spacing={2.5}>
         <Grid size={{ xs: 12, lg: 8 }}>
-          {isLoading || !data ? (
-            <Skeleton variant="rounded" height={260} sx={{ borderRadius: 3 }} />
-          ) : (
-            <RecentActivity items={data.recentActivity} />
-          )}
+          <RecentActivity />
         </Grid>
         <Grid size={{ xs: 12, lg: 4 }}>
           <QuickActions />

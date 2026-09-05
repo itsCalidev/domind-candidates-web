@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Avatar,
   Box,
+  CircularProgress,
   InputAdornment,
   Paper,
   Stack,
@@ -12,13 +13,11 @@ import {
 } from '@mui/material';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import type { ActivityItem } from '../types/dashboard.types';
+import { dashboardService } from '../services/dashboardService';
+import { buildRecentActivity } from '../hooks/useDashboardData';
 import { formatRelativeTime } from '@/shared/utils/relativeTime';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { CANDIDATE_STATUS_LABEL, type CandidateStatus } from '@/features/candidates/types/candidate.types';
-
-interface RecentActivityProps {
-  items: ActivityItem[];
-}
 
 function initialsOf(name: string) {
   return name
@@ -107,42 +106,82 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string }[] = [
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-function isSameCalendarDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
+/**
+ * Piso de fecha para 'all' — lo bastante viejo para no dejar fuera
+ * ningún registro real, tal como pidió el usuario explícitamente en vez
+ * de omitir `from`. El backend ya limita `recentActivity` a un tope
+ * seguro (100) del lado del servidor, así que no hace falta acotar más
+ * este rango desde el cliente.
+ */
+const EPOCH_FLOOR_ISO = '2000-01-01T00:00:00.000Z';
 
 /**
- * 'today' compara por día calendario (más intuitivo que una ventana de
- * 24h exactas); '3d'/'7d' sí son ventanas móviles desde `now`. 'all' no
- * filtra nada — es el escape hatch para ver todo lo que llegó del backend.
+ * Traduce el filtro visual a `from`/`to` (ISO 8601) para
+ * GET /dashboard/summary — el filtrado por fecha ahora lo hace el
+ * backend, no el cliente (antes se recibía un arreglo ya topado por el
+ * backend y se re-filtraba en memoria, lo cual nunca podía mostrar más
+ * de lo que ese arreglo fijo ya traía). 'today' usa el inicio del día
+ * calendario (más intuitivo que una ventana de 24h exactas); '3d'/'7d'
+ * son ventanas móviles desde `now`.
  */
-function isWithinRange(isoDate: string, range: TimeRange, now: Date): boolean {
-  if (range === 'all') return true;
-  const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) return false;
-  if (range === 'today') return isSameCalendarDay(date, now);
-  const diffMs = now.getTime() - date.getTime();
-  if (range === '3d') return diffMs <= 3 * DAY_MS;
-  return diffMs <= 7 * DAY_MS;
+function getDateRangeParams(range: TimeRange, now: Date): { from: string; to: string } {
+  const to = now.toISOString();
+  if (range === 'all') return { from: EPOCH_FLOOR_ISO, to };
+  if (range === 'today') {
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return { from: startOfToday.toISOString(), to };
+  }
+  const days = range === '3d' ? 3 : 7;
+  return { from: new Date(now.getTime() - days * DAY_MS).toISOString(), to };
 }
 
-export function RecentActivity({ items }: RecentActivityProps) {
+export function RecentActivity() {
   const { user } = useAuth();
   const [timeRange, setTimeRange] = useState<TimeRange>('today');
   const [search, setSearch] = useState('');
+  const [items, setItems] = useState<ActivityItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
 
+  // Se re-pide cada vez que cambia el filtro de fecha — ya no se
+  // re-filtra en memoria un arreglo fijo, porque ese arreglo ya venía
+  // topado por el backend independientemente del rango pedido (ver el
+  // diagnóstico de la sesión anterior). Ahora `from`/`to` viajan en la
+  // petición y el backend decide qué devolver dentro de su propio límite
+  // seguro (100).
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+    setIsError(false);
+
+    const { from, to } = getDateRangeParams(timeRange, new Date());
+
+    dashboardService
+      .getSummary({ from, to })
+      .then((summary) => {
+        if (isMounted) setItems(buildRecentActivity(summary));
+      })
+      .catch((error) => {
+        console.error('Error al obtener la actividad reciente:', error);
+        if (isMounted) setIsError(true);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [timeRange]);
+
+  // La búsqueda de texto sí se queda en cliente: es solo un filtro visual
+  // sobre lo que ya llegó para el rango de fecha activo, no un rango nuevo
+  // que valga la pena mandarle al backend.
   const visibleItems = useMemo(() => {
-    const now = new Date();
     const query = search.trim().toLowerCase();
+    if (!query) return items;
 
     return items.filter((item) => {
-      if (!isWithinRange(item.timestamp, timeRange, now)) return false;
-      if (!query) return true;
-
       const isSelf = item.actorId !== undefined && item.actorId === user?.id;
       const haystack = [item.actor, buildActionText(item, isSelf), item.candidateFolio, supportingDetails(item)]
         .filter(Boolean)
@@ -151,20 +190,7 @@ export function RecentActivity({ items }: RecentActivityProps) {
 
       return haystack.includes(query);
     });
-  }, [items, timeRange, search, user?.id]);
-
-  if (items.length === 0) {
-    return (
-      <Paper elevation={0} sx={{ p: 3, borderRadius: 3, height: '100%' }}>
-        <Typography variant="subtitle1" sx={{ mb: 1 }}>
-          Actividad reciente
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Todavía no hay actividad registrada.
-        </Typography>
-      </Paper>
-    );
-  }
+  }, [items, search, user?.id]);
 
   return (
     // Altura fija (igual al Skeleton que ya la representa en
@@ -233,9 +259,19 @@ export function RecentActivity({ items }: RecentActivityProps) {
       </ToggleButtonGroup>
 
       <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-        {visibleItems.length === 0 ? (
+        {isLoading ? (
+          <Stack alignItems="center" justifyContent="center" sx={{ height: '100%' }}>
+            <CircularProgress size={24} />
+          </Stack>
+        ) : isError ? (
+          <Typography variant="body2" color="error">
+            No se pudo cargar la actividad reciente. Verifica tu conexión e intenta de nuevo.
+          </Typography>
+        ) : visibleItems.length === 0 ? (
           <Typography variant="body2" color="text.secondary">
-            No se encontró actividad con estos filtros.
+            {items.length === 0
+              ? 'Todavía no hay actividad registrada en este rango.'
+              : 'No se encontró actividad con estos filtros.'}
           </Typography>
         ) : (
           <Stack spacing={2.5}>

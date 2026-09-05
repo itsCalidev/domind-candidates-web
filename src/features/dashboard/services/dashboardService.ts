@@ -42,6 +42,18 @@ export interface DashboardSummaryResponse {
   recentActivity?: DashboardActivityEntry[];
 }
 
+/**
+ * `from`/`to` en ISO 8601 — contrato agregado por el backend para que
+ * `recentActivity` deje de venir topado a un puñado de registros fijos.
+ * Sin ellos, GET /dashboard/summary sigue respondiendo (para
+ * summaryMetrics/candidatesByStatus, que no dependen de rango de fecha),
+ * pero `recentActivity` ya no debe asumirse completo.
+ */
+export interface DashboardSummaryParams {
+  from?: string;
+  to?: string;
+}
+
 function excludeSystemUser(summary: DashboardSummaryResponse): DashboardSummaryResponse {
   if (!summary.users) return summary;
   
@@ -55,8 +67,8 @@ function excludeSystemUser(summary: DashboardSummaryResponse): DashboardSummaryR
 }
 
 export const dashboardService = {
-  async getSummary(): Promise<DashboardSummaryResponse> {
-    const { data } = await apiClient.get<DashboardSummaryResponse>('/dashboard/summary');
+  async getSummary(params?: DashboardSummaryParams): Promise<DashboardSummaryResponse> {
+    const { data } = await apiClient.get<DashboardSummaryResponse>('/dashboard/summary', { params });
     return excludeSystemUser(data);
   },
 };

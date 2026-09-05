@@ -15,7 +15,6 @@ interface DashboardData {
   /** Cards para RECRUITER: desglose de SUS candidatos, ya escalado por el backend. */
   recruiterMetrics: SummaryMetric[];
   candidatesByStatus: CandidatesByStatusPoint[];
-  recentActivity: ActivityItem[];
   alerts: AlertItem[];
 }
 
@@ -94,7 +93,14 @@ function buildCandidatesByStatus(summary: DashboardSummaryResponse): CandidatesB
   ];
 }
 
-function buildRecentActivity(summary: DashboardSummaryResponse): ActivityItem[] {
+/**
+ * Exportada para que RecentActivity.tsx la reutilice: ese componente ahora
+ * pide su propio `GET /dashboard/summary?from=&to=` (ver Contexto en ese
+ * archivo) en vez de recibir `recentActivity` ya armado desde aquí, pero
+ * el mapeo de la respuesta cruda a `ActivityItem[]` es el mismo en ambos
+ * casos — no tiene sentido duplicarlo.
+ */
+export function buildRecentActivity(summary: DashboardSummaryResponse): ActivityItem[] {
   return (summary.recentActivity ?? []).map((entry) => ({
     id: entry.id,
     actor: `${entry.user.firstName} ${entry.user.lastName}`.trim(),
@@ -107,11 +113,15 @@ function buildRecentActivity(summary: DashboardSummaryResponse): ActivityItem[] 
 }
 
 /**
- * summaryMetrics, recruiterMetrics, candidatesByStatus y recentActivity
- * ahora vienen 100% de GET /dashboard/summary — el backend ya
+ * summaryMetrics, recruiterMetrics y candidatesByStatus vienen de un
+ * único GET /dashboard/summary sin `from`/`to` — el backend ya
  * escala/filtra por rol, así que este hook no necesita conocer el rol
  * del usuario (eso lo decide DashboardPage al elegir qué mostrar).
- * Solo `alerts` sigue en mock: no existe endpoint real para eso todavía.
+ * `recentActivity` YA NO vive aquí: RecentActivity.tsx pide su propio
+ * GET /dashboard/summary con `from`/`to` según el filtro de fecha
+ * seleccionado, así que depender de una única llamada sin rango (como
+ * esta) dejaría de tener sentido para esa pieza. Solo `alerts` sigue en
+ * mock: no existe endpoint real para eso todavía.
  */
 export function useDashboardData() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -133,7 +143,6 @@ export function useDashboardData() {
             summaryMetrics: buildSummaryMetrics(summary),
             recruiterMetrics: buildRecruiterMetrics(summary),
             candidatesByStatus: buildCandidatesByStatus(summary),
-            recentActivity: buildRecentActivity(summary),
             alerts,
           });
           setIsLoading(false);
