@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Box, Button, Chip, Grid, Link, Paper, Stack, Typography } from '@mui/material';
-import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
+import { Button, Chip, Grid, Paper, Typography } from '@mui/material';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import { useToast } from '@/shared/context/ToastContext';
 import { useGetEvidence } from '../hooks/useCandidateEvidence';
@@ -9,15 +8,6 @@ import type { DocumentType, EvidencePhoto } from '../types/candidate.types';
 
 interface DocumentationTabProps {
   candidateId: string;
-  /**
-   * No existe todavía un campo en el contrato de GET /candidates/:id
-   * para esto (ver el comentario de `identity` en candidateService.ts:
-   * tampoco hay endpoint que confirme ese bloque). Se deja como prop
-   * opcional para no inventar el campo — hoy el llamador siempre pasa
-   * `undefined`, y el componente ya sabe mostrar el enlace real en
-   * cuanto el backend lo exponga, sin tener que tocar esta pieza.
-   */
-  driveUrl?: string | null;
 }
 
 /**
@@ -76,66 +66,24 @@ function DocumentCard({ label, evidence }: { label: string; evidence: EvidencePh
   );
 }
 
-export function DocumentationTab({ candidateId, driveUrl }: DocumentationTabProps) {
+export function DocumentationTab({ candidateId }: DocumentationTabProps) {
   const { data: evidenceList } = useGetEvidence(candidateId, 'DOCUMENT');
 
   return (
-    <Stack spacing={3}>
-      <Paper
-        elevation={0}
-        sx={{
-          p: 6,
-          borderRadius: 3,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          textAlign: 'center',
-        }}
-      >
-        <Box
-          sx={{
-            width: 52,
-            height: 52,
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            bgcolor: 'rgba(0,74,152,0.08)',
-            color: 'primary.main',
-            mb: 2,
-          }}
-        >
-          <FolderOutlinedIcon />
-        </Box>
-        <Typography variant="subtitle1" sx={{ mb: 0.5 }}>
-          Expediente de Documentación
-        </Typography>
-        {driveUrl ? (
-          <Link href={driveUrl} target="_blank" rel="noopener noreferrer" sx={{ mt: 0.5 }}>
-            Abrir en Google Drive
-          </Link>
-        ) : (
-          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360 }}>
-            Enlace no disponible
-          </Typography>
-        )}
-      </Paper>
-
-      <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Documentos del expediente
-        </Typography>
-        <Grid container spacing={2}>
-          {DOCUMENT_DEFINITIONS.map((def) => {
-            const evidence = evidenceList?.find((item) => item.documentType === def.type);
-            return (
-              <Grid key={def.type} size={{ xs: 12, sm: 6, md: 4 }}>
-                <DocumentCard label={def.label} evidence={evidence} />
-              </Grid>
-            );
-          })}
-        </Grid>
-      </Paper>
-    </Stack>
+    <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        Documentos del expediente
+      </Typography>
+      <Grid container spacing={2}>
+        {DOCUMENT_DEFINITIONS.map((def) => {
+          const evidence = evidenceList?.find((item) => item.documentType === def.type);
+          return (
+            <Grid key={def.type} size={{ xs: 12, sm: 6, md: 4 }}>
+              <DocumentCard label={def.label} evidence={evidence} />
+            </Grid>
+          );
+        })}
+      </Grid>
+    </Paper>
   );
 }
