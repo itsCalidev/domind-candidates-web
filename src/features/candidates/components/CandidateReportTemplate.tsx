@@ -13,6 +13,7 @@ import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import { buildTheme } from '@/theme';
+import { fontDisplay } from '@/theme/typography';
 import { RATING_COLOR } from './SectionGrader';
 import {
   CANDIDATE_STATUS_COLOR,
@@ -47,32 +48,50 @@ const REPORT_WIDTH_PX = 1587;
 const REPORT_MIN_HEIGHT_PX = 1123;
 
 interface ReportSectionRow {
-  id: number;
   sourceKey: EvaluationSection;
   label: string;
   icon: typeof BadgeOutlinedIcon;
 }
 
 /**
- * Los 9 apartados originales del reporte, dados explícitamente por el
- * usuario en este orden y redacción exactos (revierte la expansión
- * temporal a 14 puntos comerciales de un turno anterior). `sourceKey`
- * corregido contra el union real de `EvaluationSection`
- * (`candidate.types.ts`): el usuario escribió 'PERSONAL_INFO' y
- * 'SOCIAL_NETWORKS', que no existen ahí — los valores reales son
- * 'PERSONAL' y 'SOCIAL_NETWORK'.
+ * Los 9 apartados originales del reporte — texto e íconos dados
+ * explícitamente por el usuario (revierte la expansión temporal a 14
+ * puntos comerciales de un turno anterior). `sourceKey` corregido contra
+ * el union real de `EvaluationSection` (`candidate.types.ts`): el usuario
+ * escribió 'PERSONAL_INFO' y 'SOCIAL_NETWORKS' en su momento, que no
+ * existen ahí — los valores reales son 'PERSONAL' y 'SOCIAL_NETWORK'.
+ * `label` sin el número al frente a propósito: el número visible se
+ * calcula en el render a partir de la posición en `ORDERED_REPORT_SECTIONS`
+ * (ver abajo), para que nunca quede desincronizado del orden real.
  */
 const REPORT_SECTIONS: ReportSectionRow[] = [
-  { id: 1, sourceKey: 'IDENTITY', label: '1. IDENTIDAD Y DOCUMENTACIÓN', icon: BadgeOutlinedIcon },
-  { id: 2, sourceKey: 'PERSONAL', label: '2. CONSISTENCIA DE INFORMACIÓN', icon: PersonOutlineOutlinedIcon },
-  { id: 3, sourceKey: 'WORK_HISTORY', label: '3. EXPERIENCIA Y TRAYECTORIA LABORAL', icon: WorkOutlineOutlinedIcon },
-  { id: 4, sourceKey: 'REFERENCES', label: '4. REFERENCIAS LABORALES Y DESEMPEÑO', icon: AssignmentIndOutlinedIcon },
-  { id: 5, sourceKey: 'ECONOMY', label: '5. INGRESOS Y CAPACIDAD FINANCIERA', icon: MonetizationOnOutlinedIcon },
-  { id: 6, sourceKey: 'HOUSING', label: '6. DOMICILIO Y ENTORNO VECINAL', icon: HomeOutlinedIcon },
-  { id: 7, sourceKey: 'FAMILY', label: '7. ESTRUCTURA FAMILIAR', icon: FamilyRestroomOutlinedIcon },
-  { id: 8, sourceKey: 'HEALTH', label: '8. ESTILO DE VIDA Y SALUD', icon: FavoriteBorderOutlinedIcon },
-  { id: 9, sourceKey: 'SOCIAL_NETWORK', label: '9. REDES SOCIALES Y PRESENCIA DIGITAL', icon: ShareOutlinedIcon },
+  { sourceKey: 'IDENTITY', label: 'IDENTIDAD Y DOCUMENTACIÓN', icon: BadgeOutlinedIcon },
+  { sourceKey: 'PERSONAL', label: 'CONSISTENCIA DE INFORMACIÓN', icon: PersonOutlineOutlinedIcon },
+  { sourceKey: 'WORK_HISTORY', label: 'EXPERIENCIA Y TRAYECTORIA LABORAL', icon: WorkOutlineOutlinedIcon },
+  { sourceKey: 'REFERENCES', label: 'REFERENCIAS LABORALES Y DESEMPEÑO', icon: AssignmentIndOutlinedIcon },
+  { sourceKey: 'ECONOMY', label: 'INGRESOS Y CAPACIDAD FINANCIERA', icon: MonetizationOnOutlinedIcon },
+  { sourceKey: 'HOUSING', label: 'DOMICILIO Y ENTORNO VECINAL', icon: HomeOutlinedIcon },
+  { sourceKey: 'FAMILY', label: 'ESTRUCTURA FAMILIAR', icon: FamilyRestroomOutlinedIcon },
+  { sourceKey: 'HEALTH', label: 'ESTILO DE VIDA Y SALUD', icon: FavoriteBorderOutlinedIcon },
+  { sourceKey: 'SOCIAL_NETWORK', label: 'REDES SOCIALES Y PRESENCIA DIGITAL', icon: ShareOutlinedIcon },
 ];
+
+/** Orden de renderizado exacto, dado explícitamente por el usuario. */
+const SECTION_ORDER: EvaluationSection[] = [
+  'PERSONAL',
+  'IDENTITY',
+  'FAMILY',
+  'HEALTH',
+  'HOUSING',
+  'ECONOMY',
+  'WORK_HISTORY',
+  'REFERENCES',
+  'SOCIAL_NETWORK',
+];
+
+const ORDERED_REPORT_SECTIONS: ReportSectionRow[] = SECTION_ORDER.map((sourceKey) =>
+  REPORT_SECTIONS.find((section) => section.sourceKey === sourceKey),
+).filter((section): section is ReportSectionRow => section !== undefined);
 
 function findSectionRating(sections: ReportSummaryResponse['sections'], sourceKey: EvaluationSection) {
   return sections.find((s) => s.section === sourceKey)?.rating ?? null;
@@ -137,6 +156,7 @@ function SectionCard({ title, children }: { title: string; children: ReactNode }
         variant="subtitle2"
         sx={{
           color: '#0F2A4A',
+          fontFamily: fontDisplay,
           fontWeight: 800,
           textTransform: 'uppercase',
           letterSpacing: 0.5,
@@ -287,7 +307,7 @@ export function CandidateReportTemplate({ data, ref }: CandidateReportTemplatePr
                         NIVEL DE RIESGO
                       </Typography>
                       <RiskLevelIndicator color={reliabilityTier.color} label={reliabilityTier.label} />
-                      <Typography variant="caption" sx={{ color: '#37474F' }}>
+                      <Typography variant="caption" sx={{ color: '#37474F', textAlign: 'justify' }}>
                         {reliabilityTier.message}
                       </Typography>
                     </Stack>
@@ -321,13 +341,13 @@ export function CandidateReportTemplate({ data, ref }: CandidateReportTemplatePr
               <Grid size={7}>
                 <SectionCard title="Verificación de Apartados">
                   <Stack>
-                    {REPORT_SECTIONS.map((item) => {
+                    {ORDERED_REPORT_SECTIONS.map((item, index) => {
                       const rating = findSectionRating(data.sections, item.sourceKey);
                       const RatingIcon = rating ? RATING_ICON[rating] : null;
                       const SectionIcon = item.icon;
                       return (
                         <Stack
-                          key={item.id}
+                          key={item.sourceKey}
                           direction="row"
                           alignItems="center"
                           justifyContent="space-between"
@@ -349,7 +369,7 @@ export function CandidateReportTemplate({ data, ref }: CandidateReportTemplatePr
                               <SectionIcon sx={{ fontSize: 18, color: '#ffffff' }} />
                             </Box>
                             <Typography variant="subtitle2" fontWeight="bold">
-                              {item.label}
+                              {index + 1}. {item.label}
                             </Typography>
                           </Stack>
                           {RatingIcon && rating ? (
