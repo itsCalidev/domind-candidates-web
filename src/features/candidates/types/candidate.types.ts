@@ -346,6 +346,20 @@ export type SocialNetworkPayload = CandidateSocialNetwork;
 export type EvidenceCategory = 'SOCIAL_MEDIA' | 'HOUSING' | 'DOCUMENT';
 
 /**
+ * Tipo de documento dentro de la categoría `DOCUMENT` — los 5 documentos
+ * esperados del expediente. `INE`, `ACTA_NACIMIENTO` y
+ * `ANTECEDENTES_PENALES` dados explícitamente por el usuario;
+ * `COMPROBANTE_DOMICILIO`/`COMPROBANTE_ESTUDIOS` confirmados por el
+ * usuario siguiendo ese mismo patrón (no inferidos sin confirmar).
+ */
+export type DocumentType =
+  | 'INE'
+  | 'ACTA_NACIMIENTO'
+  | 'COMPROBANTE_DOMICILIO'
+  | 'ANTECEDENTES_PENALES'
+  | 'COMPROBANTE_ESTUDIOS';
+
+/**
  * Foto/documento de evidencia subido vía POST /candidates/:id/evidence,
  * listado vía GET /candidates/:id/evidence (con `?category=` opcional),
  * reemplazado vía PUT /candidates/:id/evidence/:evidenceId y borrado vía
@@ -354,12 +368,15 @@ export type EvidenceCategory = 'SOCIAL_MEDIA' | 'HOUSING' | 'DOCUMENT';
  * a blob — ver `getEvidenceImageBlob` en candidateService.ts. El usuario
  * no repitió el shape completo de la respuesta al migrar a S3, solo que
  * `section` pasó a `category` (enum) — el resto de los campos se asume
- * sin cambios respecto al contrato anterior.
+ * sin cambios respecto al contrato anterior. `documentType` es nuevo y
+ * solo aplica a evidencias de categoría `DOCUMENT` — opcional porque
+ * `SOCIAL_MEDIA`/`HOUSING` no lo traen.
  */
 export interface EvidencePhoto {
   id: string;
   candidateId: string;
   category: EvidenceCategory;
+  documentType?: DocumentType;
   fileName: string;
   driveFileId: string;
   url: string;

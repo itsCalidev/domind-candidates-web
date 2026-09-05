@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { useToast } from '@/shared/context/ToastContext';
 import { useCandidateMutations } from '../hooks/useCandidateMutations';
 import { useGetEvidence } from '../hooks/useCandidateEvidence';
-import { candidatesService } from '../services/candidateService';
+import { openEvidenceFile } from '../utils/openEvidenceFile';
 import type { EvidenceCategory, EvidencePhoto } from '../types/candidate.types';
 import { SecureImage } from './SecureImage';
 
@@ -94,12 +94,8 @@ export function EvidenceGallery({
     : Array.from({ length: SLOT_COUNT }, (_, index) => items[index] ?? null);
 
   async function handleOpenPdf(photo: EvidencePhoto) {
-    try {
-      const blob = await candidatesService.getEvidenceImageBlob(photo.url);
-      window.open(URL.createObjectURL(blob), '_blank', 'noopener,noreferrer');
-    } catch {
-      showToast('No se pudo abrir el archivo.', 'error');
-    }
+    const ok = await openEvidenceFile(photo.url);
+    if (!ok) showToast('No se pudo abrir el archivo.', 'error');
   }
 
   function handleSlotClick(index: number, photo: EvidencePhoto | null) {
