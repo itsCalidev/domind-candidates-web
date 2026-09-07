@@ -4,9 +4,12 @@ import type { CandidateStatus } from '@/features/candidates/types/candidate.type
 export interface DashboardCandidateCounts {
   total: number;
   active: number;
-  inProgress: number;
-  completed: number;
-  underReview: number;
+  /** Antes `inProgress` — candidatos sin reclutador asignado (ciclo de vida 2026-09). */
+  unassigned: number;
+  /** Antes `underReview` — candidato con reclutador asignado, evaluación en curso. */
+  inEvaluation: number;
+  /** Antes `completed` — reclutador terminó de calificar todas las secciones. */
+  evaluated: number;
   approved: number;
   rejected: number;
   archived: number;

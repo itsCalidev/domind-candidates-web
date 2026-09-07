@@ -129,8 +129,8 @@ export function CandidateDetailPage() {
   // Máquina de estados del diálogo "Cambiar estado": el destino
   // disponible depende del estado ACTUAL Y del rol (ver
   // getValidStatusTransitions) — ya no de allSectionsEvaluated, porque
-  // el backend pone COMPLETED automáticamente al terminar de calificar;
-  // nadie lo elige a mano. COMPLETED/IN_EVALUATION/UNDER_REVIEW nunca
+  // el backend pone EVALUATED automáticamente al terminar de calificar;
+  // nadie lo elige a mano. UNASSIGNED/IN_EVALUATION/EVALUATED nunca
   // son destino manual para ningún rol; solo SYSTEM/ADMIN pueden
   // archivar (canAssignRecruiter agrupa ambos, igual que en el resto de
   // esta página).
@@ -149,7 +149,7 @@ export function CandidateDetailPage() {
 
   // Regla de negocio: el reporte solo se puede descargar una vez que el
   // reclutador emitió el dictamen final (ver REPORT_AVAILABLE_STATUSES).
-  // COMPLETED no basta — es el estado intermedio donde el expediente ya
+  // EVALUATED no basta — es el estado intermedio donde el expediente ya
   // cerró pero todavía falta decidir RECOMMENDED/NOT_RECOMMENDED; el
   // único botón de acción visible ahí es "Cambiar estado", para forzar
   // esa decisión antes de poder descargar nada.

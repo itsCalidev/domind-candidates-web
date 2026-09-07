@@ -1,13 +1,19 @@
 /**
- * Renombrado 2026-08 para alinear con la terminología real de RH
- * (confirmado en vivo contra /docs-json: el enum del backend ya usa
- * estos nombres): IN_PROGRESS→IN_EVALUATION, APPROVED→RECOMMENDED,
- * REJECTED→NOT_RECOMMENDED. Un candidato no se "aprueba", se "recomienda".
+ * Ciclo de vida rehecho 2026-09 tras una junta de definición de negocio
+ * (dado explícitamente por el usuario, no inferido): candidato creado →
+ * `UNASSIGNED` (nuevo estado inicial, sin reclutador); asignar
+ * reclutador → `IN_EVALUATION` (¡ojo! antes este era el estado inicial —
+ * ahora es el intermedio, tras la asignación); terminar de calificar
+ * todas las secciones → `EVALUATED` (reemplaza a `COMPLETED`); dictamen
+ * manual del reclutador → `RECOMMENDED`/`NOT_RECOMMENDED` (sin cambios);
+ * `ARCHIVED` sigue siendo exclusivo de SYSTEM/ADMIN. `UNDER_REVIEW` deja
+ * de existir como estado propio — su lugar en el ciclo lo ocupa el
+ * `IN_EVALUATION` re-significado.
  */
 export type CandidateStatus =
+  | 'UNASSIGNED'
   | 'IN_EVALUATION'
-  | 'COMPLETED'
-  | 'UNDER_REVIEW'
+  | 'EVALUATED'
   | 'RECOMMENDED'
   | 'NOT_RECOMMENDED'
   | 'ARCHIVED';
@@ -346,18 +352,21 @@ export type SocialNetworkPayload = CandidateSocialNetwork;
 export type EvidenceCategory = 'SOCIAL_MEDIA' | 'HOUSING' | 'DOCUMENT';
 
 /**
- * Tipo de documento dentro de la categoría `DOCUMENT` — los 5 documentos
+ * Tipo de documento dentro de la categoría `DOCUMENT` — los 7 documentos
  * esperados del expediente. `INE`, `ACTA_NACIMIENTO` y
  * `ANTECEDENTES_PENALES` dados explícitamente por el usuario;
  * `COMPROBANTE_DOMICILIO`/`COMPROBANTE_ESTUDIOS` confirmados por el
- * usuario siguiendo ese mismo patrón (no inferidos sin confirmar).
+ * usuario siguiendo ese mismo patrón; `NSS`/`RFC` agregados después,
+ * también dados explícitamente por el usuario.
  */
 export type DocumentType =
   | 'INE'
   | 'ACTA_NACIMIENTO'
   | 'COMPROBANTE_DOMICILIO'
   | 'ANTECEDENTES_PENALES'
-  | 'COMPROBANTE_ESTUDIOS';
+  | 'COMPROBANTE_ESTUDIOS'
+  | 'NSS'
+  | 'RFC';
 
 /**
  * Foto/documento de evidencia subido vía POST /candidates/:id/evidence,
@@ -409,9 +418,9 @@ export function recruiterFullName(recruiter: AssignedRecruiter | null): string {
 }
 
 export const CANDIDATE_STATUS_LABEL: Record<CandidateStatus, string> = {
+  UNASSIGNED: 'No asignado',
   IN_EVALUATION: 'En evaluación',
-  COMPLETED: 'Completo',
-  UNDER_REVIEW: 'En revisión',
+  EVALUATED: 'Evaluado',
   RECOMMENDED: 'Recomendable',
   NOT_RECOMMENDED: 'No recomendable',
   ARCHIVED: 'Archivado',
@@ -429,9 +438,9 @@ export const ALL_CANDIDATE_STATUSES = Object.keys(CANDIDATE_STATUS_LABEL) as Can
  * registra finishedAt) que no corresponde exponer al flujo de RECRUITER.
  */
 export const RECRUITER_EDITABLE_STATUSES: CandidateStatus[] = [
+  'UNASSIGNED',
   'IN_EVALUATION',
-  'UNDER_REVIEW',
-  'COMPLETED',
+  'EVALUATED',
   'RECOMMENDED',
   'NOT_RECOMMENDED',
 ];
@@ -448,29 +457,30 @@ export const RECRUITER_EDITABLE_STATUSES: CandidateStatus[] = [
  * este mismo mapa que le daba ARCHIVED a RECRUITER — era un error,
  * archivar sigue siendo exclusivo de SYSTEM/ADMIN):
  *
- * - IN_EVALUATION, UNDER_REVIEW y COMPLETED son "intocables": el
- *   sistema los asigna solo (asignar reclutador → UNDER_REVIEW;
- *   terminar de calificar las 6 secciones → COMPLETED automático).
- *   NINGÚN rol puede seleccionarlos como destino manual, sin importar
- *   el estado de origen — por eso no aparecen como target en ninguna
- *   entrada de ninguno de los dos mapas. UpdateCandidateStatusDialog ya
- *   sabe mostrar el estado actual con "(actual)" aunque no esté en la
- *   lista, así que el <Select> no se rompe visualmente cuando el
- *   candidato SÍ está en uno de estos tres estados.
- * - RECRUITER: desde COMPLETED solo puede emitir el dictamen
+ * - UNASSIGNED, IN_EVALUATION y EVALUATED son "intocables": el sistema
+ *   los asigna solo (candidato creado → UNASSIGNED; asignar reclutador →
+ *   IN_EVALUATION automático; terminar de calificar todas las secciones →
+ *   EVALUATED automático). NINGÚN rol puede seleccionarlos como destino
+ *   manual, sin importar el estado de origen — por eso no aparecen como
+ *   target en ninguna entrada de ninguno de los dos mapas.
+ *   UpdateCandidateStatusDialog ya sabe mostrar el estado actual con
+ *   "(actual)" aunque no esté en la lista, así que el <Select> no se
+ *   rompe visualmente cuando el candidato SÍ está en uno de estos tres
+ *   estados.
+ * - RECRUITER: desde EVALUATED solo puede emitir el dictamen
  *   (RECOMMENDED/NOT_RECOMMENDED); desde uno de esos dos, solo puede
  *   alternar al otro. Nunca ve ARCHIVED.
  * - SYSTEM/ADMIN: mismas opciones de dictamen que RECRUITER, más
- *   ARCHIVED disponible desde COMPLETED, RECOMMENDED o NOT_RECOMMENDED.
+ *   ARCHIVED disponible desde EVALUATED, RECOMMENDED o NOT_RECOMMENDED.
  *
  * Ninguno de los dos mapas define una salida manual desde
- * IN_EVALUATION/UNDER_REVIEW/ARCHIVED (quedan en `[]`): el usuario no
+ * UNASSIGNED/IN_EVALUATION/ARCHIVED (quedan en `[]`): el usuario no
  * describió esa transición para ningún rol, así que no se inventa.
  */
 export const RECRUITER_STATUS_TRANSITIONS: Record<CandidateStatus, CandidateStatus[]> = {
+  UNASSIGNED: [],
   IN_EVALUATION: [],
-  UNDER_REVIEW: [],
-  COMPLETED: ['RECOMMENDED', 'NOT_RECOMMENDED'],
+  EVALUATED: ['RECOMMENDED', 'NOT_RECOMMENDED'],
   RECOMMENDED: ['NOT_RECOMMENDED'],
   NOT_RECOMMENDED: ['RECOMMENDED'],
   ARCHIVED: [],
@@ -478,9 +488,9 @@ export const RECRUITER_STATUS_TRANSITIONS: Record<CandidateStatus, CandidateStat
 
 /** Ver RECRUITER_STATUS_TRANSITIONS — misma idea, para SYSTEM/ADMIN (hasFullAccess). */
 export const ADMIN_STATUS_TRANSITIONS: Record<CandidateStatus, CandidateStatus[]> = {
+  UNASSIGNED: [],
   IN_EVALUATION: [],
-  UNDER_REVIEW: [],
-  COMPLETED: ['RECOMMENDED', 'NOT_RECOMMENDED', 'ARCHIVED'],
+  EVALUATED: ['RECOMMENDED', 'NOT_RECOMMENDED', 'ARCHIVED'],
   RECOMMENDED: ['NOT_RECOMMENDED', 'ARCHIVED'],
   NOT_RECOMMENDED: ['RECOMMENDED', 'ARCHIVED'],
   ARCHIVED: [],
@@ -505,9 +515,9 @@ export function getValidStatusTransitions(
 /**
  * Estados en los que puede descargarse el reporte PDF desde
  * CandidateDetailPage — decisión de negocio: no basta con que el
- * expediente "cierre" (COMPLETED), se exige que el reclutador ya haya
+ * expediente "cierre" (EVALUATED), se exige que el reclutador ya haya
  * emitido el dictamen final (RECOMMENDED/NOT_RECOMMENDED). Con
- * COMPLETED el único botón de acción visible es "Cambiar estado", para
+ * EVALUATED el único botón de acción visible es "Cambiar estado", para
  * forzar esa decisión antes de poder descargar el reporte. Antes se
  * llamaba EXCEL_REPORT_STATUSES, cuando el reporte era un .xlsx
  * generado por el backend; el nombre ya no aplicaba al reemplazar esa
@@ -516,17 +526,20 @@ export function getValidStatusTransitions(
 export const REPORT_AVAILABLE_STATUSES: CandidateStatus[] = ['RECOMMENDED', 'NOT_RECOMMENDED'];
 
 /**
- * IN_EVALUATION usa un azul distinto al de COMPLETED (que ya ocupaba el
- * azul "info" del theme, #67B1E3) para que ambos estados sigan viéndose
- * distinguibles en los Chips y en la gráfica del dashboard — no es el
- * hex exacto de theme.palette.info.main, es una variante de la misma
- * familia. RECOMMENDED/NOT_RECOMMENDED sí usan el verde/rojo exactos de
+ * Un color por posición en el ciclo de vida (inicio/desarrollo/fin),
+ * preservado tal cual tras el refactor 2026-09 — solo se re-etiquetó qué
+ * estado ocupa cada posición: UNASSIGNED hereda el azul que antes tenía
+ * IN_EVALUATION (era el inicio), IN_EVALUATION hereda el morado que antes
+ * tenía UNDER_REVIEW (era el desarrollo), EVALUATED hereda el azul claro
+ * que antes tenía COMPLETED (era el fin) — no es el hex exacto de
+ * theme.palette.info.main, es una variante de la misma familia.
+ * RECOMMENDED/NOT_RECOMMENDED sí usan el verde/rojo exactos de
  * theme.palette.success.main / error.main.
  */
 export const CANDIDATE_STATUS_COLOR: Record<CandidateStatus, string> = {
-  IN_EVALUATION: '#0083C1',
-  COMPLETED: '#67B1E3',
-  UNDER_REVIEW: '#69478E',
+  UNASSIGNED: '#0083C1',
+  IN_EVALUATION: '#69478E',
+  EVALUATED: '#67B1E3',
   RECOMMENDED: '#76B82A',
   NOT_RECOMMENDED: '#D32F2F',
   ARCHIVED: '#808080',

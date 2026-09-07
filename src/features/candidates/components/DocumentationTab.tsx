@@ -11,10 +11,11 @@ interface DocumentationTabProps {
 }
 
 /**
- * Los 5 documentos esperados del expediente, en el orden dado por el
- * usuario. El candidato es quien sube estos archivos en su registro (ver
- * la misma regla de negocio ya aplicada en HousingTab): el reclutador
- * solo visualiza, nunca sube/reemplaza/borra desde aquí.
+ * Los 7 documentos esperados del expediente, en el orden dado por el
+ * usuario (NSS/RFC agregados después de los 5 originales). El candidato
+ * es quien sube estos archivos en su registro (ver la misma regla de
+ * negocio ya aplicada en HousingTab): el reclutador solo visualiza,
+ * nunca sube/reemplaza/borra desde aquí.
  */
 const DOCUMENT_DEFINITIONS: { type: DocumentType; label: string }[] = [
   { type: 'INE', label: 'INE' },
@@ -22,6 +23,8 @@ const DOCUMENT_DEFINITIONS: { type: DocumentType; label: string }[] = [
   { type: 'COMPROBANTE_DOMICILIO', label: 'Comprobante de Domicilio' },
   { type: 'ANTECEDENTES_PENALES', label: 'Antecedentes Penales' },
   { type: 'COMPROBANTE_ESTUDIOS', label: 'Comprobante de Estudios' },
+  { type: 'NSS', label: 'Número de Seguridad Social' },
+  { type: 'RFC', label: 'RFC' },
 ];
 
 function DocumentCard({ label, evidence }: { label: string; evidence: EvidencePhoto | undefined }) {

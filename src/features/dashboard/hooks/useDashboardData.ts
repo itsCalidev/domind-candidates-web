@@ -67,10 +67,10 @@ function buildRecruiterMetrics(summary: DashboardSummaryResponse): SummaryMetric
   return [
     { id: 'myTotal', label: 'Mis candidatos', value: c.total, icon: 'new', accentColor: '#0083C1' },
     { id: 'myActive', label: 'Activos', value: c.active, icon: 'approved', accentColor: '#76B82A' },
-    { id: 'myInProgress', label: 'En evaluación', value: c.inProgress, icon: 'inProgress', accentColor: '#67B1E3' },
-    { id: 'myUnderReview', label: 'En revisión', value: c.underReview, icon: 'review', accentColor: '#69478E' },
+    { id: 'myUnassigned', label: 'No asignado', value: c.unassigned, icon: 'inProgress', accentColor: '#67B1E3' },
+    { id: 'myInEvaluation', label: 'En evaluación', value: c.inEvaluation, icon: 'review', accentColor: '#69478E' },
     { id: 'myApproved', label: 'Recomendados', value: c.approved, icon: 'approved', accentColor: '#76B82A' },
-    { id: 'myCompleted', label: 'Completados', value: c.completed, icon: 'approved', accentColor: '#F39200' },
+    { id: 'myEvaluated', label: 'Evaluado', value: c.evaluated, icon: 'approved', accentColor: '#F39200' },
     { id: 'myRejected', label: 'No recomendados', value: c.rejected, icon: 'review', accentColor: '#D32F2F' },
   ];
 }
@@ -84,9 +84,9 @@ function buildRecruiterMetrics(summary: DashboardSummaryResponse): SummaryMetric
 function buildCandidatesByStatus(summary: DashboardSummaryResponse): CandidatesByStatusPoint[] {
   const c = summary.candidates;
   return [
-    { status: CANDIDATE_STATUS_LABEL.IN_EVALUATION, total: c.inProgress },
-    { status: CANDIDATE_STATUS_LABEL.UNDER_REVIEW, total: c.underReview },
-    { status: CANDIDATE_STATUS_LABEL.COMPLETED, total: c.completed },
+    { status: CANDIDATE_STATUS_LABEL.UNASSIGNED, total: c.unassigned },
+    { status: CANDIDATE_STATUS_LABEL.IN_EVALUATION, total: c.inEvaluation },
+    { status: CANDIDATE_STATUS_LABEL.EVALUATED, total: c.evaluated },
     { status: CANDIDATE_STATUS_LABEL.RECOMMENDED, total: c.approved },
     { status: CANDIDATE_STATUS_LABEL.NOT_RECOMMENDED, total: c.rejected },
     { status: CANDIDATE_STATUS_LABEL.ARCHIVED, total: c.archived },
