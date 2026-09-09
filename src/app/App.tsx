@@ -6,6 +6,7 @@ import { buildTheme } from '@/theme';
 import { AppRouter } from '@/routes/AppRouter';
 import { AuthProvider } from '@/features/auth/context/AuthContext';
 import { SessionGuard } from '@/features/auth/components/SessionGuard';
+import { MagicLinkProvider } from '@/features/candidate-auth/context/MagicLinkContext';
 import { queryClient } from '@/lib/query/queryClient';
 import { ToastProvider } from '@/shared/context/ToastContext';
 import { AccessibilityProvider, useAccessibility } from '@/shared/context/AccessibilityContext';
@@ -49,7 +50,14 @@ function ThemedApp() {
                   ToastProvider) a la vez, por eso vive aquí adentro y no
                   más arriba. */}
               <SessionGuard />
-              <AppRouter />
+              {/* MagicLinkProvider solo necesita useToast() — vive aquí
+                  (no más arriba) por consistencia con SessionGuard, y
+                  porque envuelve AppRouter: las páginas del flujo de
+                  candidato (todavía sin construir) van a necesitar
+                  useMagicLink(). */}
+              <MagicLinkProvider>
+                <AppRouter />
+              </MagicLinkProvider>
             </ToastProvider>
           </AuthProvider>
         </BrowserRouter>
