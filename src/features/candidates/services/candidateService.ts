@@ -4,6 +4,7 @@ import type {
   AssignedRecruiter,
   BankCard,
   CandidateDetail,
+  CandidateHousingPayload,
   CandidateInterviewerIntegration,
   CandidateListItem,
   CandidateSocialNetwork,
@@ -458,6 +459,32 @@ export const candidatesService = {
    */
   async updateStatus(id: string, status: CandidateStatus): Promise<void> {
     await apiClient.patch(`/candidates/${id}/status`, { status });
+  },
+
+  /**
+   * PATCH /candidates/:id/housing — ruta híbrida (Magic Link Fase 1):
+   * acepta el JWT normal de un reclutador O el header `x-magic-link` que
+   * `apiClient` ya inyecta solo si hay un token guardado (ver
+   * magicLinkStorage.ts). Nombres de campo confirmados contra el DTO real
+   * en /docs-json (mismo comentario histórico que respalda `RawHousing`
+   * arriba), no inventados para esta pieza nueva. Shape de la respuesta
+   * no confirmado — se trata como una acción sin retorno útil, igual que
+   * `updateStatus`.
+   */
+  async updateHousing(id: string, payload: CandidateHousingPayload): Promise<void> {
+    await apiClient.patch(`/candidates/${id}/housing`, payload);
+  },
+
+  /**
+   * POST /candidates/:id/submit-form — exclusivo del flujo de Magic Link:
+   * requiere `x-magic-link` (lo inyecta `apiClient`), quema el token en
+   * el backend para que no se reuse y notifica al reclutador asignado.
+   * Contrato dado directamente por el usuario en el chat; el shape de la
+   * respuesta no se confirmó, así que se trata como una acción sin
+   * retorno útil.
+   */
+  async submitForm(id: string): Promise<void> {
+    await apiClient.post(`/candidates/${id}/submit-form`);
   },
 
   /**

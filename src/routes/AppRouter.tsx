@@ -44,6 +44,11 @@ const ProfilePage = lazy(() =>
 const AdminLayout = lazy(() =>
   import('@/layouts/AdminLayout').then((m) => ({ default: m.AdminLayout })),
 );
+const MagicLinkEntryPage = lazy(() =>
+  import('@/features/candidate-auth/components/MagicLinkEntryPage').then((m) => ({
+    default: m.MagicLinkEntryPage,
+  })),
+);
 
 export function AppRouter() {
   return (
@@ -70,6 +75,12 @@ export function AppRouter() {
             </RequirePasswordChangeRoute>
           }
         />
+
+        {/* Formulario de Magic Link: pública a propósito, sin ProtectedRoute
+            ni AdminLayout — el candidato entra con un token temporal en la
+            URL, nunca con sesión JWT. Interfaz completamente separada del
+            panel administrativo, ver MagicLinkEntryPage.tsx. */}
+        <Route path={paths.candidateForm} element={<MagicLinkEntryPage />} />
 
         {/* Rutas del panel administrativo, protegidas y bajo el mismo layout */}
         <Route

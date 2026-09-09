@@ -12,4 +12,6 @@ export const paths = {
   candidates: '/candidates',
   candidateDetail: (id: string) => `/candidates/${id}`,
   users: '/users',
+  /** Fuera de ProtectedRoute (ver AppRouter.tsx): el candidato no tiene sesión JWT, solo un token temporal en `?token=`. */
+  candidateForm: '/candidato/formulario',
 } as const;

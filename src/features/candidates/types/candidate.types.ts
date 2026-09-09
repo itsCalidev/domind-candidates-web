@@ -125,6 +125,31 @@ export interface CandidateHousing {
   publicServices: string[];
 }
 
+/**
+ * Body de PATCH /candidates/:id/housing — mismos nombres de campo que
+ * `CandidateHousing` (confirmados contra el DTO real en /docs-json, ver
+ * el comentario de `RawHousing` en candidateService.ts), todos opcionales
+ * porque es un PATCH parcial. Usado por el flujo de Magic Link
+ * (candidate-auth) para que el candidato capture su propia vivienda.
+ */
+export interface CandidateHousingPayload {
+  propertyOwner?: string;
+  timeLivingThere?: string;
+  previousAddress?: string;
+  hasInfonavitDebt?: boolean;
+  infonavitAmount?: number;
+  infonavitCreditNumber?: string;
+  housingConditions?: string;
+  housingType?: string;
+  roomsCount?: number;
+  livingRoomCount?: number;
+  diningRoomCount?: number;
+  kitchenCount?: number;
+  bathroomsCount?: number;
+  patioCount?: number;
+  publicServices?: string[];
+}
+
 export interface Income {
   source: string;
   amount: number;
