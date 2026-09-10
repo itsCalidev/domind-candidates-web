@@ -5,8 +5,13 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
+  FormControl,
+  FormControlLabel,
+  FormLabel,
   ListItemText,
   MenuItem,
+  Radio,
+  RadioGroup,
   Stack,
   TextField,
   Typography,
@@ -47,6 +52,8 @@ export function AssignRecruiterDialog({ open, candidate, onClose }: AssignRecrui
   return <AssignRecruiterDialogContent key={candidate.id} candidate={candidate} onClose={onClose} />;
 }
 
+type FillMode = 'manual' | 'magicLink';
+
 function AssignRecruiterDialogContent({
   candidate,
   onClose,
@@ -55,14 +62,21 @@ function AssignRecruiterDialogContent({
   onClose: () => void;
 }) {
   const { recruiters, isLoading, isError, error } = useRecruiters();
-  const { assignRecruiter } = useCandidateMutations();
+  const { assignRecruiter, sendMagicLink } = useCandidateMutations();
   const [selectedId, setSelectedId] = useState(
     candidate.assignedRecruiter?.id ?? UNASSIGNED_VALUE,
   );
+  const [fillMode, setFillMode] = useState<FillMode>('manual');
 
-  const isPending = assignRecruiter.isPending;
+  const isPending = assignRecruiter.isPending || sendMagicLink.isPending;
   const currentId = candidate.assignedRecruiter?.id ?? UNASSIGNED_VALUE;
   const hasChanged = selectedId !== currentId;
+  const hasRecruiterSelected = selectedId !== UNASSIGNED_VALUE;
+  const wantsMagicLink = hasRecruiterSelected && fillMode === 'magicLink';
+  // Regla UI 2: habilitado si se reasignó a alguien distinto, O si el
+  // reclutador es el mismo pero se pidió (re)enviar el enlace mágico —
+  // `hasChanged` ya cubre por sí solo el caso "reasignó Y quiere enlace".
+  const canSubmit = hasChanged || wantsMagicLink;
 
   /**
    * El reclutador actual puede no estar en la lista: useRecruiters solo
@@ -74,16 +88,29 @@ function AssignRecruiterDialogContent({
   const assigned = candidate.assignedRecruiter;
   const isAssignedMissing = !!assigned && !recruiters.some((r) => r.id === assigned.id);
 
+  function handleSelectChange(value: string) {
+    setSelectedId(value);
+    // Sin reclutador no hay a quién mandarle el enlace — se resetea para
+    // que no quede "Autollenado" elegido en silencio si luego se vuelve
+    // a asignar a alguien.
+    if (value === UNASSIGNED_VALUE) setFillMode('manual');
+  }
+
   async function onSubmit() {
     try {
-      await assignRecruiter.mutateAsync({
-        id: candidate.id,
-        recruiterId: selectedId === UNASSIGNED_VALUE ? null : selectedId,
-      });
+      if (hasChanged) {
+        await assignRecruiter.mutateAsync({
+          id: candidate.id,
+          recruiterId: selectedId === UNASSIGNED_VALUE ? null : selectedId,
+        });
+      }
+      if (wantsMagicLink) {
+        await sendMagicLink.mutateAsync(candidate.id);
+      }
       onClose();
     } catch {
-      // El toast de error ya lo emite useCandidateMutations; aquí solo
-      // se evita cerrar el diálogo para que se pueda reintentar.
+      // Los toasts de error ya los emiten las mutaciones; aquí solo se
+      // evita cerrar el diálogo para que se pueda reintentar.
     }
   }
 
@@ -115,7 +142,7 @@ function AssignRecruiterDialogContent({
             label="Reclutador"
             fullWidth
             value={selectedId}
-            onChange={(e) => setSelectedId(e.target.value)}
+            onChange={(e) => handleSelectChange(e.target.value)}
             disabled={isLoading || isPending}
             helperText={
               isLoading ? 'Cargando reclutadores…' : 'Elige "Sin asignar" para remover la asignación.'
@@ -145,6 +172,25 @@ function AssignRecruiterDialogContent({
               </MenuItem>
             ))}
           </TextField>
+
+          {/* Regla UI 1: sin reclutador no hay a quién mandarle el enlace, así que se oculta por completo en vez de solo deshabilitarse. */}
+          {hasRecruiterSelected && (
+            <FormControl disabled={isPending}>
+              <FormLabel id="fill-mode-label">Modalidad de llenado</FormLabel>
+              <RadioGroup
+                aria-labelledby="fill-mode-label"
+                value={fillMode}
+                onChange={(e) => setFillMode(e.target.value as FillMode)}
+              >
+                <FormControlLabel value="manual" control={<Radio />} label="Llenado Manual (Reclutador)" />
+                <FormControlLabel
+                  value="magicLink"
+                  control={<Radio />}
+                  label="Autollenado (Enviar Enlace Mágico al Candidato)"
+                />
+              </RadioGroup>
+            </FormControl>
+          )}
         </Stack>
       </DialogContent>
 
@@ -157,7 +203,7 @@ function AssignRecruiterDialogContent({
         <Button
           variant="contained"
           onClick={onSubmit}
-          disabled={isPending || isLoading || !hasChanged}
+          disabled={isPending || isLoading || !canSubmit}
         >
           {isPending ? 'Guardando…' : 'Guardar'}
         </Button>

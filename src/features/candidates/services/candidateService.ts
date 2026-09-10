@@ -462,6 +462,17 @@ export const candidatesService = {
   },
 
   /**
+   * POST /candidates/:id/magic-link — genera y envía al candidato el
+   * enlace de autollenado (ver Fase 1-3 de Magic Link). Contrato dado
+   * directamente por el usuario en el chat, sin body ni shape de
+   * respuesta confirmados — se trata como una acción sin retorno útil,
+   * mismo criterio que `updateStatus`/`submitForm`.
+   */
+  async sendMagicLink(id: string): Promise<void> {
+    await apiClient.post(`/candidates/${id}/magic-link`);
+  },
+
+  /**
    * PATCH /candidates/:id/housing — ruta híbrida (Magic Link Fase 1):
    * acepta el JWT normal de un reclutador O el header `x-magic-link` que
    * `apiClient` ya inyecta solo si hay un token guardado (ver

@@ -55,6 +55,20 @@ export function useCandidateMutations() {
     },
   });
 
+  // Sin invalidateCandidates(): enviar el enlace no cambia ningún campo
+  // que el listado/detalle muestren hoy (no hay un "estado de magic link"
+  // confirmado en el contrato) — mismo criterio que getReportSummary, que
+  // tampoco invalida nada por ser una acción de solo efecto externo.
+  const sendMagicLink = useMutation({
+    mutationFn: (id: string) => candidatesService.sendMagicLink(id),
+    onSuccess: () => {
+      showToast('Enlace mágico enviado exitosamente.');
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo enviar el enlace mágico.'), 'error');
+    },
+  });
+
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: CandidateStatus }) =>
       candidatesService.updateStatus(id, status),
@@ -316,6 +330,7 @@ export function useCandidateMutations() {
 
   return {
     assignRecruiter,
+    sendMagicLink,
     updateStatus,
     getReportSummary,
     evaluateSection,
