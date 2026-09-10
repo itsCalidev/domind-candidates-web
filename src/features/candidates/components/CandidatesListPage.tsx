@@ -13,9 +13,11 @@ import {
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
+import PersonAddAltOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined';
 import { useCandidatesList } from '../hooks/useCandidatesList';
 import { CandidatesTable } from './CandidatesTable';
 import { AssignRecruiterDialog } from './AssignRecruiterDialog';
+import { CreateAndAssignCandidateDialog } from './CreateAndAssignCandidateDialog';
 import {
   ALL_CANDIDATE_STATUSES,
   CANDIDATE_STATUS_LABEL,
@@ -48,6 +50,7 @@ export function CandidatesListPage() {
   // solo SYSTEM/ADMIN pueden alcanzar.
   const visibleStatuses = canAssignRecruiter ? ALL_CANDIDATE_STATUSES : RECRUITER_EDITABLE_STATUSES;
   const [candidateToAssign, setCandidateToAssign] = useState<CandidateListItem | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const {
     candidates,
@@ -136,6 +139,16 @@ export function CandidatesListPage() {
       <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 0.5 }}>
         <Typography variant="h4">Candidatos</Typography>
         <Stack direction="row" spacing={1.5}>
+          {canAssignRecruiter && (
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<PersonAddAltOutlinedIcon fontSize="small" />}
+              onClick={() => setIsCreateOpen(true)}
+            >
+              Agregar candidato
+            </Button>
+          )}
           <ExportButton
             label="Exportar Excel"
             icon={<TableChartOutlinedIcon fontSize="small" />}
@@ -276,6 +289,8 @@ export function CandidatesListPage() {
         candidate={candidateToAssign}
         onClose={() => setCandidateToAssign(null)}
       />
+
+      <CreateAndAssignCandidateDialog open={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
     </Box>
   );
 }

@@ -4,6 +4,7 @@ import { useToast } from '@/shared/context/ToastContext';
 import { extractApiErrorMessage } from '@/shared/utils/apiError';
 import type {
   CandidateStatus,
+  CreateAndAssignCandidatePayload,
   EvaluationRating,
   EvaluationSection,
   EvidenceCategory,
@@ -66,6 +67,22 @@ export function useCandidateMutations() {
     },
     onError: (error) => {
       showToast(extractApiErrorMessage(error, 'No se pudo enviar el enlace mágico.'), 'error');
+    },
+  });
+
+  // El service method es un stub a propósito (falta el contrato real de
+  // creación de candidatos) — hoy siempre cae en onError. La mutación ya
+  // queda lista: el día que candidateService.createAndAssignCandidate
+  // haga la llamada real, nada aquí necesita cambiar.
+  const createAndAssignCandidate = useMutation({
+    mutationFn: (payload: CreateAndAssignCandidatePayload) =>
+      candidatesService.createAndAssignCandidate(payload),
+    onSuccess: () => {
+      showToast('Candidato creado y asignado exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo crear al candidato.'), 'error');
     },
   });
 
@@ -331,6 +348,7 @@ export function useCandidateMutations() {
   return {
     assignRecruiter,
     sendMagicLink,
+    createAndAssignCandidate,
     updateStatus,
     getReportSummary,
     evaluateSection,
