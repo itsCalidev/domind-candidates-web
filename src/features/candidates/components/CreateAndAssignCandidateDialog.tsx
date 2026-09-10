@@ -36,9 +36,9 @@ interface CreateAndAssignCandidateDialogProps {
 /** Textos exactos pedidos por el usuario — cambian según la modalidad elegida. */
 const FILL_MODE_HELP: Record<'manual' | 'magicLink', string> = {
   manual:
-    'Se enviará un correo únicamente al reclutador con el enlace a su dashboard para que él mismo llene la información del candidato.',
+    'Se enviará un correo únicamente al reclutador con el enlace para que él mismo llene la información del candidato.',
   magicLink:
-    'Se enviará un correo al candidato con un enlace válido por 24 hrs, pidiéndole que no lo comparta. El reclutador recibirá un correo notificándole que debe brindar soporte a este email.',
+    'Se enviará un correo al candidato con un enlace válido por 24 hrs. El reclutador recibirá un correo notificándole que debe brindar soporte.',
 };
 
 /**
@@ -72,8 +72,6 @@ function CreateAndAssignCandidateDialogContent({ onClose }: { onClose: () => voi
     defaultValues: {
       firstName: '',
       lastName: '',
-      positionName: '',
-      companyName: '',
       recruiterId: '',
       fillMode: 'manual',
       candidateEmail: '',
@@ -87,8 +85,6 @@ function CreateAndAssignCandidateDialogContent({ onClose }: { onClose: () => voi
       await createAndAssignCandidate.mutateAsync({
         firstName: values.firstName,
         lastName: values.lastName,
-        positionName: values.positionName,
-        companyName: values.companyName,
         recruiterId: values.recruiterId,
         fillMode: values.fillMode === 'magicLink' ? 'MAGIC_LINK' : 'MANUAL',
         candidateEmail: values.fillMode === 'magicLink' ? values.candidateEmail : undefined,
@@ -125,7 +121,7 @@ function CreateAndAssignCandidateDialogContent({ onClose }: { onClose: () => voi
             )}
 
             <TextField
-              label="Nombre(s)"
+              label="Nombre(s) del candidato(a)"
               fullWidth
               disabled={isPending}
               {...register('firstName')}
@@ -133,28 +129,12 @@ function CreateAndAssignCandidateDialogContent({ onClose }: { onClose: () => voi
               helperText={errors.firstName?.message}
             />
             <TextField
-              label="Apellido(s)"
+              label="Apellido(s) del candidato(a)"
               fullWidth
               disabled={isPending}
               {...register('lastName')}
               error={!!errors.lastName}
               helperText={errors.lastName?.message}
-            />
-            <TextField
-              label="Puesto"
-              fullWidth
-              disabled={isPending}
-              {...register('positionName')}
-              error={!!errors.positionName}
-              helperText={errors.positionName?.message}
-            />
-            <TextField
-              label="Empresa"
-              fullWidth
-              disabled={isPending}
-              {...register('companyName')}
-              error={!!errors.companyName}
-              helperText={errors.companyName?.message}
             />
 
             <Controller
@@ -213,10 +193,7 @@ function CreateAndAssignCandidateDialogContent({ onClose }: { onClose: () => voi
                 disabled={isPending}
                 {...register('candidateEmail')}
                 error={!!errors.candidateEmail}
-                helperText={
-                  errors.candidateEmail?.message ??
-                  'Se usa solo para enviarle el enlace — no se asume que ya exista en la base de datos.'
-                }
+                helperText={errors.candidateEmail?.message}
               />
             )}
           </Stack>

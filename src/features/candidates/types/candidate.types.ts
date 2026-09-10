@@ -161,8 +161,6 @@ export interface CandidateHousingPayload {
 export interface CreateAndAssignCandidatePayload {
   firstName: string;
   lastName: string;
-  positionName: string;
-  companyName: string;
   recruiterId: string;
   fillMode: 'MANUAL' | 'MAGIC_LINK';
   /** Solo presente cuando `fillMode === 'MAGIC_LINK'`. */
