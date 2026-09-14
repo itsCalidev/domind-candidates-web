@@ -151,16 +151,22 @@ export interface CandidateHousingPayload {
 }
 
 /**
- * Body pretendido para la acción combinada "Agregar Candidato" (crear +
- * asignar reclutador + elegir modalidad de llenado). NO existe todavía
- * ningún endpoint de creación de candidatos confirmado en este repo — los
- * nombres de campo son de mejor esfuerzo (calcados de `CandidateListItem`/
- * `generalInfo`), no un DTO verificado. Ver `createAndAssignCandidate` en
- * candidateService.ts, que hoy es un stub a propósito.
+ * Body de la acción combinada "Agregar Candidato" (crear + asignar
+ * reclutador + elegir modalidad de llenado), enviado a
+ * `POST /candidates` (ver `createAndAssignCandidate` en
+ * candidateService.ts).
+ *
+ * `email` es el correo informativo del candidato — siempre obligatorio,
+ * se guarda como dato de contacto para el panel y las notificaciones del
+ * reclutador, pero nunca se usa para enviarle nada directamente a él.
+ * `candidateEmail` es un campo aparte: solo existe cuando
+ * `fillMode === 'MAGIC_LINK'` y es estrictamente transaccional (el
+ * destinatario del enlace de autollenado).
  */
 export interface CreateAndAssignCandidatePayload {
   firstName: string;
   lastName: string;
+  email: string;
   recruiterId: string;
   fillMode: 'MANUAL' | 'MAGIC_LINK';
   /** Solo presente cuando `fillMode === 'MAGIC_LINK'`. */

@@ -72,6 +72,7 @@ function CreateAndAssignCandidateDialogContent({ onClose }: { onClose: () => voi
     defaultValues: {
       firstName: '',
       lastName: '',
+      email: '',
       recruiterId: '',
       fillMode: 'manual',
       candidateEmail: '',
@@ -85,6 +86,7 @@ function CreateAndAssignCandidateDialogContent({ onClose }: { onClose: () => voi
       await createAndAssignCandidate.mutateAsync({
         firstName: values.firstName,
         lastName: values.lastName,
+        email: values.email,
         recruiterId: values.recruiterId,
         fillMode: values.fillMode === 'magicLink' ? 'MAGIC_LINK' : 'MANUAL',
         candidateEmail: values.fillMode === 'magicLink' ? values.candidateEmail : undefined,
@@ -135,6 +137,15 @@ function CreateAndAssignCandidateDialogContent({ onClose }: { onClose: () => voi
               {...register('lastName')}
               error={!!errors.lastName}
               helperText={errors.lastName?.message}
+            />
+            <TextField
+              label="Correo electrónico"
+              type="email"
+              fullWidth
+              disabled={isPending}
+              {...register('email')}
+              error={!!errors.email}
+              helperText={errors.email?.message}
             />
 
             <Controller
