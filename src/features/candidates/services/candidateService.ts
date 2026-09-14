@@ -474,19 +474,15 @@ export const candidatesService = {
   },
 
   /**
-   * STUB — no existe todavía un endpoint de creación de candidatos
-   * confirmado (no hay `POST /candidates` en este repo ni contrato dado
-   * para la acción combinada crear+asignar+notificar). No manda ninguna
-   * petición real a propósito: lanza un error explícito para que sea
-   * obvio en pruebas manuales que falta el contrato del backend, en vez
-   * de fallar con un 404 confuso contra una ruta inventada. Reemplazar
-   * por la llamada real en cuanto exista — la mutación que lo envuelve
-   * (`useCandidateMutations.createAndAssignCandidate`) ya está lista y no
-   * necesita cambiar.
+   * POST /candidates — da de alta al candidato, lo asigna al reclutador
+   * elegido y dispara la notificación según `fillMode` (confirmado por el
+   * usuario: el backend ya implementa este endpoint con el mismo payload
+   * que arma `CreateAndAssignCandidateDialog`). Sin shape de respuesta
+   * confirmado, así que se trata como una acción sin retorno útil, igual
+   * que `updateStatus`/`sendMagicLink`.
    */
   async createAndAssignCandidate(payload: CreateAndAssignCandidatePayload): Promise<void> {
-    void payload;
-    throw new Error('createAndAssignCandidate: falta confirmar el contrato del backend.');
+    await apiClient.post('/candidates', payload);
   },
 
   /**

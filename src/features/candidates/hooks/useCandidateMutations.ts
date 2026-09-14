@@ -70,10 +70,6 @@ export function useCandidateMutations() {
     },
   });
 
-  // El service method es un stub a propósito (falta el contrato real de
-  // creación de candidatos) — hoy siempre cae en onError. La mutación ya
-  // queda lista: el día que candidateService.createAndAssignCandidate
-  // haga la llamada real, nada aquí necesita cambiar.
   const createAndAssignCandidate = useMutation({
     mutationFn: (payload: CreateAndAssignCandidatePayload) =>
       candidatesService.createAndAssignCandidate(payload),
