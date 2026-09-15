@@ -16,11 +16,13 @@ import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
 import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined';
 import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
 import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined';
+import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCandidateDetail } from '../hooks/useCandidateDetail';
 import { useGetEvaluations } from '../hooks/useCandidateEvaluations';
 import { useCandidateReportPdf } from '../hooks/useCandidateReportPdf';
+import { useCandidateMutations } from '../hooks/useCandidateMutations';
 import { CandidateStatusChip } from './CandidateStatusChip';
 import { GeneralInfoTab } from './GeneralInfoTab';
 import { DocumentationTab } from './DocumentationTab';
@@ -37,6 +39,7 @@ import { CandidateSubTabs, type SubTabDefinition } from './CandidateSubTabs';
 import { SectionGrader } from './SectionGrader';
 import { AssignRecruiterDialog } from './AssignRecruiterDialog';
 import { UpdateCandidateStatusDialog } from './UpdateCandidateStatusDialog';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import {
   getValidStatusTransitions,
   REPORT_AVAILABLE_STATUSES,
@@ -69,6 +72,8 @@ export function CandidateDetailPage() {
   const [activeSubTab, setActiveSubTab] = useState(0);
   const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [isFinalizeCaptureOpen, setIsFinalizeCaptureOpen] = useState(false);
+  const { updateCaptureStatus } = useCandidateMutations();
   const { user } = useAuth();
   const canAssignRecruiter = hasFullAccess(user?.role);
   // Fuente única de verdad del progreso de calificación: GET
@@ -159,6 +164,17 @@ export function CandidateDetailPage() {
   // guard de arriba dentro de una función declarada más adelante en el
   // mismo cuerpo del componente.
   const candidateId = candidate.id;
+  // Solo aplica a captura manual todavía sin terminar — una vez
+  // COMPLETED, o si el candidato se autollenó por Magic Link, esta
+  // acción deja de tener sentido.
+  const canFinalizeCapture = candidate.captureMode === 'MANUAL' && candidate.captureStatus === 'DRAFT';
+
+  function handleFinalizeCapture() {
+    updateCaptureStatus.mutate(
+      { id: candidateId, captureStatus: 'COMPLETED' },
+      { onSuccess: () => setIsFinalizeCaptureOpen(false) },
+    );
+  }
 
   /**
    * Cada sub-pestaña con datos reales lleva su SectionGrader al final
@@ -353,6 +369,17 @@ export function CandidateDetailPage() {
             Cambiar estado
           </Button>
         )}
+        {canFinalizeCapture && (
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={<TaskAltOutlinedIcon fontSize="small" />}
+            onClick={() => setIsFinalizeCaptureOpen(true)}
+            disabled={updateCaptureStatus.isPending}
+          >
+            Finalizar captura
+          </Button>
+        )}
         {canDownloadReport && (
           <ExportButton
             label="Descargar reporte"
@@ -434,6 +461,17 @@ export function CandidateDetailPage() {
         candidate={candidate}
         availableStatuses={statusOptions}
         onClose={() => setIsStatusDialogOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={isFinalizeCaptureOpen}
+        title="Finalizar captura"
+        description="¿Estás seguro de finalizar la captura? Ya no podrás editar los datos generales."
+        confirmText="Finalizar captura"
+        severity="warning"
+        loading={updateCaptureStatus.isPending}
+        onConfirm={handleFinalizeCapture}
+        onClose={() => setIsFinalizeCaptureOpen(false)}
       />
 
       {/* Fuera de pantalla a propósito (ver useCandidateReportPdf): html2canvas
