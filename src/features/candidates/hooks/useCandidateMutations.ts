@@ -3,6 +3,7 @@ import { candidatesService } from '../services/candidateService';
 import { useToast } from '@/shared/context/ToastContext';
 import { extractApiErrorMessage } from '@/shared/utils/apiError';
 import type {
+  CandidateCaptureStatus,
   CandidateStatus,
   CreateAndAssignCandidatePayload,
   EvaluationRating,
@@ -92,6 +93,21 @@ export function useCandidateMutations() {
     onError: (error) => {
       showToast(
         extractApiErrorMessage(error, 'No se pudo actualizar el estado del candidato.'),
+        'error',
+      );
+    },
+  });
+
+  const updateCaptureStatus = useMutation({
+    mutationFn: ({ id, captureStatus }: { id: string; captureStatus: CandidateCaptureStatus }) =>
+      candidatesService.updateCaptureStatus(id, captureStatus),
+    onSuccess: () => {
+      showToast('Estado de captura actualizado exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(
+        extractApiErrorMessage(error, 'No se pudo actualizar el estado de captura.'),
         'error',
       );
     },
@@ -346,6 +362,7 @@ export function useCandidateMutations() {
     sendMagicLink,
     createAndAssignCandidate,
     updateStatus,
+    updateCaptureStatus,
     getReportSummary,
     evaluateSection,
     createWorkHistory,

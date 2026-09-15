@@ -471,6 +471,15 @@ export const candidatesService = {
   },
 
   /**
+   * PATCH /candidates/:id/capture-status — body { captureStatus }, ruta
+   * dedicada distinta de `updateStatus` (no existe un PATCH genérico de
+   * candidato). Contrato dado directamente por el usuario en el chat.
+   */
+  async updateCaptureStatus(id: string, captureStatus: CandidateCaptureStatus): Promise<void> {
+    await apiClient.patch(`/candidates/${id}/capture-status`, { captureStatus });
+  },
+
+  /**
    * POST /candidates/:id/magic-link — genera y envía al candidato el
    * enlace de autollenado (ver Fase 1-3 de Magic Link). Contrato dado
    * directamente por el usuario en el chat, sin body ni shape de
