@@ -75,7 +75,6 @@ function CreateAndAssignCandidateDialogContent({ onClose }: { onClose: () => voi
       email: '',
       recruiterId: '',
       fillMode: 'manual',
-      candidateEmail: '',
     },
   });
 
@@ -89,7 +88,6 @@ function CreateAndAssignCandidateDialogContent({ onClose }: { onClose: () => voi
         email: values.email,
         recruiterId: values.recruiterId,
         fillMode: values.fillMode === 'magicLink' ? 'MAGIC_LINK' : 'MANUAL',
-        candidateEmail: values.fillMode === 'magicLink' ? values.candidateEmail : undefined,
       });
       onClose();
     } catch {
@@ -195,18 +193,6 @@ function CreateAndAssignCandidateDialogContent({ onClose }: { onClose: () => voi
                 {FILL_MODE_HELP[fillMode]}
               </Typography>
             </FormControl>
-
-            {fillMode === 'magicLink' && (
-              <TextField
-                label="Correo del candidato"
-                type="email"
-                fullWidth
-                disabled={isPending}
-                {...register('candidateEmail')}
-                error={!!errors.candidateEmail}
-                helperText={errors.candidateEmail?.message}
-              />
-            )}
           </Stack>
         </DialogContent>
 

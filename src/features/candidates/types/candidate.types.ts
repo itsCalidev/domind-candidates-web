@@ -170,12 +170,11 @@ export interface CandidateHousingPayload {
  * `POST /candidates` (ver `createAndAssignCandidate` en
  * candidateService.ts).
  *
- * `email` es el correo informativo del candidato — siempre obligatorio,
- * se guarda como dato de contacto para el panel y las notificaciones del
- * reclutador, pero nunca se usa para enviarle nada directamente a él.
- * `candidateEmail` es un campo aparte: solo existe cuando
- * `fillMode === 'MAGIC_LINK'` y es estrictamente transaccional (el
- * destinatario del enlace de autollenado).
+ * `email` es el único correo del candidato — siempre obligatorio, sin
+ * importar `fillMode`. Antes existía `candidateEmail`, un segundo campo
+ * exclusivo de `fillMode === 'MAGIC_LINK'` como destinatario transaccional
+ * del enlace; se quitó a propósito (confirmado por el usuario) para no
+ * duplicar el dato: ahora `email` cumple ambos roles.
  */
 export interface CreateAndAssignCandidatePayload {
   firstName: string;
@@ -183,8 +182,6 @@ export interface CreateAndAssignCandidatePayload {
   email: string;
   recruiterId: string;
   fillMode: 'MANUAL' | 'MAGIC_LINK';
-  /** Solo presente cuando `fillMode === 'MAGIC_LINK'`. */
-  candidateEmail?: string;
 }
 
 export interface Income {
