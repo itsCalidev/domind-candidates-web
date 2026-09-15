@@ -137,7 +137,7 @@ function CreateAndAssignCandidateDialogContent({ onClose }: { onClose: () => voi
               helperText={errors.lastName?.message}
             />
             <TextField
-              label="Correo electrónico"
+              label="Correo electrónico del candidato(a)"
               type="email"
               fullWidth
               disabled={isPending}
