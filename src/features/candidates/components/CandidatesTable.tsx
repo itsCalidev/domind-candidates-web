@@ -20,6 +20,7 @@ import {
 import MoreVertOutlinedIcon from '@mui/icons-material/MoreVertOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined';
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import { useNavigate } from 'react-router-dom';
 import { recruiterFullName, type CandidateListItem } from '../types/candidate.types';
 import { CandidateStatusChip } from './CandidateStatusChip';
@@ -189,6 +190,20 @@ export function CandidatesTable({
           </ListItemIcon>
           <ListItemText>Ver detalle</ListItemText>
         </MenuItem>
+
+        {menuCandidate?.captureMode === 'MANUAL' && menuCandidate?.captureStatus === 'DRAFT' && (
+          <MenuItem
+            onClick={() => {
+              if (menuCandidate) navigate(paths.candidateDetail(menuCandidate.id));
+              closeMenu();
+            }}
+          >
+            <ListItemIcon>
+              <EditNoteOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Llenar datos</ListItemText>
+          </MenuItem>
+        )}
 
         {canAssignRecruiter && (
           <>

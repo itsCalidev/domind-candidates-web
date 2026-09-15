@@ -33,6 +33,18 @@ export interface AssignedRecruiter {
   isActive: boolean;
 }
 
+/**
+ * Cómo se está llenando la información del candidato — mismo concepto que
+ * `fillMode` en `CreateAndAssignCandidateDialog`, ya persistido en el
+ * candidato con este nombre (confirmado por el usuario). `captureStatus`
+ * es el avance de esa captura: `DRAFT` mientras falta completarla,
+ * `COMPLETED` una vez terminada. Ambos confirmados por el usuario en el
+ * chat, incluyendo que GET /candidates ya los devuelve en cada item de la
+ * lista.
+ */
+export type CandidateCaptureMode = 'MANUAL' | 'MAGIC_LINK';
+export type CandidateCaptureStatus = 'DRAFT' | 'COMPLETED';
+
 export interface CandidateListItem {
   id: string;
   folio: string;
@@ -44,6 +56,8 @@ export interface CandidateListItem {
   isActive: boolean;
   /** `null` cuando el candidato no tiene reclutador (ver acción UNASSIGN_CANDIDATE). */
   assignedRecruiter: AssignedRecruiter | null;
+  captureMode: CandidateCaptureMode;
+  captureStatus: CandidateCaptureStatus;
 }
 
 export interface CandidateGeneralInfo {

@@ -3,6 +3,8 @@ import type { PaginatedResponse } from '@/shared/types/pagination';
 import type {
   AssignedRecruiter,
   BankCard,
+  CandidateCaptureMode,
+  CandidateCaptureStatus,
   CandidateDetail,
   CandidateHousingPayload,
   CandidateInterviewerIntegration,
@@ -36,6 +38,8 @@ interface DetailedCandidateList {
   isActive: boolean;
   companyName: string;
   positionName: string;
+  captureMode: CandidateCaptureMode;
+  captureStatus: CandidateCaptureStatus;
   /** Ausente/nulo cuando nadie tiene asignado al candidato. */
   assignedRecruiter?: AssignedRecruiter | null;
   personal?: {
@@ -291,6 +295,8 @@ export const candidatesService = {
       status: c.status,
       isActive: c.isActive,
       assignedRecruiter: c.assignedRecruiter ?? null,
+      captureMode: c.captureMode,
+      captureStatus: c.captureStatus,
     }));
 
     return {
@@ -313,6 +319,8 @@ export const candidatesService = {
       status: data.status,
       isActive: data.isActive,
       assignedRecruiter: data.assignedRecruiter ?? null,
+      captureMode: data.captureMode,
+      captureStatus: data.captureStatus,
       generalInfo: {
         fullName: data.personal ? `${data.personal.firstName} ${data.personal.lastName}` : 'Sin nombre',
         positionApplied: data.positionName,
