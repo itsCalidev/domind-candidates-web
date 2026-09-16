@@ -90,14 +90,19 @@ export const personalInfoSchema = z.object({
   birthDate: z.string().refine((value) => !value || value <= maxBirthDateForAdult(), {
     message: 'El candidato debe ser mayor de edad (18 años)',
   }),
-  spouseBirthDate: z.string().refine((value) => !value || value <= todayISODate(), {
-    message: 'La fecha no puede ser posterior a hoy',
+  // Mismo tope que birthDate (hoy - 18 años), no `todayISODate()`: la
+  // edad legal para casarse es 18 años, así que el cónyuge tampoco puede
+  // ser menor de edad.
+  spouseBirthDate: z.string().refine((value) => !value || value <= maxBirthDateForAdult(), {
+    message: 'El cónyuge debe ser mayor de edad (18 años)',
   }),
   highestEducation: z.string().trim().max(100, 'Máximo 100 caracteres'),
   studiesProofType: z.string().trim().max(100, 'Máximo 100 caracteres'),
   studiesProofDate: z.string().refine((value) => !value || value <= todayISODate(), {
     message: 'La fecha no puede ser posterior a hoy',
   }),
+  companyName: z.string().trim().max(150, 'Máximo 150 caracteres'),
+  positionName: z.string().trim().max(150, 'Máximo 150 caracteres'),
 });
 
 export type PersonalInfoFormValues = z.infer<typeof personalInfoSchema>;

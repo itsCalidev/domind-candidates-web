@@ -47,6 +47,8 @@ function buildFormDefaults(info: CandidateGeneralInfo): PersonalInfoFormValues {
   return {
     firstName: info.firstName,
     lastName: info.lastName,
+    companyName: clean(info.companyName),
+    positionName: clean(info.positionApplied),
     address: clean(info.address),
     neighborhood: clean(info.neighborhood),
     postalCode: clean(info.postalCode),
@@ -96,6 +98,8 @@ function buildChangedPayload(
   if (dirtyFields.highestEducation) payload.highestEducation = values.highestEducation;
   if (dirtyFields.studiesProofType) payload.studiesProofType = values.studiesProofType;
   if (dirtyFields.studiesProofDate) payload.studiesProofDate = values.studiesProofDate;
+  if (dirtyFields.companyName) payload.companyName = values.companyName;
+  if (dirtyFields.positionName) payload.positionName = values.positionName;
   return payload;
 }
 
@@ -183,6 +187,26 @@ export function GeneralInfoTab({ candidateId, info, captureStatus }: GeneralInfo
               {...register('lastName')}
               error={!!errors.lastName}
               helperText={errors.lastName?.message}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <TextField
+              label="Empresa"
+              fullWidth
+              disabled={isSaving}
+              {...register('companyName')}
+              error={!!errors.companyName}
+              helperText={errors.companyName?.message}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <TextField
+              label="Puesto solicitado"
+              fullWidth
+              disabled={isSaving}
+              {...register('positionName')}
+              error={!!errors.positionName}
+              helperText={errors.positionName?.message}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
@@ -300,7 +324,7 @@ export function GeneralInfoTab({ candidateId, info, captureStatus }: GeneralInfo
               helperText={errors.spouseBirthDate?.message}
               slotProps={{
                 inputLabel: { shrink: true },
-                htmlInput: { max: todayISODate() },
+                htmlInput: { max: maxBirthDateForAdult() },
               }}
             />
           </Grid>
@@ -411,6 +435,7 @@ export function GeneralInfoTab({ candidateId, info, captureStatus }: GeneralInfo
       )}
       <Grid container spacing={3}>
         <Field label="Nombre completo" value={info.fullName} />
+        <Field label="Empresa" value={info.companyName} />
         <Field label="Puesto solicitado" value={info.positionApplied} />
         <Field
           label="Estado civil"

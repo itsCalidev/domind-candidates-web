@@ -65,6 +65,8 @@ export interface CandidateGeneralInfo {
   fullName: string;
   firstName: string;
   lastName: string;
+  /** Duplicado de `CandidateListItem.companyName`, con fallback "No registrado" — ver comentario de PersonalInfoPayload sobre por qué se edita desde aquí. */
+  companyName: string;
   positionApplied: string;
   address: string;
   neighborhood: string;
@@ -85,14 +87,18 @@ export interface CandidateGeneralInfo {
 
 /**
  * Body de `PATCH /candidates/:id/personal` (contrato dado directamente
- * por el usuario en el chat). `positionApplied` queda fuera a propósito:
- * pertenece al candidato (`positionName`), no a sus datos personales, y
- * el usuario confirmó que se edita en otra acción distinta a futuro.
+ * por el usuario en el chat).
  *
  * `highestEducation`/`studiesProofType` son String libres en el backend
  * (máx. 100 caracteres, no Enums) — confirmado por el usuario en el
  * chat; el Select de la UI solo ofrece un set fijo de opciones sugeridas,
  * pero el tipo aquí es `string` sin restricción de valores.
+ *
+ * `companyName`/`positionName`: aunque este mismo endpoint también
+ * actualiza datos personales, el usuario confirmó que el backend acepta
+ * estos dos campos aquí y los guarda en la tabla raíz del candidato
+ * (no en `personal`) — no son un capricho de nombres, es el contrato
+ * real que dio explícitamente.
  */
 export interface PersonalInfoPayload {
   firstName: string;
@@ -109,6 +115,8 @@ export interface PersonalInfoPayload {
   highestEducation: string;
   studiesProofType: string;
   studiesProofDate: string;
+  companyName: string;
+  positionName: string;
 }
 
 export interface FamilyMember {
