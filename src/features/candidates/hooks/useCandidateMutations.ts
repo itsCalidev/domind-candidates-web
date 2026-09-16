@@ -11,6 +11,7 @@ import type {
   EvidenceCategory,
   InterviewerIntegrationPayload,
   NeighborhoodReferencePayload,
+  PersonalInfoPayload,
   PersonalReferencePayload,
   SocialNetworkPayload,
   WorkHistoryPayload,
@@ -110,6 +111,18 @@ export function useCandidateMutations() {
         extractApiErrorMessage(error, 'No se pudo actualizar el estado de captura.'),
         'error',
       );
+    },
+  });
+
+  const updatePersonalInfo = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: PersonalInfoPayload }) =>
+      candidatesService.updatePersonalInfo(id, payload),
+    onSuccess: () => {
+      showToast('Datos personales actualizados exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudieron actualizar los datos personales.'), 'error');
     },
   });
 
@@ -363,6 +376,7 @@ export function useCandidateMutations() {
     createAndAssignCandidate,
     updateStatus,
     updateCaptureStatus,
+    updatePersonalInfo,
     getReportSummary,
     evaluateSection,
     createWorkHistory,

@@ -61,7 +61,10 @@ export interface CandidateListItem {
 }
 
 export interface CandidateGeneralInfo {
+  /** `firstName` + `lastName` ya concatenados por candidateService — solo para modo lectura. */
   fullName: string;
+  firstName: string;
+  lastName: string;
   positionApplied: string;
   address: string;
   neighborhood: string;
@@ -71,6 +74,25 @@ export interface CandidateGeneralInfo {
   birthDate: string;
   birthPlace: string;
   civilStatus: string;
+}
+
+/**
+ * Body de `PATCH /candidates/:id/personal` (contrato dado directamente
+ * por el usuario en el chat). `positionApplied` queda fuera a propósito:
+ * pertenece al candidato (`positionName`), no a sus datos personales, y
+ * el usuario confirmó que se edita en otra acción distinta a futuro.
+ */
+export interface PersonalInfoPayload {
+  firstName: string;
+  lastName: string;
+  address: string;
+  neighborhood: string;
+  postalCode: string;
+  phone: string;
+  email: string;
+  birthDate: string;
+  birthPlace: string;
+  maritalStatus: string;
 }
 
 export interface FamilyMember {

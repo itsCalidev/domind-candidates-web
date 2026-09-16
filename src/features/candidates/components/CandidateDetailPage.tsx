@@ -209,7 +209,14 @@ export function CandidateDetailPage() {
       subTabs: [
         {
           label: 'Información General',
-          content: withGrader('PERSONAL', <GeneralInfoTab info={candidate.generalInfo} />),
+          content: withGrader(
+            'PERSONAL',
+            <GeneralInfoTab
+              candidateId={candidateId}
+              info={candidate.generalInfo}
+              captureStatus={candidate.captureStatus}
+            />,
+          ),
         },
         {
           label: 'Documentación',

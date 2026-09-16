@@ -21,6 +21,7 @@ import type {
   InterviewerIntegrationPayload,
   NeighborhoodReferenceEntry,
   NeighborhoodReferencePayload,
+  PersonalInfoPayload,
   PersonalReferenceEntry,
   PersonalReferencePayload,
   ReportSummaryResponse,
@@ -323,6 +324,8 @@ export const candidatesService = {
       captureStatus: data.captureStatus,
       generalInfo: {
         fullName: data.personal ? `${data.personal.firstName} ${data.personal.lastName}` : 'Sin nombre',
+        firstName: data.personal?.firstName || '',
+        lastName: data.personal?.lastName || '',
         positionApplied: data.positionName,
         address: data.personal?.address || 'No registrado',
         neighborhood: data.personal?.neighborhood || 'No registrado',
@@ -477,6 +480,17 @@ export const candidatesService = {
    */
   async updateCaptureStatus(id: string, captureStatus: CandidateCaptureStatus): Promise<void> {
     await apiClient.patch(`/candidates/${id}/capture-status`, { captureStatus });
+  },
+
+  /**
+   * PATCH /candidates/:id/personal — actualiza los datos personales del
+   * candidato (pestaña Información General). Contrato dado directamente
+   * por el usuario en el chat, incluyendo que `maritalStatus` es el
+   * nombre que espera el backend (no `civilStatus`, que es solo el
+   * nombre usado en CandidateGeneralInfo para el valor ya mapeado).
+   */
+  async updatePersonalInfo(id: string, payload: PersonalInfoPayload): Promise<void> {
+    await apiClient.patch(`/candidates/${id}/personal`, payload);
   },
 
   /**
