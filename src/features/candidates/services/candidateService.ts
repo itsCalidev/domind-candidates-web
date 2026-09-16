@@ -232,6 +232,10 @@ interface BackendCandidateDetail extends DetailedCandidateList {
     birthDate: string;
     birthPlace: string;
     maritalStatus: string; // En el back es maritalStatus
+    spouseBirthDate?: string | null;
+    highestEducation?: string | null;
+    studiesProofType?: string | null;
+    studiesProofDate?: string | null;
   };
   family?: RawFamily;
   familyMembers?: RawFamilyMember[];
@@ -335,6 +339,14 @@ export const candidatesService = {
         birthDate: data.personal?.birthDate ? data.personal.birthDate.split('T')[0] : 'No registrado',
         birthPlace: data.personal?.birthPlace || 'No registrado',
         civilStatus: data.personal?.maritalStatus || 'No registrado',
+        spouseBirthDate: data.personal?.spouseBirthDate
+          ? data.personal.spouseBirthDate.split('T')[0]
+          : 'No registrado',
+        highestEducation: data.personal?.highestEducation || 'No registrado',
+        studiesProofType: data.personal?.studiesProofType || 'No registrado',
+        studiesProofDate: data.personal?.studiesProofDate
+          ? data.personal.studiesProofDate.split('T')[0]
+          : 'No registrado',
       },
       family: {
         hasGovRelatives: data.family?.hasGovRelatives ?? null,

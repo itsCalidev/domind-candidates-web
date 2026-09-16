@@ -6,8 +6,11 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { useCandidateMutations } from '../hooks/useCandidateMutations';
 import type { CandidateCaptureStatus, CandidateGeneralInfo, PersonalInfoPayload } from '../types/candidate.types';
 import {
+  HIGHEST_EDUCATION_OPTIONS,
+  STUDIES_PROOF_TYPE_OPTIONS,
   maxBirthDateForAdult,
   personalInfoSchema,
+  todayISODate,
   type PersonalInfoFormValues,
 } from '../types/personalInfo.schema';
 import { maritalStatusLabels } from '../utils/maritalStatus';
@@ -57,6 +60,15 @@ function buildFormDefaults(info: CandidateGeneralInfo): PersonalInfoFormValues {
     maritalStatus: maritalStatusLabels[info.civilStatus]
       ? (info.civilStatus as PersonalInfoFormValues['maritalStatus'])
       : '',
+    spouseBirthDate: clean(info.spouseBirthDate),
+    // highestEducation/studiesProofType son texto libre (no un enum
+    // cerrado), así que a diferencia de maritalStatus no hace falta
+    // validar contra la lista de opciones — cualquier valor guardado
+    // previamente es válido de mostrar, incluso si ya no está en
+    // HIGHEST_EDUCATION_OPTIONS/STUDIES_PROOF_TYPE_OPTIONS.
+    highestEducation: clean(info.highestEducation),
+    studiesProofType: clean(info.studiesProofType),
+    studiesProofDate: clean(info.studiesProofDate),
   };
 }
 
@@ -80,7 +92,25 @@ function buildChangedPayload(
   if (dirtyFields.birthPlace) payload.birthPlace = values.birthPlace;
   if (dirtyFields.birthDate) payload.birthDate = values.birthDate;
   if (dirtyFields.maritalStatus) payload.maritalStatus = values.maritalStatus;
+  if (dirtyFields.spouseBirthDate) payload.spouseBirthDate = values.spouseBirthDate;
+  if (dirtyFields.highestEducation) payload.highestEducation = values.highestEducation;
+  if (dirtyFields.studiesProofType) payload.studiesProofType = values.studiesProofType;
+  if (dirtyFields.studiesProofDate) payload.studiesProofDate = values.studiesProofDate;
   return payload;
+}
+
+/**
+ * `highestEducation`/`studiesProofType` son texto libre en el backend:
+ * un candidato viejo puede tener guardado un valor que ya no está en la
+ * lista de opciones sugeridas. Sin esto, el Select de MUI mostraría un
+ * "out-of-range value" y ocultaría el dato real en vez de solo permitir
+ * elegir uno de los sugeridos.
+ */
+function withCurrentValueOption(options: readonly string[], currentValue: string): string[] {
+  if (!currentValue || currentValue === NOT_REGISTERED || options.includes(currentValue)) {
+    return [...options];
+  }
+  return [currentValue, ...options];
 }
 
 /**
@@ -259,6 +289,88 @@ export function GeneralInfoTab({ candidateId, info, captureStatus }: GeneralInfo
               helperText={errors.birthPlace?.message}
             />
           </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <TextField
+              label="Fecha Nac. Cónyuge"
+              type="date"
+              fullWidth
+              disabled={isSaving}
+              {...register('spouseBirthDate')}
+              error={!!errors.spouseBirthDate}
+              helperText={errors.spouseBirthDate?.message}
+              slotProps={{
+                inputLabel: { shrink: true },
+                htmlInput: { max: todayISODate() },
+              }}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <Controller
+              name="highestEducation"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  select
+                  label="Último grado de estudios"
+                  fullWidth
+                  disabled={isSaving}
+                  error={!!errors.highestEducation}
+                  helperText={errors.highestEducation?.message}
+                >
+                  <MenuItem value="">
+                    <em>Sin especificar</em>
+                  </MenuItem>
+                  {withCurrentValueOption(HIGHEST_EDUCATION_OPTIONS, info.highestEducation).map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <Controller
+              name="studiesProofType"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  select
+                  label="Tipo de comprobante"
+                  fullWidth
+                  disabled={isSaving}
+                  error={!!errors.studiesProofType}
+                  helperText={errors.studiesProofType?.message}
+                >
+                  <MenuItem value="">
+                    <em>Sin especificar</em>
+                  </MenuItem>
+                  {withCurrentValueOption(STUDIES_PROOF_TYPE_OPTIONS, info.studiesProofType).map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <TextField
+              label="Fecha del comprobante"
+              type="date"
+              fullWidth
+              disabled={isSaving}
+              {...register('studiesProofDate')}
+              error={!!errors.studiesProofDate}
+              helperText={errors.studiesProofDate?.message}
+              slotProps={{
+                inputLabel: { shrink: true },
+                htmlInput: { max: todayISODate() },
+              }}
+            />
+          </Grid>
 
           <Grid size={12}>
             <Stack direction="row" spacing={1}>
@@ -311,6 +423,10 @@ export function GeneralInfoTab({ candidateId, info, captureStatus }: GeneralInfo
         <Field label="Correo electrónico" value={info.email} />
         <Field label="Fecha de nacimiento" value={info.birthDate} />
         <Field label="Lugar de nacimiento" value={info.birthPlace} />
+        <Field label="Fecha Nac. Cónyuge" value={info.spouseBirthDate} />
+        <Field label="Último grado de estudios" value={info.highestEducation} />
+        <Field label="Tipo de comprobante" value={info.studiesProofType} />
+        <Field label="Fecha del comprobante" value={info.studiesProofDate} />
       </Grid>
     </Paper>
   );

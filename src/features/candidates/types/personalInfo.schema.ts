@@ -18,8 +18,35 @@ export function maxBirthDateForAdult(): string {
   return cutoff.toISOString().slice(0, 10);
 }
 
+/**
+ * Hoy en formato `YYYY-MM-DD` — tope para `spouseBirthDate` y
+ * `studiesProofDate` (el usuario pidió explícitamente no permitir fechas
+ * futuras en ninguno de los dos). Mismo criterio de "no memoizar" que
+ * `maxBirthDateForAdult`.
+ */
+export function todayISODate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 const PHONE_REGEX = /^[\d\s()+-]*$/;
 const POSTAL_CODE_REGEX = /^\d{5}$/;
+
+/**
+ * Opciones sugeridas para los Select de `highestEducation`/
+ * `studiesProofType` — el backend las acepta como texto libre (String,
+ * máx. 100, confirmado por el usuario), así que esta lista solo limita
+ * qué puede elegir el reclutador desde la UI, no es un enum del backend.
+ */
+export const HIGHEST_EDUCATION_OPTIONS = [
+  'Primaria',
+  'Secundaria',
+  'Bachillerato',
+  'Licenciatura',
+  'Maestría',
+  'Doctorado',
+] as const;
+
+export const STUDIES_PROOF_TYPE_OPTIONS = ['Certificado', 'Título', 'Constancia'] as const;
 
 /**
  * Formulario de edición de datos personales (GeneralInfoTab, modo
@@ -62,6 +89,14 @@ export const personalInfoSchema = z.object({
     .or(z.literal('')),
   birthDate: z.string().refine((value) => !value || value <= maxBirthDateForAdult(), {
     message: 'El candidato debe ser mayor de edad (18 años)',
+  }),
+  spouseBirthDate: z.string().refine((value) => !value || value <= todayISODate(), {
+    message: 'La fecha no puede ser posterior a hoy',
+  }),
+  highestEducation: z.string().trim().max(100, 'Máximo 100 caracteres'),
+  studiesProofType: z.string().trim().max(100, 'Máximo 100 caracteres'),
+  studiesProofDate: z.string().refine((value) => !value || value <= todayISODate(), {
+    message: 'La fecha no puede ser posterior a hoy',
   }),
 });
 

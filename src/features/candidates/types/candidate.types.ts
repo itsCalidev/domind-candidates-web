@@ -74,6 +74,13 @@ export interface CandidateGeneralInfo {
   birthDate: string;
   birthPlace: string;
   civilStatus: string;
+  /** Fecha de nacimiento del cónyuge, mismo formato `YYYY-MM-DD` que `birthDate`. */
+  spouseBirthDate: string;
+  /** Texto libre (backend: String, máx. 100) — el Select de la UI solo restringe qué se puede escribir, el backend acepta cualquier texto de ese largo. */
+  highestEducation: string;
+  /** Texto libre, mismo criterio que `highestEducation`. */
+  studiesProofType: string;
+  studiesProofDate: string;
 }
 
 /**
@@ -81,6 +88,11 @@ export interface CandidateGeneralInfo {
  * por el usuario en el chat). `positionApplied` queda fuera a propósito:
  * pertenece al candidato (`positionName`), no a sus datos personales, y
  * el usuario confirmó que se edita en otra acción distinta a futuro.
+ *
+ * `highestEducation`/`studiesProofType` son String libres en el backend
+ * (máx. 100 caracteres, no Enums) — confirmado por el usuario en el
+ * chat; el Select de la UI solo ofrece un set fijo de opciones sugeridas,
+ * pero el tipo aquí es `string` sin restricción de valores.
  */
 export interface PersonalInfoPayload {
   firstName: string;
@@ -93,6 +105,10 @@ export interface PersonalInfoPayload {
   birthDate: string;
   birthPlace: string;
   maritalStatus: string;
+  spouseBirthDate: string;
+  highestEducation: string;
+  studiesProofType: string;
+  studiesProofDate: string;
 }
 
 export interface FamilyMember {
