@@ -220,7 +220,14 @@ export function CandidateDetailPage() {
         },
         {
           label: 'Documentación',
-          content: withGrader('IDENTITY', <DocumentationTab candidateId={candidateId} />),
+          content: withGrader(
+            'IDENTITY',
+            <DocumentationTab
+              candidateId={candidateId}
+              captureMode={candidate.captureMode}
+              captureStatus={candidate.captureStatus}
+            />,
+          ),
         },
         {
           label: 'Estructura Familiar',

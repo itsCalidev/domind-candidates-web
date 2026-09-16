@@ -6,6 +6,7 @@ import type {
   CandidateCaptureStatus,
   CandidateStatus,
   CreateAndAssignCandidatePayload,
+  DocumentType,
   EvaluationRating,
   EvaluationSection,
   EvidenceCategory,
@@ -335,8 +336,17 @@ export function useCandidateMutations() {
   // corta (sin `category`) alcanza por prefijo a las 3 variantes por
   // categoría de la query — no hace falta saber cuál tocó esta mutación.
   const uploadEvidence = useMutation({
-    mutationFn: ({ id, file, category }: { id: string; file: File; category: EvidenceCategory }) =>
-      candidatesService.uploadEvidence(id, file, category),
+    mutationFn: ({
+      id,
+      file,
+      category,
+      documentType,
+    }: {
+      id: string;
+      file: File;
+      category: EvidenceCategory;
+      documentType?: DocumentType;
+    }) => candidatesService.uploadEvidence(id, file, category, documentType),
     onSuccess: (_data, variables) => {
       showToast('Evidencia subida exitosamente.');
       return queryClient.invalidateQueries({ queryKey: ['candidates', 'evidence', variables.id] });

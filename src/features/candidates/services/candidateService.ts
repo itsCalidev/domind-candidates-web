@@ -13,6 +13,7 @@ import type {
   CandidateStatus,
   CreateAndAssignCandidatePayload,
   Debt,
+  DocumentType,
   EvaluationRating,
   EvaluationSection,
   EvidenceCategory,
@@ -330,7 +331,8 @@ export const candidatesService = {
         fullName: data.personal ? `${data.personal.firstName} ${data.personal.lastName}` : 'Sin nombre',
         firstName: data.personal?.firstName || '',
         lastName: data.personal?.lastName || '',
-        positionApplied: data.positionName,
+        companyName: data.companyName || 'No registrado',
+        positionApplied: data.positionName || 'No registrado',
         address: data.personal?.address || 'No registrado',
         neighborhood: data.personal?.neighborhood || 'No registrado',
         postalCode: data.personal?.postalCode || 'No registrado',
@@ -753,11 +755,20 @@ export const candidatesService = {
    * lib/http/apiClient.ts): con un body `FormData` el navegador debe poner
    * su propio boundary, así que hay que quitar ese default explícitamente
    * en esta llamada en vez de heredarlo.
+   *
+   * `documentType` solo aplica (y solo se manda) para `category ===
+   * 'DOCUMENT'` — SOCIAL_MEDIA/HOUSING no lo traen, por eso es opcional.
    */
-  async uploadEvidence(id: string, file: File, category: EvidenceCategory): Promise<EvidencePhoto> {
+  async uploadEvidence(
+    id: string,
+    file: File,
+    category: EvidenceCategory,
+    documentType?: DocumentType,
+  ): Promise<EvidencePhoto> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('category', category);
+    if (documentType) formData.append('documentType', documentType);
     const { data } = await apiClient.post<EvidencePhoto>(`/candidates/${id}/evidence`, formData, {
       headers: { 'Content-Type': undefined },
     });
