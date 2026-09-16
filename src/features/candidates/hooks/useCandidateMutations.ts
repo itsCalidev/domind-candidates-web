@@ -115,7 +115,7 @@ export function useCandidateMutations() {
   });
 
   const updatePersonalInfo = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: PersonalInfoPayload }) =>
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<PersonalInfoPayload> }) =>
       candidatesService.updatePersonalInfo(id, payload),
     onSuccess: () => {
       showToast('Datos personales actualizados exitosamente.');

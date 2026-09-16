@@ -488,8 +488,13 @@ export const candidatesService = {
    * por el usuario en el chat, incluyendo que `maritalStatus` es el
    * nombre que espera el backend (no `civilStatus`, que es solo el
    * nombre usado en CandidateGeneralInfo para el valor ya mapeado).
+   *
+   * `Partial`, no el objeto completo: GeneralInfoTab solo manda los
+   * campos que el reclutador realmente tocó (dirty fields de
+   * react-hook-form), por pedido explícito del usuario — no reenvía los
+   * que no cambiaron.
    */
-  async updatePersonalInfo(id: string, payload: PersonalInfoPayload): Promise<void> {
+  async updatePersonalInfo(id: string, payload: Partial<PersonalInfoPayload>): Promise<void> {
     await apiClient.patch(`/candidates/${id}/personal`, payload);
   },
 

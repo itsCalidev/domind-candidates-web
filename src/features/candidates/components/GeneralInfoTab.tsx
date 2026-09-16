@@ -1,9 +1,15 @@
 import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Grid, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import { ClearableTextField } from '@/shared/components/ClearableTextField';
 import { useCandidateMutations } from '../hooks/useCandidateMutations';
-import type { CandidateCaptureStatus, CandidateGeneralInfo } from '../types/candidate.types';
+import type { CandidateCaptureStatus, CandidateGeneralInfo, PersonalInfoPayload } from '../types/candidate.types';
+import {
+  maxBirthDateForAdult,
+  personalInfoSchema,
+  type PersonalInfoFormValues,
+} from '../types/personalInfo.schema';
 import { maritalStatusLabels } from '../utils/maritalStatus';
 
 interface GeneralInfoTabProps {
@@ -33,20 +39,7 @@ function Field({ label, value }: { label: string; value: string }) {
  */
 const NOT_REGISTERED = 'No registrado';
 
-interface EditableForm {
-  firstName: string;
-  lastName: string;
-  address: string;
-  neighborhood: string;
-  postalCode: string;
-  phone: string;
-  email: string;
-  birthDate: string;
-  birthPlace: string;
-  maritalStatus: string;
-}
-
-function buildEditableForm(info: CandidateGeneralInfo): EditableForm {
+function buildFormDefaults(info: CandidateGeneralInfo): PersonalInfoFormValues {
   const clean = (value: string) => (value === NOT_REGISTERED ? '' : value);
   return {
     firstName: info.firstName,
@@ -60,9 +53,34 @@ function buildEditableForm(info: CandidateGeneralInfo): EditableForm {
     birthPlace: clean(info.birthPlace),
     // Si el valor guardado no es una clave válida de maritalStatusLabels
     // (nunca se capturó, o es el placeholder de arriba), el Select debe
-    // arrancar vacío en vez de con un value que no matchea ningún MenuItem.
-    maritalStatus: maritalStatusLabels[info.civilStatus] ? info.civilStatus : '',
+    // arrancar en "Sin especificar" en vez de con un value huérfano.
+    maritalStatus: maritalStatusLabels[info.civilStatus]
+      ? (info.civilStatus as PersonalInfoFormValues['maritalStatus'])
+      : '',
   };
+}
+
+/**
+ * Solo incluye los campos que react-hook-form marcó como `dirty` —
+ * pedido explícito del usuario: el PATCH manda únicamente lo que el
+ * reclutador realmente tocó, no el objeto completo en cada guardado.
+ */
+function buildChangedPayload(
+  values: PersonalInfoFormValues,
+  dirtyFields: Partial<Record<keyof PersonalInfoFormValues, boolean>>,
+): Partial<PersonalInfoPayload> {
+  const payload: Partial<PersonalInfoPayload> = {};
+  if (dirtyFields.firstName) payload.firstName = values.firstName;
+  if (dirtyFields.lastName) payload.lastName = values.lastName;
+  if (dirtyFields.email) payload.email = values.email;
+  if (dirtyFields.phone) payload.phone = values.phone;
+  if (dirtyFields.address) payload.address = values.address;
+  if (dirtyFields.neighborhood) payload.neighborhood = values.neighborhood;
+  if (dirtyFields.postalCode) payload.postalCode = values.postalCode;
+  if (dirtyFields.birthPlace) payload.birthPlace = values.birthPlace;
+  if (dirtyFields.birthDate) payload.birthDate = values.birthDate;
+  if (dirtyFields.maritalStatus) payload.maritalStatus = values.maritalStatus;
+  return payload;
 }
 
 /**
@@ -72,125 +90,148 @@ function buildEditableForm(info: CandidateGeneralInfo): EditableForm {
  * Una vez `COMPLETED`, esta vista vuelve a ser de solo lectura — ni
  * siquiera se renderiza el botón "Editar" (regla de negocio dada
  * explícitamente por el usuario, no una decisión de UI).
+ *
+ * Modo edición con react-hook-form + Zod (personalInfoSchema), a
+ * diferencia de SocialNetworkTab/HousingTab (useState plano sin schema):
+ * este formulario sí necesita validar formatos estrictos del backend
+ * (longitudes, regex de teléfono/CP, edad mínima), así que amerita un
+ * resolver en vez de checks manuales dispersos.
  */
 export function GeneralInfoTab({ candidateId, info, captureStatus }: GeneralInfoTabProps) {
   const { updatePersonalInfo } = useCandidateMutations();
   const [isEditing, setIsEditing] = useState(false);
-  const [form, setForm] = useState<EditableForm>(() => buildEditableForm(info));
-  const canEdit = captureStatus === 'DRAFT';
   const isSaving = updatePersonalInfo.isPending;
+  const canEdit = captureStatus === 'DRAFT';
+
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors, isDirty, dirtyFields },
+  } = useForm<PersonalInfoFormValues>({
+    resolver: zodResolver(personalInfoSchema),
+    defaultValues: buildFormDefaults(info),
+  });
 
   function handleStartEditing() {
-    setForm(buildEditableForm(info));
+    reset(buildFormDefaults(info));
     setIsEditing(true);
   }
 
-  function handleFieldChange(field: keyof EditableForm, value: string) {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  }
-
-  async function handleSave() {
+  async function onSubmit(values: PersonalInfoFormValues) {
     try {
-      await updatePersonalInfo.mutateAsync({ id: candidateId, payload: form });
+      const payload = buildChangedPayload(values, dirtyFields);
+      await updatePersonalInfo.mutateAsync({ id: candidateId, payload });
       setIsEditing(false);
     } catch {
-      // El toast de error ya lo emite useCandidateMutations; el formulario
-      // se queda abierto con lo que el usuario escribió, para reintentar.
+      // El toast de error (extractApiErrorMessage, sin detalles técnicos)
+      // ya lo emite useCandidateMutations; el formulario se queda abierto
+      // con lo que el usuario escribió, para reintentar.
     }
   }
 
   if (isEditing) {
     return (
       <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
-        <Grid container spacing={2}>
+        <Grid component="form" container spacing={2} onSubmit={handleSubmit(onSubmit)} noValidate>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <ClearableTextField
+            <TextField
               label="Nombre(s)"
               fullWidth
               disabled={isSaving}
-              value={form.firstName}
-              onChange={(e) => handleFieldChange('firstName', e.target.value)}
-              onClear={() => handleFieldChange('firstName', '')}
+              {...register('firstName')}
+              error={!!errors.firstName}
+              helperText={errors.firstName?.message}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <ClearableTextField
+            <TextField
               label="Apellido(s)"
               fullWidth
               disabled={isSaving}
-              value={form.lastName}
-              onChange={(e) => handleFieldChange('lastName', e.target.value)}
-              onClear={() => handleFieldChange('lastName', '')}
+              {...register('lastName')}
+              error={!!errors.lastName}
+              helperText={errors.lastName?.message}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <Controller
+              name="maritalStatus"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  select
+                  label="Estado civil"
+                  fullWidth
+                  disabled={isSaving}
+                  error={!!errors.maritalStatus}
+                  helperText={errors.maritalStatus?.message}
+                >
+                  <MenuItem value="">
+                    <em>Sin especificar</em>
+                  </MenuItem>
+                  {Object.entries(maritalStatusLabels).map(([value, label]) => (
+                    <MenuItem key={value} value={value}>
+                      {label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <TextField
-              select
-              label="Estado civil"
-              fullWidth
-              disabled={isSaving}
-              value={form.maritalStatus}
-              onChange={(e) => handleFieldChange('maritalStatus', e.target.value)}
-            >
-              <MenuItem value="">
-                <em>Sin especificar</em>
-              </MenuItem>
-              {Object.entries(maritalStatusLabels).map(([value, label]) => (
-                <MenuItem key={value} value={value}>
-                  {label}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <ClearableTextField
               label="Domicilio"
               fullWidth
               disabled={isSaving}
-              value={form.address}
-              onChange={(e) => handleFieldChange('address', e.target.value)}
-              onClear={() => handleFieldChange('address', '')}
+              {...register('address')}
+              error={!!errors.address}
+              helperText={errors.address?.message}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <ClearableTextField
+            <TextField
               label="Colonia"
               fullWidth
               disabled={isSaving}
-              value={form.neighborhood}
-              onChange={(e) => handleFieldChange('neighborhood', e.target.value)}
-              onClear={() => handleFieldChange('neighborhood', '')}
+              {...register('neighborhood')}
+              error={!!errors.neighborhood}
+              helperText={errors.neighborhood?.message}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <ClearableTextField
+            <TextField
               label="Código postal"
               fullWidth
               disabled={isSaving}
-              value={form.postalCode}
-              onChange={(e) => handleFieldChange('postalCode', e.target.value)}
-              onClear={() => handleFieldChange('postalCode', '')}
+              {...register('postalCode')}
+              error={!!errors.postalCode}
+              helperText={errors.postalCode?.message}
+              slotProps={{ htmlInput: { maxLength: 5, inputMode: 'numeric' } }}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <ClearableTextField
+            <TextField
               label="Teléfono"
               fullWidth
               disabled={isSaving}
-              value={form.phone}
-              onChange={(e) => handleFieldChange('phone', e.target.value)}
-              onClear={() => handleFieldChange('phone', '')}
+              {...register('phone')}
+              error={!!errors.phone}
+              helperText={errors.phone?.message}
+              slotProps={{ htmlInput: { maxLength: 15 } }}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <ClearableTextField
+            <TextField
               label="Correo electrónico"
               type="email"
               fullWidth
               disabled={isSaving}
-              value={form.email}
-              onChange={(e) => handleFieldChange('email', e.target.value)}
-              onClear={() => handleFieldChange('email', '')}
+              {...register('email')}
+              error={!!errors.email}
+              helperText={errors.email?.message}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
@@ -199,37 +240,44 @@ export function GeneralInfoTab({ candidateId, info, captureStatus }: GeneralInfo
               type="date"
               fullWidth
               disabled={isSaving}
-              value={form.birthDate}
-              onChange={(e) => handleFieldChange('birthDate', e.target.value)}
-              slotProps={{ inputLabel: { shrink: true } }}
+              {...register('birthDate')}
+              error={!!errors.birthDate}
+              helperText={errors.birthDate?.message}
+              slotProps={{
+                inputLabel: { shrink: true },
+                htmlInput: { max: maxBirthDateForAdult() },
+              }}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <ClearableTextField
+            <TextField
               label="Lugar de nacimiento"
               fullWidth
               disabled={isSaving}
-              value={form.birthPlace}
-              onChange={(e) => handleFieldChange('birthPlace', e.target.value)}
-              onClear={() => handleFieldChange('birthPlace', '')}
+              {...register('birthPlace')}
+              error={!!errors.birthPlace}
+              helperText={errors.birthPlace?.message}
             />
           </Grid>
-        </Grid>
 
-        <Stack direction="row" spacing={1} sx={{ mt: 3 }}>
-          <Button variant="contained" size="small" disabled={isSaving} onClick={handleSave}>
-            {isSaving ? 'Guardando…' : 'Guardar cambios'}
-          </Button>
-          <Button
-            variant="outlined"
-            color="inherit"
-            size="small"
-            disabled={isSaving}
-            onClick={() => setIsEditing(false)}
-          >
-            Cancelar
-          </Button>
-        </Stack>
+          <Grid size={12}>
+            <Stack direction="row" spacing={1}>
+              <Button type="submit" variant="contained" size="small" disabled={isSaving || !isDirty}>
+                {isSaving ? 'Guardando…' : 'Guardar cambios'}
+              </Button>
+              <Button
+                type="button"
+                variant="outlined"
+                color="inherit"
+                size="small"
+                disabled={isSaving}
+                onClick={() => setIsEditing(false)}
+              >
+                Cancelar
+              </Button>
+            </Stack>
+          </Grid>
+        </Grid>
       </Paper>
     );
   }
