@@ -15,6 +15,7 @@ import type {
   PersonalInfoPayload,
   PersonalReferencePayload,
   SocialNetworkPayload,
+  UpdateCandidateFamilyPayload,
   WorkHistoryPayload,
 } from '../types/candidate.types';
 
@@ -124,6 +125,18 @@ export function useCandidateMutations() {
     },
     onError: (error) => {
       showToast(extractApiErrorMessage(error, 'No se pudieron actualizar los datos personales.'), 'error');
+    },
+  });
+
+  const updateFamily = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateCandidateFamilyPayload }) =>
+      candidatesService.updateFamily(id, payload),
+    onSuccess: () => {
+      showToast('Estructura familiar actualizada exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo actualizar la estructura familiar.'), 'error');
     },
   });
 
@@ -387,6 +400,7 @@ export function useCandidateMutations() {
     updateStatus,
     updateCaptureStatus,
     updatePersonalInfo,
+    updateFamily,
     getReportSummary,
     evaluateSection,
     createWorkHistory,

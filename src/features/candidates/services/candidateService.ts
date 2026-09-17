@@ -28,6 +28,7 @@ import type {
   ReportSummaryResponse,
   SectionEvaluation,
   SocialNetworkPayload,
+  UpdateCandidateFamilyPayload,
   Vehicle,
   WorkHistoryEntry,
   WorkHistoryPayload,
@@ -510,6 +511,20 @@ export const candidatesService = {
    */
   async updatePersonalInfo(id: string, payload: Partial<PersonalInfoPayload>): Promise<void> {
     await apiClient.patch(`/candidates/${id}/personal`, payload);
+  },
+
+  /**
+   * PATCH /candidates/:id/family — actualiza la estructura familiar y las
+   * preguntas de riesgo (pestaña Estructura Familiar). Contrato dado
+   * directamente por el usuario en el chat (dto/update-candidate-family.dto.ts).
+   * A diferencia de `updatePersonalInfo`, aquí SIEMPRE se manda el objeto
+   * completo (incluido `familyMembers` entero, no solo el integrante que
+   * cambió): el backend reemplaza todo el arreglo en cada PATCH, no hace
+   * upsert individual por integrante — mandar solo lo "dirty" borraría a
+   * los integrantes no tocados en esta edición.
+   */
+  async updateFamily(id: string, payload: UpdateCandidateFamilyPayload): Promise<void> {
+    await apiClient.patch(`/candidates/${id}/family`, payload);
   },
 
   /**

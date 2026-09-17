@@ -135,6 +135,37 @@ export interface CandidateFamily {
   politicalPostsDetails: string | null;
 }
 
+/**
+ * Body de `PATCH /candidates/:id/family` (dto/update-candidate-family.dto.ts,
+ * contrato dado directamente por el usuario en el chat, con nombres de
+ * campo confirmados 1:1 contra el DTO real del backend). `name` es el
+ * único campo obligatorio de cada integrante; el resto —incluido
+ * `maritalStatus`— es texto libre en Prisma (`String?`, a propósito
+ * "por si escriben algo fuera del Enum"), NO el enum `MaritalStatus` que
+ * sí aplica en `PersonalInfoPayload.maritalStatus` (endpoint distinto).
+ *
+ * `familyMembers` reemplaza el arreglo completo en el backend (borra y
+ * vuelve a crear todos los integrantes) — nunca se manda un solo
+ * integrante suelto, siempre el arreglo entero con todos los que deben
+ * quedar tras el guardado.
+ */
+export interface FamilyMemberPayload {
+  name: string;
+  relationship?: string;
+  age?: number;
+  occupation?: string;
+  education?: string;
+  maritalStatus?: string;
+}
+
+export interface UpdateCandidateFamilyPayload {
+  familyMembers: FamilyMemberPayload[];
+  hasGovRelatives?: boolean;
+  govRelativesDetails?: string;
+  hasPoliticalPosts?: boolean;
+  politicalPostsDetails?: string;
+}
+
 export interface CandidateHealth {
   chronicDiseasesFamily: boolean | null;
   chronicDiseasesDetails: string | null;

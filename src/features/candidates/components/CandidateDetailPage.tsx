@@ -233,7 +233,13 @@ export function CandidateDetailPage() {
           label: 'Estructura Familiar',
           content: withGrader(
             'FAMILY',
-            <FamilyTab family={candidate.family} familyMembers={candidate.familyMembers} />,
+            <FamilyTab
+              candidateId={candidateId}
+              family={candidate.family}
+              familyMembers={candidate.familyMembers}
+              captureMode={candidate.captureMode}
+              captureStatus={candidate.captureStatus}
+            />,
           ),
         },
       ],
