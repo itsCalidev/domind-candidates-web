@@ -83,23 +83,63 @@ function FamilyAgeTooltip({ active, payload }: TooltipContentProps) {
   );
 }
 
+/**
+ * 4 estados estrictos — antes `null` (sin capturar) se trataba igual que
+ * `false` (sin riesgo confirmado), lo que producía un falso positivo
+ * peligroso: un candidato sin ninguna información familiar registrada
+ * mostraba el mismo banner verde "Sin riesgo" que uno con ambos campos
+ * explícitamente en `false`. Ahora "sin datos" es su propio estado
+ * neutral, nunca se colapsa a "sin riesgo".
+ */
+type FamilyRiskLevel = 'pending' | 'none' | 'caution' | 'high';
+
 export function FamilyTab({ family, familyMembers }: FamilyTabProps) {
   const theme = useTheme();
 
-  // Semáforo de riesgo: null (no especificado) se trata igual que
-  // false — sin evidencia de exposición, no hay motivo para alertar.
+  // Solo "sin riesgo" cuando AMBOS campos están explícitamente
+  // capturados como `false` — si cualquiera de los dos sigue sin
+  // responder (`null`/`undefined`), no hay evidencia suficiente para
+  // afirmar que no hay exposición, así que el estado es "pendiente".
+  const hasGovInfo = family.hasGovRelatives !== null && family.hasGovRelatives !== undefined;
+  const hasPoliticalInfo = family.hasPoliticalPosts !== null && family.hasPoliticalPosts !== undefined;
+  const isPending = !hasGovInfo || !hasPoliticalInfo;
+
   const hasGov = family.hasGovRelatives === true;
   const hasPolitical = family.hasPoliticalPosts === true;
   const riskCount = Number(hasGov) + Number(hasPolitical);
-  const riskSeverity = riskCount === 0 ? 'success' : riskCount === 1 ? 'warning' : 'error';
-  const riskTitle =
-    riskCount === 0 ? 'Sin riesgo detectado' : riskCount === 1 ? 'Precaución' : 'Alerta de riesgo';
-  const riskMessage =
-    riskCount === 0
-      ? 'Sin exposición a riesgo político/gubernamental.'
+
+  const riskLevel: FamilyRiskLevel = isPending
+    ? 'pending'
+    : riskCount === 0
+      ? 'none'
       : riskCount === 1
-        ? `El candidato tiene familiares en ${hasGov ? 'el Gobierno' : 'Cargos Políticos'}.`
-        : 'El candidato tiene familiares en el gobierno y con cargos políticos.';
+        ? 'caution'
+        : 'high';
+
+  const riskSeverity =
+    riskLevel === 'pending'
+      ? 'info'
+      : riskLevel === 'none'
+        ? 'success'
+        : riskLevel === 'caution'
+          ? 'warning'
+          : 'error';
+  const riskTitle =
+    riskLevel === 'pending'
+      ? 'Evaluación pendiente'
+      : riskLevel === 'none'
+        ? 'Sin riesgo detectado'
+        : riskLevel === 'caution'
+          ? 'Precaución'
+          : 'Alerta de riesgo';
+  const riskMessage =
+    riskLevel === 'pending'
+      ? 'No hay información registrada sobre familiares en gobierno o policía.'
+      : riskLevel === 'none'
+        ? 'Sin exposición a riesgo político/gubernamental.'
+        : riskLevel === 'caution'
+          ? `El candidato tiene familiares en ${hasGov ? 'el Gobierno' : 'Cargos Políticos'}.`
+          : 'El candidato tiene familiares en el gobierno y con cargos políticos.';
 
   const chartData: FamilyChartDatum[] = familyMembers
     .filter((member) => member.age !== null)
