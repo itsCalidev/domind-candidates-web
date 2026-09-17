@@ -33,30 +33,25 @@ const DOCUMENT_DEFINITIONS: { type: DocumentType; label: string }[] = [
   { type: 'RFC', label: 'RFC' },
 ];
 
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const IMAGE_MAX_BYTES = 500 * 1024;
-const PDF_MAX_BYTES = 1024 * 1024;
-const ACCEPTED_FILE_TYPES = 'image/jpeg, image/png, image/webp, application/pdf';
+const PDF_MAX_BYTES = 1048576; // 1MB — límite exacto dado por el usuario
+const ACCEPTED_FILE_TYPES = 'application/pdf';
 
 /**
  * El atributo `accept` del input es solo una sugerencia del navegador
  * (el usuario puede elegir "todos los archivos" y saltárselo, o el SO
  * puede ignorarlo) — esta es la validación real, la única que decide si
- * se dispara la mutación. Whitelist explícita de MIME (no "cualquier
- * imagen"): el backend solo acepta JPEG/PNG/WEBP, no GIF ni otros.
+ * se dispara la mutación. Regla estricta dada por el usuario: para
+ * `category === 'DOCUMENT'` el backend solo acepta PDF — las imágenes
+ * (aceptadas en una versión anterior de este contrato) quedan prohibidas.
  */
 function validateDocumentFile(file: File): string | null {
-  if (file.type === 'application/pdf') {
-    return file.size > PDF_MAX_BYTES
-      ? `El PDF no debe superar ${Math.round(PDF_MAX_BYTES / 1024)}KB.`
-      : null;
+  if (file.type !== 'application/pdf') {
+    return 'Solo se aceptan archivos PDF.';
   }
-  if (ALLOWED_IMAGE_TYPES.includes(file.type)) {
-    return file.size > IMAGE_MAX_BYTES
-      ? `La imagen no debe superar ${Math.round(IMAGE_MAX_BYTES / 1024)}KB.`
-      : null;
+  if (file.size > PDF_MAX_BYTES) {
+    return `El PDF no debe superar ${PDF_MAX_BYTES / 1024}KB.`;
   }
-  return 'Solo se aceptan imágenes JPEG, PNG, WEBP o archivos PDF.';
+  return null;
 }
 
 function DocumentCard({
