@@ -1,4 +1,5 @@
 import { accentColors } from '@/theme/palette';
+import { isEmptyMedicalText } from './healthQualitative';
 import type { CandidateHealth } from '../types/candidate.types';
 
 export interface HealthRiskFactor {
@@ -65,4 +66,23 @@ export function computeHealthRisk(health: CandidateHealth): {
   );
 
   return { total, factors };
+}
+
+/**
+ * `computeHealthRisk` trata `null` igual que "no activo" en cada factor
+ * (ver `active: health.usedDrugs === true`, etc.) — correcto para
+ * calcular el total, pero peligroso para decidir el color del banner: un
+ * candidato sin NINGÚN hábito capturado obtiene `total === 0`, igual que
+ * uno evaluado y confirmado sin riesgo. Esta función distingue ambos
+ * casos: solo es "sin datos" cuando los 5 campos que alimentan el Vaso
+ * de Riesgo siguen exactamente sin responder.
+ */
+export function isHealthRiskDataMissing(health: CandidateHealth): boolean {
+  return (
+    health.usedDrugs === null &&
+    health.smokes === null &&
+    isEmptyMedicalText(health.alcoholFrequency) &&
+    isEmptyMedicalText(health.dietQuality) &&
+    health.sedentaryHours === null
+  );
 }

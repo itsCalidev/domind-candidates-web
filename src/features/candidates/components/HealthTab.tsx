@@ -17,10 +17,11 @@ import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
 import HealthAndSafetyOutlinedIcon from '@mui/icons-material/HealthAndSafetyOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
+import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import type { ReactElement, ReactNode } from 'react';
 import { RiskGlass } from './RiskGlass';
 import { BmiGauge } from './BmiGauge';
-import { computeHealthRisk } from '../utils/healthRisk';
+import { computeHealthRisk, isHealthRiskDataMissing } from '../utils/healthRisk';
 import {
   classifyAlcoholFrequency,
   classifyCurrentHealth,
@@ -144,6 +145,26 @@ function SummaryCard({ icon, title, children }: { icon: ReactNode; title: string
   );
 }
 
+/**
+ * Complemento de CleanStateBadge (shared/components), pero deliberadamente
+ * NO se movió ahí: CleanStateBadge es siempre verde por diseño (para los
+ * casos donde "ausencia de dato" SÍ es una buena noticia confirmada, ej.
+ * HousingTab). Aquí, en cambio, la ausencia de dato es ambigua — puede
+ * ser "confirmado sin riesgo" o "todavía no se preguntó" — así que este
+ * badge es neutral (gris), nunca verde, para no repetir el falso
+ * positivo que se está corrigiendo en este archivo.
+ */
+function PendingStateBadge({ label }: { label: string }) {
+  return (
+    <Stack direction="row" spacing={1} alignItems="center">
+      <HelpOutlineOutlinedIcon fontSize="small" sx={{ color: 'text.disabled' }} />
+      <Typography variant="body2" fontWeight={600} color="text.secondary">
+        {label}
+      </Typography>
+    </Stack>
+  );
+}
+
 function InfoLine({ label, value }: { label: string; value: ReactNode }) {
   return (
     <Box>
@@ -164,12 +185,24 @@ export function HealthTab({ health }: HealthTabProps) {
   const dietSeverity = classifyDietQuality(health.dietQuality);
   const physicalActivitySeverity = classifyPhysicalActivity(health.physicalActivity);
   const alcoholSeverity = classifyAlcoholFrequency(health.alcoholFrequency);
-  const isNonSmoker = health.smokes !== true || !health.cigarettesPerDay;
-  const hasNoDrugs = health.usedDrugs !== true;
-  const hasNoAlcohol = isEmptyMedicalText(health.alcoholFrequency) && health.alcoholTypes.length === 0;
-  const riskSeverity = total > 60 ? 'error' : total > 0 ? 'warning' : 'success';
-  const riskTitle =
-    riskSeverity === 'error'
+  // Tri-estado, no booleano: `null` (sin responder) nunca debe verse
+  // igual que `false` (confirmado). Antes `isNonSmoker`/`hasNoDrugs`
+  // trataban `health.smokes !== true`/`health.usedDrugs !== true` como
+  // "no fuma"/"sin drogas" — eso incluía `null`, mostrando el badge
+  // verde de "confirmado sin riesgo" aunque nunca se hubiera preguntado.
+  const smokingStatus: 'pending' | 'no' | 'yes' =
+    health.smokes === null ? 'pending' : health.smokes ? 'yes' : 'no';
+  const drugsStatus: 'pending' | 'no' | 'yes' =
+    health.usedDrugs === null ? 'pending' : health.usedDrugs ? 'yes' : 'no';
+  // Sin un booleano equivalente para alcohol (solo texto libre + arreglo
+  // de tipos), no hay forma de distinguir "confirmado sin consumo" de
+  // "nunca se preguntó" — así que vacío siempre es Pendiente, nunca verde.
+  const hasNoAlcoholData = isEmptyMedicalText(health.alcoholFrequency) && health.alcoholTypes.length === 0;
+  const isRiskDataMissing = isHealthRiskDataMissing(health);
+  const riskSeverity = isRiskDataMissing ? 'info' : total > 60 ? 'error' : total > 0 ? 'warning' : 'success';
+  const riskTitle = isRiskDataMissing
+    ? 'Evaluación pendiente'
+    : riskSeverity === 'error'
       ? 'Riesgo de Salud Alto por Hábitos'
       : riskSeverity === 'warning'
         ? 'Riesgo moderado por hábitos'
@@ -192,9 +225,11 @@ export function HealthTab({ health }: HealthTabProps) {
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Alert severity={riskSeverity} variant="filled" sx={{ borderRadius: 3 }}>
                   <AlertTitle sx={{ fontWeight: 700 }}>{riskTitle}</AlertTitle>
-                  {activeFactors.length > 0
-                    ? `Factores detectados: ${activeFactors.map((factor) => factor.label).join(', ')}.`
-                    : 'No se detectaron hábitos de riesgo registrados.'}
+                  {isRiskDataMissing
+                    ? 'No hay información registrada sobre hábitos de riesgo.'
+                    : activeFactors.length > 0
+                      ? `Factores detectados: ${activeFactors.map((factor) => factor.label).join(', ')}.`
+                      : 'No se detectaron hábitos de riesgo registrados.'}
                 </Alert>
               </Box>
             </Stack>
@@ -221,7 +256,7 @@ export function HealthTab({ health }: HealthTabProps) {
                 Detalle
               </Typography>
               {isEmptyMedicalText(health.chronicDiseasesDetails) ? (
-                <CleanStateBadge label="Sin antecedentes" />
+                <PendingStateBadge label="No registrado" />
               ) : (
                 <MedicalChipList
                   entries={splitMedicalEntries(health.chronicDiseasesDetails)}
@@ -240,7 +275,7 @@ export function HealthTab({ health }: HealthTabProps) {
                 Enfermedades pasadas
               </Typography>
               {isEmptyMedicalText(health.pastDiseases) ? (
-                <CleanStateBadge label="Historial limpio" />
+                <PendingStateBadge label="No registrado" />
               ) : (
                 <MedicalChipList
                   entries={splitMedicalEntries(health.pastDiseases)}
@@ -254,7 +289,7 @@ export function HealthTab({ health }: HealthTabProps) {
                 Cirugías
               </Typography>
               {isEmptyMedicalText(health.surgeries) ? (
-                <CleanStateBadge label="Sin cirugías" />
+                <PendingStateBadge label="No registrado" />
               ) : (
                 <MedicalChipList
                   entries={splitMedicalEntries(health.surgeries)}
@@ -384,8 +419,8 @@ export function HealthTab({ health }: HealthTabProps) {
               <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.8 }}>
                 Alcohol
               </Typography>
-              {hasNoAlcohol ? (
-                <CleanStateBadge label="No consume alcohol" />
+              {hasNoAlcoholData ? (
+                <PendingStateBadge label="No registrado" />
               ) : (
                 <Stack direction="row" flexWrap="wrap" gap={0.75}>
                   {!isEmptyMedicalText(health.alcoholFrequency) && (
@@ -406,13 +441,19 @@ export function HealthTab({ health }: HealthTabProps) {
               <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.8 }}>
                 Tabaco
               </Typography>
-              {isNonSmoker ? (
+              {smokingStatus === 'pending' ? (
+                <PendingStateBadge label="No registrado" />
+              ) : smokingStatus === 'no' ? (
                 <CleanStateBadge label="No fuma" icon={SmokeFreeOutlinedIcon} />
               ) : (
                 <Stack direction="row" flexWrap="wrap" gap={0.75}>
                   <Chip
                     icon={<SmokingRoomsOutlinedIcon />}
-                    label={`${health.cigarettesPerDay} cigarros/día`}
+                    label={
+                      health.cigarettesPerDay !== null
+                        ? `${health.cigarettesPerDay} cigarros/día`
+                        : 'Cantidad no especificada'
+                    }
                     color="warning"
                     size="small"
                   />
@@ -432,7 +473,9 @@ export function HealthTab({ health }: HealthTabProps) {
               <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.8 }}>
                 Drogas
               </Typography>
-              {hasNoDrugs ? (
+              {drugsStatus === 'pending' ? (
+                <PendingStateBadge label="No registrado" />
+              ) : drugsStatus === 'no' ? (
                 <CleanStateBadge label="Sin consumo de drogas" />
               ) : (
                 <MedicalChipList

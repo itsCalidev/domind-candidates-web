@@ -18,11 +18,17 @@ const NEEDLE_LENGTH = 110;
 const BMI_SCALE_MIN = 15;
 const BMI_SCALE_MAX = 40;
 
+/**
+ * "Atención preventiva", no "Obesidad": por normativa laboral y
+ * antidiscriminación, ese término está prohibido en evaluaciones de
+ * reclutamiento (instrucción explícita del usuario) — el color de
+ * advertencia se mantiene, solo cambia la etiqueta de texto.
+ */
 function getBmiCategory(bmi: number, theme: Theme): { label: string; color: string } {
   if (bmi < 18.5) return { label: 'Bajo peso', color: theme.palette.info.main };
   if (bmi < 25) return { label: 'Normal', color: theme.palette.success.main };
   if (bmi < 30) return { label: 'Sobrepeso', color: theme.palette.warning.main };
-  return { label: 'Obesidad', color: theme.palette.error.main };
+  return { label: 'Atención preventiva', color: theme.palette.error.main };
 }
 
 /**
@@ -40,7 +46,7 @@ export function BmiGauge({ weightKg, heightM }: BmiGaugeProps) {
     return (
       <Stack alignItems="center" justifyContent="center" sx={{ height: GAUGE_HEIGHT, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
-          Datos insuficientes para calcular el IMC.
+          No hay registro de peso y estatura para calcular el IMC.
         </Typography>
       </Stack>
     );
@@ -53,7 +59,7 @@ export function BmiGauge({ weightKg, heightM }: BmiGaugeProps) {
     { label: 'Bajo peso', width: 3.5, color: theme.palette.info.main },
     { label: 'Normal', width: 6.4, color: theme.palette.success.main },
     { label: 'Sobrepeso', width: 4.9, color: theme.palette.warning.main },
-    { label: 'Obesidad', width: 10.1, color: theme.palette.error.main },
+    { label: 'Atención preventiva', width: 10.1, color: theme.palette.error.main },
   ];
 
   const fraction = Math.min(1, Math.max(0, (bmi - BMI_SCALE_MIN) / (BMI_SCALE_MAX - BMI_SCALE_MIN)));
