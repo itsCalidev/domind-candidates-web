@@ -6,6 +6,7 @@ import type {
   CandidateCaptureMode,
   CandidateCaptureStatus,
   CandidateDetail,
+  CandidateHealthPayload,
   CandidateHousingPayload,
   CandidateInterviewerIntegration,
   CandidateListItem,
@@ -525,6 +526,17 @@ export const candidatesService = {
    */
   async updateFamily(id: string, payload: UpdateCandidateFamilyPayload): Promise<void> {
     await apiClient.patch(`/candidates/${id}/family`, payload);
+  },
+
+  /**
+   * PATCH /candidates/:id/health — actualiza la pestaña Estado de Salud.
+   * Contrato dado directamente por el usuario en el chat: acepta un
+   * payload parcial, por eso `Partial` (mismo criterio que
+   * `updatePersonalInfo`) — HealthTab solo manda los campos que el
+   * reclutador realmente tocó.
+   */
+  async updateHealth(id: string, payload: Partial<CandidateHealthPayload>): Promise<void> {
+    await apiClient.patch(`/candidates/${id}/health`, payload);
   },
 
   /**

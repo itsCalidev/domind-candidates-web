@@ -198,6 +198,40 @@ export interface CandidateHealth {
   screenTimeHours: number | null;
 }
 
+/**
+ * Body de `PATCH /candidates/:id/health` (pestaña Estado de Salud).
+ * Contrato dado directamente por el usuario en el chat: payload parcial,
+ * todos los campos opcionales. Las 4 dependencias condicionales
+ * (`chronicDiseasesFamily`→`chronicDiseasesDetails`,
+ * `smokes`→`cigarettesPerDay`/`smokingExpensePerWeek`,
+ * `usedDrugs`→`drugsDetails`) no se validan a nivel de tipo — HealthTab
+ * las limpia por UI (`setValue`) en cuanto la respuesta pasa a "No",
+ * mismo criterio que las preguntas de riesgo de FamilyTab.
+ */
+export interface CandidateHealthPayload {
+  weight?: number;
+  height?: number;
+  usesGlasses?: boolean;
+  physicalAspect?: string;
+  currentHealth?: string;
+  chronicDiseasesFamily?: boolean;
+  chronicDiseasesDetails?: string;
+  pastDiseases?: string;
+  surgeries?: string;
+  healthcareAccess?: string[];
+  alcoholFrequency?: string;
+  alcoholTypes?: string[];
+  smokes?: boolean;
+  cigarettesPerDay?: number;
+  smokingExpensePerWeek?: number;
+  usedDrugs?: boolean;
+  drugsDetails?: string;
+  dietQuality?: string;
+  physicalActivity?: string;
+  sedentaryHours?: number;
+  screenTimeHours?: number;
+}
+
 export interface CandidateHousing {
   propertyOwner: string | null;
   timeLivingThere: string | null;

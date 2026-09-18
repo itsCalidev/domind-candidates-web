@@ -4,6 +4,7 @@ import { useToast } from '@/shared/context/ToastContext';
 import { extractApiErrorMessage } from '@/shared/utils/apiError';
 import type {
   CandidateCaptureStatus,
+  CandidateHealthPayload,
   CandidateStatus,
   CreateAndAssignCandidatePayload,
   DocumentType,
@@ -137,6 +138,18 @@ export function useCandidateMutations() {
     },
     onError: (error) => {
       showToast(extractApiErrorMessage(error, 'No se pudo actualizar la estructura familiar.'), 'error');
+    },
+  });
+
+  const updateHealth = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<CandidateHealthPayload> }) =>
+      candidatesService.updateHealth(id, payload),
+    onSuccess: () => {
+      showToast('Estado de salud actualizado exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo actualizar el estado de salud.'), 'error');
     },
   });
 
@@ -401,6 +414,7 @@ export function useCandidateMutations() {
     updateCaptureStatus,
     updatePersonalInfo,
     updateFamily,
+    updateHealth,
     getReportSummary,
     evaluateSection,
     createWorkHistory,

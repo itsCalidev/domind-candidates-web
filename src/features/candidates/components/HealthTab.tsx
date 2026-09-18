@@ -1,4 +1,27 @@
-import { Alert, AlertTitle, Box, Chip, Grid, LinearProgress, Paper, Stack, Typography } from '@mui/material';
+import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  Alert,
+  AlertTitle,
+  Box,
+  Button,
+  Checkbox,
+  Chip,
+  FormControlLabel,
+  FormGroup,
+  FormLabel,
+  Grid,
+  LinearProgress,
+  MenuItem,
+  Paper,
+  Radio,
+  RadioGroup,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import MedicalServicesOutlinedIcon from '@mui/icons-material/MedicalServicesOutlined';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import AccessibilityNewOutlinedIcon from '@mui/icons-material/AccessibilityNewOutlined';
@@ -33,10 +56,145 @@ import {
   type HabitSeverity,
 } from '../utils/healthQualitative';
 import { CleanStateBadge } from '@/shared/components/CleanStateBadge';
-import type { CandidateHealth } from '../types/candidate.types';
+import { useCandidateMutations } from '../hooks/useCandidateMutations';
+import type {
+  CandidateCaptureMode,
+  CandidateCaptureStatus,
+  CandidateHealth,
+  CandidateHealthPayload,
+} from '../types/candidate.types';
+import {
+  ALCOHOL_TYPE_OPTIONS,
+  DIET_QUALITY_OPTIONS,
+  HEALTHCARE_ACCESS_OPTIONS,
+  PHYSICAL_ACTIVITY_OPTIONS,
+  healthFormSchema,
+  type HealthFormValues,
+} from '../types/healthForm.schema';
 
 interface HealthTabProps {
+  candidateId: string;
   health: CandidateHealth;
+  captureMode: CandidateCaptureMode;
+  captureStatus: CandidateCaptureStatus;
+}
+
+function toFormNumber(value: number | null): string {
+  return value === null ? '' : String(value);
+}
+
+function toTriState(value: boolean | null): 'yes' | 'no' | '' {
+  return value === null ? '' : value ? 'yes' : 'no';
+}
+
+function pickOption<T extends string>(options: readonly T[], value: string | null): T | '' {
+  return value && (options as readonly string[]).includes(value) ? (value as T) : '';
+}
+
+function buildHealthFormDefaults(health: CandidateHealth): HealthFormValues {
+  return {
+    weight: toFormNumber(health.weight),
+    height: toFormNumber(health.height),
+    usesGlasses: toTriState(health.usesGlasses),
+    physicalAspect: health.physicalAspect ?? '',
+    currentHealth: health.currentHealth ?? '',
+    chronicDiseasesFamily: toTriState(health.chronicDiseasesFamily),
+    chronicDiseasesDetails: health.chronicDiseasesDetails ?? '',
+    pastDiseases: health.pastDiseases ?? '',
+    surgeries: health.surgeries ?? '',
+    healthcareAccess: health.healthcareAccess,
+    alcoholFrequency: health.alcoholFrequency ?? '',
+    alcoholTypes: health.alcoholTypes,
+    smokes: toTriState(health.smokes),
+    cigarettesPerDay: toFormNumber(health.cigarettesPerDay),
+    smokingExpensePerWeek: toFormNumber(health.smokingExpensePerWeek),
+    usedDrugs: toTriState(health.usedDrugs),
+    drugsDetails: health.drugsDetails ?? '',
+    dietQuality: pickOption(DIET_QUALITY_OPTIONS, health.dietQuality),
+    physicalActivity: pickOption(PHYSICAL_ACTIVITY_OPTIONS, health.physicalActivity),
+    sedentaryHours: toFormNumber(health.sedentaryHours),
+    screenTimeHours: toFormNumber(health.screenTimeHours),
+  };
+}
+
+function toNumberOrUndefined(value: string | undefined): number | undefined {
+  return value ? Number(value) : undefined;
+}
+
+/**
+ * Solo incluye los campos que react-hook-form marcó como `dirty` — el
+ * backend acepta un PATCH parcial (confirmado por el usuario), así que
+ * se manda únicamente lo que el reclutador realmente tocó, mismo
+ * criterio que `updatePersonalInfo`/GeneralInfoTab.
+ */
+function buildHealthPayload(
+  values: HealthFormValues,
+  // `unknown`, no `boolean`: react-hook-form marca los arreglos
+  // (healthcareAccess/alcoholTypes) como `(boolean | undefined)[]`, no
+  // como un solo booleano — aquí solo importa la verdad/falsedad general.
+  dirtyFields: Partial<Record<keyof HealthFormValues, unknown>>,
+): Partial<CandidateHealthPayload> {
+  const payload: Partial<CandidateHealthPayload> = {};
+  if (dirtyFields.weight) payload.weight = toNumberOrUndefined(values.weight);
+  if (dirtyFields.height) payload.height = toNumberOrUndefined(values.height);
+  if (dirtyFields.usesGlasses && values.usesGlasses !== '') payload.usesGlasses = values.usesGlasses === 'yes';
+  if (dirtyFields.physicalAspect) payload.physicalAspect = values.physicalAspect;
+  if (dirtyFields.currentHealth) payload.currentHealth = values.currentHealth;
+  if (dirtyFields.chronicDiseasesFamily && values.chronicDiseasesFamily !== '') {
+    payload.chronicDiseasesFamily = values.chronicDiseasesFamily === 'yes';
+  }
+  if (dirtyFields.chronicDiseasesDetails) payload.chronicDiseasesDetails = values.chronicDiseasesDetails;
+  if (dirtyFields.pastDiseases) payload.pastDiseases = values.pastDiseases;
+  if (dirtyFields.surgeries) payload.surgeries = values.surgeries;
+  if (dirtyFields.healthcareAccess) payload.healthcareAccess = values.healthcareAccess;
+  if (dirtyFields.alcoholFrequency) payload.alcoholFrequency = values.alcoholFrequency;
+  if (dirtyFields.alcoholTypes) payload.alcoholTypes = values.alcoholTypes;
+  if (dirtyFields.smokes && values.smokes !== '') payload.smokes = values.smokes === 'yes';
+  if (dirtyFields.cigarettesPerDay) payload.cigarettesPerDay = toNumberOrUndefined(values.cigarettesPerDay);
+  if (dirtyFields.smokingExpensePerWeek) {
+    payload.smokingExpensePerWeek = toNumberOrUndefined(values.smokingExpensePerWeek);
+  }
+  if (dirtyFields.usedDrugs && values.usedDrugs !== '') payload.usedDrugs = values.usedDrugs === 'yes';
+  if (dirtyFields.drugsDetails) payload.drugsDetails = values.drugsDetails;
+  if (dirtyFields.dietQuality) payload.dietQuality = values.dietQuality;
+  if (dirtyFields.physicalActivity) payload.physicalActivity = values.physicalActivity;
+  if (dirtyFields.sedentaryHours) payload.sedentaryHours = toNumberOrUndefined(values.sedentaryHours);
+  if (dirtyFields.screenTimeHours) payload.screenTimeHours = toNumberOrUndefined(values.screenTimeHours);
+  return payload;
+}
+
+/** Checkboxes múltiples para healthcareAccess/alcoholTypes — arreglos de string plano, sin códigos. */
+function CheckboxOptionGroup({
+  options,
+  value,
+  onChange,
+  disabled,
+}: {
+  options: readonly string[];
+  value: string[];
+  onChange: (value: string[]) => void;
+  disabled: boolean;
+}) {
+  return (
+    <FormGroup row>
+      {options.map((option) => (
+        <FormControlLabel
+          key={option}
+          disabled={disabled}
+          control={
+            <Checkbox
+              checked={value.includes(option)}
+              onChange={(e) => {
+                if (e.target.checked) onChange([...value, option]);
+                else onChange(value.filter((item) => item !== option));
+              }}
+            />
+          }
+          label={option}
+        />
+      ))}
+    </FormGroup>
+  );
 }
 
 function formatBoolean(value: boolean | null): string {
@@ -178,7 +336,45 @@ function InfoLine({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
-export function HealthTab({ health }: HealthTabProps) {
+export function HealthTab({ candidateId, health, captureMode, captureStatus }: HealthTabProps) {
+  const { updateHealth } = useCandidateMutations();
+  const [isEditing, setIsEditing] = useState(false);
+  const isSaving = updateHealth.isPending;
+  const canEdit = captureMode === 'MANUAL' && captureStatus === 'DRAFT';
+
+  const {
+    register,
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    reset,
+    formState: { errors, dirtyFields },
+  } = useForm<HealthFormValues>({
+    resolver: zodResolver(healthFormSchema),
+    defaultValues: buildHealthFormDefaults(health),
+  });
+
+  const smokesValue = watch('smokes');
+  const chronicDiseasesFamilyValue = watch('chronicDiseasesFamily');
+  const usedDrugsValue = watch('usedDrugs');
+
+  function handleStartEditing() {
+    reset(buildHealthFormDefaults(health));
+    setIsEditing(true);
+  }
+
+  async function onSubmit(values: HealthFormValues) {
+    try {
+      const payload = buildHealthPayload(values, dirtyFields);
+      await updateHealth.mutateAsync({ id: candidateId, payload });
+      setIsEditing(false);
+    } catch {
+      // El toast de error ya lo emite useCandidateMutations; el formulario
+      // se queda abierto con lo que el usuario escribió, para reintentar.
+    }
+  }
+
   const { total, factors } = computeHealthRisk(health);
   const currentHealthMeter = classifyCurrentHealth(health.currentHealth);
   const physicalAspectSeverity = classifyPhysicalAspect(health.physicalAspect);
@@ -209,8 +405,364 @@ export function HealthTab({ health }: HealthTabProps) {
         : 'Sin hábitos de riesgo detectados';
   const activeFactors = factors.filter((factor) => factor.active);
 
+  if (isEditing) {
+    return (
+      <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+        <Stack spacing={3}>
+          <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
+            <Typography variant="subtitle1" sx={{ mb: 2 }}>
+              Biometría y aspecto
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <TextField
+                  label="Peso (kg)"
+                  fullWidth
+                  disabled={isSaving}
+                  {...register('weight')}
+                  error={!!errors.weight}
+                  helperText={errors.weight?.message}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <TextField
+                  label="Estatura (m)"
+                  fullWidth
+                  disabled={isSaving}
+                  {...register('height')}
+                  error={!!errors.height}
+                  helperText={errors.height?.message}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Box>
+                  <FormLabel id="uses-glasses-label">Usa lentes</FormLabel>
+                  <Controller
+                    name="usesGlasses"
+                    control={control}
+                    render={({ field }) => (
+                      <RadioGroup row aria-labelledby="uses-glasses-label" {...field}>
+                        <FormControlLabel value="yes" control={<Radio />} label="Sí" disabled={isSaving} />
+                        <FormControlLabel value="no" control={<Radio />} label="No" disabled={isSaving} />
+                      </RadioGroup>
+                    )}
+                  />
+                </Box>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <TextField
+                  label="Aspecto físico"
+                  fullWidth
+                  disabled={isSaving}
+                  {...register('physicalAspect')}
+                  error={!!errors.physicalAspect}
+                  helperText={errors.physicalAspect?.message}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Estado de salud actual"
+                  fullWidth
+                  disabled={isSaving}
+                  {...register('currentHealth')}
+                  error={!!errors.currentHealth}
+                  helperText={errors.currentHealth?.message}
+                />
+              </Grid>
+            </Grid>
+          </Paper>
+
+          <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
+            <Typography variant="subtitle1" sx={{ mb: 2 }}>
+              Enfermedades crónicas e historial médico
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormLabel id="chronic-diseases-family-label">¿Antecedentes familiares de enfermedades crónicas?</FormLabel>
+                <Controller
+                  name="chronicDiseasesFamily"
+                  control={control}
+                  render={({ field }) => (
+                    <RadioGroup
+                      row
+                      aria-labelledby="chronic-diseases-family-label"
+                      value={field.value}
+                      onChange={(e) => {
+                        field.onChange(e.target.value);
+                        if (e.target.value === 'no') setValue('chronicDiseasesDetails', '');
+                      }}
+                    >
+                      <FormControlLabel value="yes" control={<Radio />} label="Sí" disabled={isSaving} />
+                      <FormControlLabel value="no" control={<Radio />} label="No" disabled={isSaving} />
+                    </RadioGroup>
+                  )}
+                />
+                {chronicDiseasesFamilyValue === 'yes' && (
+                  <TextField
+                    label="Detalle de antecedentes"
+                    fullWidth
+                    disabled={isSaving}
+                    {...register('chronicDiseasesDetails')}
+                    error={!!errors.chronicDiseasesDetails}
+                    helperText={errors.chronicDiseasesDetails?.message}
+                    sx={{ mt: 1 }}
+                  />
+                )}
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Enfermedades pasadas"
+                  fullWidth
+                  disabled={isSaving}
+                  {...register('pastDiseases')}
+                  error={!!errors.pastDiseases}
+                  helperText={errors.pastDiseases?.message}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Cirugías"
+                  fullWidth
+                  disabled={isSaving}
+                  {...register('surgeries')}
+                  error={!!errors.surgeries}
+                  helperText={errors.surgeries?.message}
+                />
+              </Grid>
+            </Grid>
+          </Paper>
+
+          <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
+            <Typography variant="subtitle1" sx={{ mb: 1.5 }}>
+              Acceso a servicios de salud
+            </Typography>
+            <Controller
+              name="healthcareAccess"
+              control={control}
+              render={({ field }) => (
+                <CheckboxOptionGroup
+                  options={HEALTHCARE_ACCESS_OPTIONS}
+                  value={field.value}
+                  onChange={field.onChange}
+                  disabled={isSaving}
+                />
+              )}
+            />
+          </Paper>
+
+          <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
+            <Typography variant="subtitle1" sx={{ mb: 2 }}>
+              Consumo de sustancias
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid size={12}>
+                <TextField
+                  label="Frecuencia de consumo de alcohol"
+                  fullWidth
+                  disabled={isSaving}
+                  {...register('alcoholFrequency')}
+                  error={!!errors.alcoholFrequency}
+                  helperText={errors.alcoholFrequency?.message}
+                />
+                <Box sx={{ mt: 1 }}>
+                  <Controller
+                    name="alcoholTypes"
+                    control={control}
+                    render={({ field }) => (
+                      <CheckboxOptionGroup
+                        options={ALCOHOL_TYPE_OPTIONS}
+                        value={field.value}
+                        onChange={field.onChange}
+                        disabled={isSaving}
+                      />
+                    )}
+                  />
+                </Box>
+              </Grid>
+
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormLabel id="smokes-label">¿Fuma?</FormLabel>
+                <Controller
+                  name="smokes"
+                  control={control}
+                  render={({ field }) => (
+                    <RadioGroup
+                      row
+                      aria-labelledby="smokes-label"
+                      value={field.value}
+                      onChange={(e) => {
+                        field.onChange(e.target.value);
+                        if (e.target.value === 'no') {
+                          setValue('cigarettesPerDay', '');
+                          setValue('smokingExpensePerWeek', '');
+                        }
+                      }}
+                    >
+                      <FormControlLabel value="yes" control={<Radio />} label="Sí" disabled={isSaving} />
+                      <FormControlLabel value="no" control={<Radio />} label="No" disabled={isSaving} />
+                    </RadioGroup>
+                  )}
+                />
+                {smokesValue === 'yes' && (
+                  <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                    <TextField
+                      label="Cigarros/día"
+                      fullWidth
+                      disabled={isSaving}
+                      {...register('cigarettesPerDay')}
+                      error={!!errors.cigarettesPerDay}
+                      helperText={errors.cigarettesPerDay?.message}
+                    />
+                    <TextField
+                      label="Gasto semanal ($)"
+                      fullWidth
+                      disabled={isSaving}
+                      {...register('smokingExpensePerWeek')}
+                      error={!!errors.smokingExpensePerWeek}
+                      helperText={errors.smokingExpensePerWeek?.message}
+                    />
+                  </Stack>
+                )}
+              </Grid>
+
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormLabel id="used-drugs-label">¿Ha consumido drogas?</FormLabel>
+                <Controller
+                  name="usedDrugs"
+                  control={control}
+                  render={({ field }) => (
+                    <RadioGroup
+                      row
+                      aria-labelledby="used-drugs-label"
+                      value={field.value}
+                      onChange={(e) => {
+                        field.onChange(e.target.value);
+                        if (e.target.value === 'no') setValue('drugsDetails', '');
+                      }}
+                    >
+                      <FormControlLabel value="yes" control={<Radio />} label="Sí" disabled={isSaving} />
+                      <FormControlLabel value="no" control={<Radio />} label="No" disabled={isSaving} />
+                    </RadioGroup>
+                  )}
+                />
+                {usedDrugsValue === 'yes' && (
+                  <TextField
+                    label="Detalle de consumo"
+                    fullWidth
+                    disabled={isSaving}
+                    {...register('drugsDetails')}
+                    error={!!errors.drugsDetails}
+                    helperText={errors.drugsDetails?.message}
+                    sx={{ mt: 1 }}
+                  />
+                )}
+              </Grid>
+            </Grid>
+          </Paper>
+
+          <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
+            <Typography variant="subtitle1" sx={{ mb: 2 }}>
+              Hábitos de vida
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <TextField
+                  select
+                  label="Calidad de la alimentación"
+                  fullWidth
+                  disabled={isSaving}
+                  {...register('dietQuality')}
+                  error={!!errors.dietQuality}
+                  helperText={errors.dietQuality?.message}
+                >
+                  <MenuItem value="">
+                    <em>Sin especificar</em>
+                  </MenuItem>
+                  {DIET_QUALITY_OPTIONS.map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <TextField
+                  select
+                  label="Actividad física"
+                  fullWidth
+                  disabled={isSaving}
+                  {...register('physicalActivity')}
+                  error={!!errors.physicalActivity}
+                  helperText={errors.physicalActivity?.message}
+                >
+                  <MenuItem value="">
+                    <em>Sin especificar</em>
+                  </MenuItem>
+                  {PHYSICAL_ACTIVITY_OPTIONS.map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <TextField
+                  label="Horas sedentarias al día"
+                  fullWidth
+                  disabled={isSaving}
+                  {...register('sedentaryHours')}
+                  error={!!errors.sedentaryHours}
+                  helperText={errors.sedentaryHours?.message}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <TextField
+                  label="Horas de pantalla al día"
+                  fullWidth
+                  disabled={isSaving}
+                  {...register('screenTimeHours')}
+                  error={!!errors.screenTimeHours}
+                  helperText={errors.screenTimeHours?.message}
+                />
+              </Grid>
+            </Grid>
+          </Paper>
+
+          <Stack direction="row" spacing={1}>
+            <Button type="submit" variant="contained" size="small" disabled={isSaving}>
+              {isSaving ? 'Guardando…' : 'Guardar cambios'}
+            </Button>
+            <Button
+              type="button"
+              variant="outlined"
+              color="inherit"
+              size="small"
+              disabled={isSaving}
+              onClick={() => setIsEditing(false)}
+            >
+              Cancelar
+            </Button>
+          </Stack>
+        </Stack>
+      </Box>
+    );
+  }
+
   return (
     <Stack spacing={3}>
+      {canEdit && (
+        <Stack direction="row" justifyContent="flex-end">
+          <Button
+            size="small"
+            variant="outlined"
+            color="inherit"
+            startIcon={<EditOutlinedIcon fontSize="small" />}
+            onClick={handleStartEditing}
+          >
+            Editar
+          </Button>
+        </Stack>
+      )}
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 6 }}>
           <Paper elevation={0} sx={{ p: 3, borderRadius: 3, height: '100%' }}>

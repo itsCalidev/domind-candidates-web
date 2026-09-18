@@ -247,7 +247,18 @@ export function CandidateDetailPage() {
     {
       label: 'Estabilidad y Calidad de Vida',
       subTabs: [
-        { label: 'Estado de Salud', content: withGrader('HEALTH', <HealthTab health={candidate.health} />) },
+        {
+          label: 'Estado de Salud',
+          content: withGrader(
+            'HEALTH',
+            <HealthTab
+              candidateId={candidateId}
+              health={candidate.health}
+              captureMode={candidate.captureMode}
+              captureStatus={candidate.captureStatus}
+            />,
+          ),
+        },
         {
           label: 'Vivienda',
           content: withGrader(
