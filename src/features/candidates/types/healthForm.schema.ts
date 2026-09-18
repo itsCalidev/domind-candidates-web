@@ -7,6 +7,16 @@ export const DIET_QUALITY_OPTIONS = ['Buena', 'Regular', 'Mala'] as const;
 export const PHYSICAL_ACTIVITY_OPTIONS = ['Sedentario', 'Ligera', 'Intensa', 'Atleta'] as const;
 /** Los 4 strings exactos que `classifyCurrentHealth` (healthQualitative.ts) sabe mapear a un % de la barra de progreso — cualquier otro texto cae en el "50% gris" de esa función. */
 export const CURRENT_HEALTH_OPTIONS = ['Excelente', 'Buena', 'Regular', 'Mala'] as const;
+/**
+ * `classifyAlcoholFrequency` (healthQualitative.ts) y `FREQUENT_ALCOHOL_KEYWORDS`
+ * (healthRisk.ts) no son un enum cerrado — buscan por sub-string las 3
+ * palabras clave 'frecuente'/'diario'/'fines de semana' dentro de
+ * cualquier texto libre para pintar el chip en amarillo/sumar riesgo, y
+ * tratan cualquier otro texto no vacío como 'info' (azul). Estas 5
+ * opciones incluyen las 3 palabras clave tal cual (para que sigan
+ * activando esa lógica) más 'Nunca'/'Ocasional' para el resto de casos.
+ */
+export const ALCOHOL_FREQUENCY_OPTIONS = ['Nunca', 'Ocasional', 'Frecuente', 'Fines de semana', 'Diario'] as const;
 /** Marcador de UI para "Otro" en los checkboxes de healthcareAccess/alcoholTypes — nunca se envía tal cual al backend. */
 export const OTHER_OPTION = 'Otro';
 
@@ -41,7 +51,7 @@ export const healthFormSchema = z.object({
   surgeries: optionalText(255),
   healthcareAccess: z.array(z.string()),
   healthcareAccessOther: optionalText(150),
-  alcoholFrequency: optionalText(150),
+  alcoholFrequency: z.enum([...ALCOHOL_FREQUENCY_OPTIONS, '']),
   alcoholTypes: z.array(z.string()),
   alcoholTypesOther: optionalText(150),
   smokes: triState,

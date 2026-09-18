@@ -64,6 +64,7 @@ import type {
   CandidateHealthPayload,
 } from '../types/candidate.types';
 import {
+  ALCOHOL_FREQUENCY_OPTIONS,
   ALCOHOL_TYPE_OPTIONS,
   CURRENT_HEALTH_OPTIONS,
   DIET_QUALITY_OPTIONS,
@@ -137,7 +138,7 @@ function buildHealthFormDefaults(health: CandidateHealth): HealthFormValues {
     surgeries: health.surgeries ?? '',
     healthcareAccess: healthcareAccess.known,
     healthcareAccessOther: healthcareAccess.other,
-    alcoholFrequency: health.alcoholFrequency ?? '',
+    alcoholFrequency: pickOption(ALCOHOL_FREQUENCY_OPTIONS, health.alcoholFrequency),
     alcoholTypes: alcoholTypes.known,
     alcoholTypesOther: alcoholTypes.other,
     smokes: toTriState(health.smokes),
@@ -478,21 +479,6 @@ export function HealthTab({ candidateId, health, captureMode, captureStatus }: H
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <Box>
-                  <FormLabel id="uses-glasses-label">Usa lentes</FormLabel>
-                  <Controller
-                    name="usesGlasses"
-                    control={control}
-                    render={({ field }) => (
-                      <RadioGroup row aria-labelledby="uses-glasses-label" {...field}>
-                        <FormControlLabel value="yes" control={<Radio />} label="Sí" disabled={isSaving} />
-                        <FormControlLabel value="no" control={<Radio />} label="No" disabled={isSaving} />
-                      </RadioGroup>
-                    )}
-                  />
-                </Box>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <TextField
                   label="Aspecto físico"
                   fullWidth
@@ -502,25 +488,45 @@ export function HealthTab({ candidateId, health, captureMode, captureStatus }: H
                   helperText={errors.physicalAspect?.message}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  select
-                  label="Estado de salud actual"
-                  fullWidth
-                  disabled={isSaving}
-                  {...register('currentHealth')}
-                  error={!!errors.currentHealth}
-                  helperText={errors.currentHealth?.message}
-                >
-                  <MenuItem value="">
-                    <em>Sin especificar</em>
-                  </MenuItem>
-                  {CURRENT_HEALTH_OPTIONS.map((option) => (
-                    <MenuItem key={option} value={option}>
-                      {option}
-                    </MenuItem>
-                  ))}
-                </TextField>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Controller
+                  name="currentHealth"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      select
+                      label="Estado de salud actual"
+                      fullWidth
+                      disabled={isSaving}
+                      error={!!errors.currentHealth}
+                      helperText={errors.currentHealth?.message}
+                    >
+                      <MenuItem value="">
+                        <em>Sin especificar</em>
+                      </MenuItem>
+                      {CURRENT_HEALTH_OPTIONS.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  )}
+                />
+              </Grid>
+
+              <Grid size={12}>
+                <FormLabel id="uses-glasses-label">Usa lentes</FormLabel>
+                <Controller
+                  name="usesGlasses"
+                  control={control}
+                  render={({ field }) => (
+                    <RadioGroup row aria-labelledby="uses-glasses-label" {...field}>
+                      <FormControlLabel value="yes" control={<Radio />} label="Sí" disabled={isSaving} />
+                      <FormControlLabel value="no" control={<Radio />} label="No" disabled={isSaving} />
+                    </RadioGroup>
+                  )}
+                />
               </Grid>
             </Grid>
           </Paper>
@@ -664,13 +670,29 @@ export function HealthTab({ candidateId, health, captureMode, captureStatus }: H
             </Typography>
             <Grid container spacing={2}>
               <Grid size={12}>
-                <TextField
-                  label="Frecuencia de consumo de alcohol"
-                  fullWidth
-                  disabled={isSaving}
-                  {...register('alcoholFrequency')}
-                  error={!!errors.alcoholFrequency}
-                  helperText={errors.alcoholFrequency?.message}
+                <Controller
+                  name="alcoholFrequency"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      select
+                      label="Frecuencia de consumo de alcohol"
+                      fullWidth
+                      disabled={isSaving}
+                      error={!!errors.alcoholFrequency}
+                      helperText={errors.alcoholFrequency?.message}
+                    >
+                      <MenuItem value="">
+                        <em>Sin especificar</em>
+                      </MenuItem>
+                      {ALCOHOL_FREQUENCY_OPTIONS.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  )}
                 />
                 <Box sx={{ mt: 1 }}>
                   <Controller
@@ -785,44 +807,56 @@ export function HealthTab({ candidateId, health, captureMode, captureStatus }: H
             </Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <TextField
-                  select
-                  label="Calidad de la alimentación"
-                  fullWidth
-                  disabled={isSaving}
-                  {...register('dietQuality')}
-                  error={!!errors.dietQuality}
-                  helperText={errors.dietQuality?.message}
-                >
-                  <MenuItem value="">
-                    <em>Sin especificar</em>
-                  </MenuItem>
-                  {DIET_QUALITY_OPTIONS.map((option) => (
-                    <MenuItem key={option} value={option}>
-                      {option}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <Controller
+                  name="dietQuality"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      select
+                      label="Calidad de la alimentación"
+                      fullWidth
+                      disabled={isSaving}
+                      error={!!errors.dietQuality}
+                      helperText={errors.dietQuality?.message}
+                    >
+                      <MenuItem value="">
+                        <em>Sin especificar</em>
+                      </MenuItem>
+                      {DIET_QUALITY_OPTIONS.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  )}
+                />
               </Grid>
               <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <TextField
-                  select
-                  label="Actividad física"
-                  fullWidth
-                  disabled={isSaving}
-                  {...register('physicalActivity')}
-                  error={!!errors.physicalActivity}
-                  helperText={errors.physicalActivity?.message}
-                >
-                  <MenuItem value="">
-                    <em>Sin especificar</em>
-                  </MenuItem>
-                  {PHYSICAL_ACTIVITY_OPTIONS.map((option) => (
-                    <MenuItem key={option} value={option}>
-                      {option}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <Controller
+                  name="physicalActivity"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      select
+                      label="Actividad física"
+                      fullWidth
+                      disabled={isSaving}
+                      error={!!errors.physicalActivity}
+                      helperText={errors.physicalActivity?.message}
+                    >
+                      <MenuItem value="">
+                        <em>Sin especificar</em>
+                      </MenuItem>
+                      {PHYSICAL_ACTIVITY_OPTIONS.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  )}
+                />
               </Grid>
               <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <TextField
