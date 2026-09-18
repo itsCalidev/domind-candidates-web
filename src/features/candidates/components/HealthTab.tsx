@@ -132,9 +132,9 @@ function buildHealthFormDefaults(health: CandidateHealth): HealthFormValues {
     currentHealth: pickOption(CURRENT_HEALTH_OPTIONS, health.currentHealth),
     chronicDiseasesFamily: toTriState(health.chronicDiseasesFamily),
     chronicDiseasesDetails: health.chronicDiseasesDetails ?? '',
-    pastDiseasesFlag: isEmptyMedicalText(health.pastDiseases) ? '' : 'yes',
+    pastDiseasesFlag: toTriState(health.hasPastDiseases),
     pastDiseases: health.pastDiseases ?? '',
-    surgeriesFlag: isEmptyMedicalText(health.surgeries) ? '' : 'yes',
+    surgeriesFlag: toTriState(health.hasSurgeries),
     surgeries: health.surgeries ?? '',
     healthcareAccess: healthcareAccess.known,
     healthcareAccessOther: healthcareAccess.other,
@@ -158,6 +158,19 @@ function toNumberOrUndefined(value: string | undefined): number | undefined {
 }
 
 /**
+ * Conversión estricta y explícita del tri-estado del RadioGroup
+ * (`'yes' | 'no' | ''`) a un booleano real — el valor que llega de un
+ * RadioGroup es SIEMPRE un string, nunca se inyecta ese string crudo al
+ * payload. `''` (todavía sin responder) se traduce a `undefined` para no
+ * enviar nada en ese campo.
+ */
+function parseTriStateBoolean(value: 'yes' | 'no' | ''): boolean | undefined {
+  if (value === 'yes') return true;
+  if (value === 'no') return false;
+  return undefined;
+}
+
+/**
  * Solo incluye los campos que react-hook-form marcó como `dirty` — el
  * backend acepta un PATCH parcial (confirmado por el usuario), así que
  * se manda únicamente lo que el reclutador realmente tocó, mismo
@@ -173,15 +186,34 @@ function buildHealthPayload(
   const payload: Partial<CandidateHealthPayload> = {};
   if (dirtyFields.weight) payload.weight = toNumberOrUndefined(values.weight);
   if (dirtyFields.height) payload.height = toNumberOrUndefined(values.height);
-  if (dirtyFields.usesGlasses && values.usesGlasses !== '') payload.usesGlasses = values.usesGlasses === 'yes';
+  if (dirtyFields.usesGlasses) {
+    const usesGlasses = parseTriStateBoolean(values.usesGlasses);
+    if (usesGlasses !== undefined) payload.usesGlasses = usesGlasses;
+  }
   if (dirtyFields.physicalAspect) payload.physicalAspect = values.physicalAspect;
   if (dirtyFields.currentHealth) payload.currentHealth = values.currentHealth;
-  if (dirtyFields.chronicDiseasesFamily && values.chronicDiseasesFamily !== '') {
-    payload.chronicDiseasesFamily = values.chronicDiseasesFamily === 'yes';
+  if (dirtyFields.chronicDiseasesFamily) {
+    const chronicDiseasesFamily = parseTriStateBoolean(values.chronicDiseasesFamily);
+    if (chronicDiseasesFamily !== undefined) payload.chronicDiseasesFamily = chronicDiseasesFamily;
   }
   if (dirtyFields.chronicDiseasesDetails) payload.chronicDiseasesDetails = values.chronicDiseasesDetails;
-  if (dirtyFields.pastDiseases) payload.pastDiseases = values.pastDiseases;
-  if (dirtyFields.surgeries) payload.surgeries = values.surgeries;
+  // hasPastDiseases/hasSurgeries: booleanos reales del backend (confirmado
+  // por el usuario), no solo estado de UI — viajan siempre junto con su
+  // texto asociado, que va como `null` (no '') cuando el booleano es `false`.
+  if (dirtyFields.pastDiseasesFlag || dirtyFields.pastDiseases) {
+    const hasPastDiseases = parseTriStateBoolean(values.pastDiseasesFlag);
+    if (hasPastDiseases !== undefined) {
+      payload.hasPastDiseases = hasPastDiseases;
+      payload.pastDiseases = hasPastDiseases ? values.pastDiseases : null;
+    }
+  }
+  if (dirtyFields.surgeriesFlag || dirtyFields.surgeries) {
+    const hasSurgeries = parseTriStateBoolean(values.surgeriesFlag);
+    if (hasSurgeries !== undefined) {
+      payload.hasSurgeries = hasSurgeries;
+      payload.surgeries = hasSurgeries ? values.surgeries : null;
+    }
+  }
   if (dirtyFields.healthcareAccess || dirtyFields.healthcareAccessOther) {
     payload.healthcareAccess = resolveOtherOption(values.healthcareAccess, values.healthcareAccessOther ?? '');
   }
@@ -189,12 +221,18 @@ function buildHealthPayload(
   if (dirtyFields.alcoholTypes || dirtyFields.alcoholTypesOther) {
     payload.alcoholTypes = resolveOtherOption(values.alcoholTypes, values.alcoholTypesOther ?? '');
   }
-  if (dirtyFields.smokes && values.smokes !== '') payload.smokes = values.smokes === 'yes';
+  if (dirtyFields.smokes) {
+    const smokes = parseTriStateBoolean(values.smokes);
+    if (smokes !== undefined) payload.smokes = smokes;
+  }
   if (dirtyFields.cigarettesPerDay) payload.cigarettesPerDay = toNumberOrUndefined(values.cigarettesPerDay);
   if (dirtyFields.smokingExpensePerWeek) {
     payload.smokingExpensePerWeek = toNumberOrUndefined(values.smokingExpensePerWeek);
   }
-  if (dirtyFields.usedDrugs && values.usedDrugs !== '') payload.usedDrugs = values.usedDrugs === 'yes';
+  if (dirtyFields.usedDrugs) {
+    const usedDrugs = parseTriStateBoolean(values.usedDrugs);
+    if (usedDrugs !== undefined) payload.usedDrugs = usedDrugs;
+  }
   if (dirtyFields.drugsDetails) payload.drugsDetails = values.drugsDetails;
   if (dirtyFields.dietQuality) payload.dietQuality = values.dietQuality;
   if (dirtyFields.physicalActivity) payload.physicalActivity = values.physicalActivity;
@@ -411,6 +449,8 @@ export function HealthTab({ candidateId, health, captureMode, captureStatus }: H
   async function onSubmit(values: HealthFormValues) {
     try {
       const payload = buildHealthPayload(values, dirtyFields);
+      // eslint-disable-next-line no-console -- debug temporal pedido por el usuario para verificar hasPastDiseases/hasSurgeries en el payload real; quitar una vez confirmado en pruebas.
+      console.log(payload);
       await updateHealth.mutateAsync({ id: candidateId, payload });
       setIsEditing(false);
     } catch {
@@ -979,8 +1019,10 @@ export function HealthTab({ candidateId, health, captureMode, captureStatus }: H
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
                 Enfermedades pasadas
               </Typography>
-              {isEmptyMedicalText(health.pastDiseases) ? (
+              {health.hasPastDiseases === null || health.hasPastDiseases === undefined ? (
                 <PendingStateBadge label="No registrado" />
+              ) : health.hasPastDiseases === false ? (
+                <CleanStateBadge label="Historial limpio" />
               ) : (
                 <MedicalChipList
                   entries={splitMedicalEntries(health.pastDiseases)}
@@ -993,8 +1035,10 @@ export function HealthTab({ candidateId, health, captureMode, captureStatus }: H
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
                 Cirugías
               </Typography>
-              {isEmptyMedicalText(health.surgeries) ? (
+              {health.hasSurgeries === null || health.hasSurgeries === undefined ? (
                 <PendingStateBadge label="No registrado" />
+              ) : health.hasSurgeries === false ? (
+                <CleanStateBadge label="Sin cirugías" />
               ) : (
                 <MedicalChipList
                   entries={splitMedicalEntries(health.surgeries)}

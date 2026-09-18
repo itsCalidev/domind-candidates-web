@@ -175,7 +175,15 @@ export interface CandidateHealth {
   weight: number | null;
   physicalAspect: string | null;
   currentHealth: string | null;
+  /**
+   * `null`/`undefined` = todavía sin responder, `false` = confirmado sin
+   * antecedentes, `true` = sí tiene (ver `pastDiseases`/`surgeries` para
+   * el detalle). Confirmado por el usuario vía pruebas de API — el
+   * backend ya guarda y devuelve ambos booleanos junto con su texto.
+   */
+  hasPastDiseases: boolean | null;
   pastDiseases: string | null;
+  hasSurgeries: boolean | null;
   surgeries: string | null;
   alcoholFrequency: string | null;
   alcoholTypes: string[];
@@ -207,6 +215,12 @@ export interface CandidateHealth {
  * `usedDrugs`→`drugsDetails`) no se validan a nivel de tipo — HealthTab
  * las limpia por UI (`setValue`) en cuanto la respuesta pasa a "No",
  * mismo criterio que las preguntas de riesgo de FamilyTab.
+ *
+ * `hasPastDiseases`/`hasSurgeries` confirmados por el usuario en el chat
+ * como booleanos reales del backend (no solo estado de UI) — igual que
+ * `chronicDiseasesFamily`, viajan junto con su texto asociado
+ * (`pastDiseases`/`surgeries`), que va como `null` cuando el booleano es
+ * `false`, no como cadena vacía.
  */
 export interface CandidateHealthPayload {
   weight?: number;
@@ -216,8 +230,10 @@ export interface CandidateHealthPayload {
   currentHealth?: string;
   chronicDiseasesFamily?: boolean;
   chronicDiseasesDetails?: string;
-  pastDiseases?: string;
-  surgeries?: string;
+  hasPastDiseases?: boolean;
+  pastDiseases?: string | null;
+  hasSurgeries?: boolean;
+  surgeries?: string | null;
   healthcareAccess?: string[];
   alcoholFrequency?: string;
   alcoholTypes?: string[];

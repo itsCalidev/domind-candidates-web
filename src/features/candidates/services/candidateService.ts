@@ -94,7 +94,9 @@ interface RawHealth {
   weight?: number | null;
   physicalAspect?: string | null;
   currentHealth?: string | null;
+  hasPastDiseases?: boolean | null;
   pastDiseases?: string | null;
+  hasSurgeries?: boolean | null;
   surgeries?: string | null;
   alcoholFrequency?: string | null;
   alcoholTypes?: string[];
@@ -375,7 +377,9 @@ export const candidatesService = {
         weight: data.health?.weight ?? null,
         physicalAspect: data.health?.physicalAspect ?? null,
         currentHealth: data.health?.currentHealth ?? null,
+        hasPastDiseases: data.health?.hasPastDiseases ?? null,
         pastDiseases: data.health?.pastDiseases ?? null,
+        hasSurgeries: data.health?.hasSurgeries ?? null,
         surgeries: data.health?.surgeries ?? null,
         alcoholFrequency: data.health?.alcoholFrequency ?? null,
         alcoholTypes: data.health?.alcoholTypes ?? [],
