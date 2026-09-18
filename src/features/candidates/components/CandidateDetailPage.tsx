@@ -263,7 +263,12 @@ export function CandidateDetailPage() {
           label: 'Vivienda',
           content: withGrader(
             'HOUSING',
-            <HousingTab candidateId={candidateId} housing={candidate.housing} />,
+            <HousingTab
+              candidateId={candidateId}
+              housing={candidate.housing}
+              captureMode={candidate.captureMode}
+              captureStatus={candidate.captureStatus}
+            />,
           ),
         },
         {

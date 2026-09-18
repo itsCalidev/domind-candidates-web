@@ -5,6 +5,7 @@ import { extractApiErrorMessage } from '@/shared/utils/apiError';
 import type {
   CandidateCaptureStatus,
   CandidateHealthPayload,
+  CandidateHousingPayload,
   CandidateStatus,
   CreateAndAssignCandidatePayload,
   DocumentType,
@@ -150,6 +151,22 @@ export function useCandidateMutations() {
     },
     onError: (error) => {
       showToast(extractApiErrorMessage(error, 'No se pudo actualizar el estado de salud.'), 'error');
+    },
+  });
+
+  // El service method (`updateHousing`) ya existía — lo usaba solo el
+  // flujo de Magic Link (candidate-auth) llamándolo directo. Esta
+  // mutación es la envoltura del lado admin (toast + invalidateCandidates),
+  // mismo criterio que el resto de las pestañas de detalle.
+  const updateHousing = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<CandidateHousingPayload> }) =>
+      candidatesService.updateHousing(id, payload),
+    onSuccess: () => {
+      showToast('Datos de vivienda actualizados exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo actualizar la vivienda.'), 'error');
     },
   });
 
@@ -415,6 +432,7 @@ export function useCandidateMutations() {
     updatePersonalInfo,
     updateFamily,
     updateHealth,
+    updateHousing,
     getReportSummary,
     evaluateSection,
     createWorkHistory,

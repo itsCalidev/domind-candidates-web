@@ -27,6 +27,10 @@ interface EvidenceGalleryProps {
   readOnly?: boolean;
   /** Solo aplica con `readOnly` y 0 evidencias — debe ser un texto definitivo, no uno que implique que todavía se puede subir algo. */
   emptyMessage?: string;
+  /** `false` para categorías que solo aceptan fotografías (ej. HOUSING) — por defecto `true`, mismo comportamiento que ya tenía este componente. */
+  allowPdf?: boolean;
+  /** Tope de bytes para imágenes de esta categoría — por defecto 500KB, mismo valor que ya tenía este componente. */
+  maxImageBytes?: number;
 }
 
 const SLOT_COUNT = 3;
@@ -51,14 +55,17 @@ function isPdf(fileName: string): boolean {
   return fileName.toLowerCase().endsWith('.pdf');
 }
 
-function validateFile(file: File): string | null {
+function validateFile(file: File, allowPdf: boolean, maxImageBytes: number): string | null {
   if (file.type === 'application/pdf') {
+    if (!allowPdf) return 'Solo se aceptan imágenes JPEG, PNG o WEBP.';
     return file.size > PDF_MAX_BYTES ? `El PDF no debe superar los ${PDF_MAX_BYTES / 1024}KB.` : null;
   }
   if (file.type.startsWith('image/')) {
-    return file.size > IMAGE_MAX_BYTES ? `La imagen no debe superar los ${IMAGE_MAX_BYTES / 1024}KB.` : null;
+    return file.size > maxImageBytes
+      ? `La imagen no debe superar los ${Math.round((maxImageBytes / (1024 * 1024)) * 10) / 10}MB.`
+      : null;
   }
-  return 'Solo se aceptan imágenes o archivos PDF.';
+  return allowPdf ? 'Solo se aceptan imágenes o archivos PDF.' : 'Solo se aceptan imágenes JPEG, PNG o WEBP.';
 }
 
 /**
@@ -73,6 +80,8 @@ export function EvidenceGallery({
   category,
   readOnly = false,
   emptyMessage = 'No hay evidencia registrada.',
+  allowPdf = true,
+  maxImageBytes = IMAGE_MAX_BYTES,
 }: EvidenceGalleryProps) {
   const { showToast } = useToast();
   const { uploadEvidence, updateEvidence, deleteEvidence } = useCandidateMutations();
@@ -122,7 +131,7 @@ export function EvidenceGallery({
 
     if (!file || !pendingAction) return;
 
-    const error = validateFile(file);
+    const error = validateFile(file, allowPdf, maxImageBytes);
     if (error) {
       showToast(error, 'error');
       return;
@@ -152,7 +161,13 @@ export function EvidenceGallery({
       </Typography>
 
       {!readOnly && (
-        <input ref={fileInputRef} type="file" accept="image/*,application/pdf" hidden onChange={handleFileChange} />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={allowPdf ? 'image/*,application/pdf' : 'image/jpeg, image/png, image/webp'}
+          hidden
+          onChange={handleFileChange}
+        />
       )}
 
       {readOnly && slots.length === 0 ? (
