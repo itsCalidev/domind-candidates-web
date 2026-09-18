@@ -32,8 +32,11 @@ import HandshakeOutlinedIcon from '@mui/icons-material/HandshakeOutlined';
 import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import WaterDropOutlinedIcon from '@mui/icons-material/WaterDropOutlined';
 import ElectricBoltOutlinedIcon from '@mui/icons-material/ElectricBoltOutlined';
+import LocalFireDepartmentOutlinedIcon from '@mui/icons-material/LocalFireDepartmentOutlined';
 import WifiOutlinedIcon from '@mui/icons-material/WifiOutlined';
 import PlumbingOutlinedIcon from '@mui/icons-material/PlumbingOutlined';
+import TvOutlinedIcon from '@mui/icons-material/TvOutlined';
+import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
 import RequestQuoteOutlinedIcon from '@mui/icons-material/RequestQuoteOutlined';
 import type { ReactNode } from 'react';
 import { CleanStateBadge } from '@/shared/components/CleanStateBadge';
@@ -98,20 +101,26 @@ function OwnerFact({ icon, label, value }: { icon: ReactNode; label: string; val
 }
 
 /**
- * Coincidencia por palabra clave, no por igualdad exacta: publicServices
- * es texto libre del backend ("Agua potable", "Energía eléctrica"), no
- * un enum — mismo criterio que dietQuality/alcoholFrequency en
- * healthQualitative.ts.
+ * Diccionario ícono↔servicio para los 6 valores exactos del catálogo
+ * (`PUBLIC_SERVICES_OPTIONS`, housingForm.schema.ts) — el modo edición ya
+ * guarda estos strings exactos vía checkboxes, así que el modo lectura
+ * empareja por igualdad, no por palabra clave. `CheckCircleOutlineOutlinedIcon`
+ * es el ícono de respaldo para un valor legado que no esté en este mapa
+ * (ej. texto libre capturado antes de que existieran los checkboxes, o un
+ * servicio nuevo agregado al catálogo sin actualizar este diccionario
+ * todavía) — nunca se oculta un servicio registrado por no reconocerlo.
  */
-const PUBLIC_SERVICE_DEFINITIONS = [
-  { label: 'Agua', icon: WaterDropOutlinedIcon, keywords: ['agua'] },
-  { label: 'Luz', icon: ElectricBoltOutlinedIcon, keywords: ['luz', 'electric'] },
-  { label: 'Internet', icon: WifiOutlinedIcon, keywords: ['internet', 'wifi'] },
-  { label: 'Drenaje', icon: PlumbingOutlinedIcon, keywords: ['drenaje', 'alcantarillado'] },
-];
+const PUBLIC_SERVICE_ICONS: Record<string, typeof WaterDropOutlinedIcon> = {
+  Agua: WaterDropOutlinedIcon,
+  Luz: ElectricBoltOutlinedIcon,
+  Gas: LocalFireDepartmentOutlinedIcon,
+  Drenaje: PlumbingOutlinedIcon,
+  Internet: WifiOutlinedIcon,
+  Telecable: TvOutlinedIcon,
+};
 
-function hasServiceKeyword(services: string[], keywords: string[]): boolean {
-  return services.some((service) => keywords.some((keyword) => service.toLowerCase().includes(keyword)));
+function getPublicServiceIcon(service: string): typeof WaterDropOutlinedIcon {
+  return PUBLIC_SERVICE_ICONS[service] ?? CheckCircleOutlineOutlinedIcon;
 }
 
 function toFormNumber(value: number | null): string {
@@ -568,37 +577,37 @@ export function HousingTab({ candidateId, housing, captureMode, captureStatus }:
         <Typography variant="subtitle1" sx={{ mb: 2 }}>
           Servicios públicos
         </Typography>
-        <Grid container spacing={2}>
-          {PUBLIC_SERVICE_DEFINITIONS.map((service) => {
-            const active = hasServiceKeyword(housing.publicServices, service.keywords);
-            const Icon = service.icon;
-            return (
-              <Grid key={service.label} size={{ xs: 6, sm: 3 }}>
-                <Stack
-                  alignItems="center"
-                  spacing={0.75}
-                  sx={{
-                    py: 2,
-                    borderRadius: 3,
-                    border: '1px solid',
-                    borderColor: active ? 'primary.main' : 'divider',
-                    bgcolor: active ? (theme) => alpha(theme.palette.primary.main, 0.08) : 'transparent',
-                    opacity: active ? 1 : 0.5,
-                  }}
-                >
-                  <Icon sx={{ fontSize: 30, color: active ? 'primary.main' : 'text.disabled' }} />
-                  <Typography
-                    variant="caption"
-                    fontWeight={600}
-                    color={active ? 'text.primary' : 'text.secondary'}
+        {housing.publicServices.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            Sin servicios públicos registrados
+          </Typography>
+        ) : (
+          <Grid container spacing={2}>
+            {housing.publicServices.map((service) => {
+              const Icon = getPublicServiceIcon(service);
+              return (
+                <Grid key={service} size={{ xs: 6, sm: 4, lg: 2 }}>
+                  <Stack
+                    alignItems="center"
+                    spacing={0.75}
+                    sx={{
+                      py: 2,
+                      borderRadius: 3,
+                      border: '1px solid',
+                      borderColor: 'primary.main',
+                      bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                    }}
                   >
-                    {service.label}
-                  </Typography>
-                </Stack>
-              </Grid>
-            );
-          })}
-        </Grid>
+                    <Icon sx={{ fontSize: 30, color: 'primary.main' }} />
+                    <Typography variant="caption" fontWeight={600} color="text.primary">
+                      {service}
+                    </Typography>
+                  </Stack>
+                </Grid>
+              );
+            })}
+          </Grid>
+        )}
       </Paper>
 
       {housing.hasInfonavitDebt === true ? (
