@@ -5,6 +5,10 @@ export const HEALTHCARE_ACCESS_OPTIONS = ['IMSS', 'ISSSTE', 'Médico particular'
 export const ALCOHOL_TYPE_OPTIONS = ['Licor', 'Vinos', 'Cerveza', 'Cocteles', 'Tequila'] as const;
 export const DIET_QUALITY_OPTIONS = ['Buena', 'Regular', 'Mala'] as const;
 export const PHYSICAL_ACTIVITY_OPTIONS = ['Sedentario', 'Ligera', 'Intensa', 'Atleta'] as const;
+/** Los 4 strings exactos que `classifyCurrentHealth` (healthQualitative.ts) sabe mapear a un % de la barra de progreso — cualquier otro texto cae en el "50% gris" de esa función. */
+export const CURRENT_HEALTH_OPTIONS = ['Excelente', 'Buena', 'Regular', 'Mala'] as const;
+/** Marcador de UI para "Otro" en los checkboxes de healthcareAccess/alcoholTypes — nunca se envía tal cual al backend. */
+export const OTHER_OPTION = 'Otro';
 
 const DECIMAL_REGEX = /^\d{1,3}(\.\d{1,2})?$/;
 const INTEGER_REGEX = /^\d{1,3}$/;
@@ -26,14 +30,20 @@ export const healthFormSchema = z.object({
   height: optionalDecimal('Ingresa una estatura válida'),
   usesGlasses: triState,
   physicalAspect: optionalText(150),
-  currentHealth: optionalText(150),
+  currentHealth: z.enum([...CURRENT_HEALTH_OPTIONS, '']),
   chronicDiseasesFamily: triState,
   chronicDiseasesDetails: optionalText(255),
+  // Tri-estado también aquí: son campos de UI (no viajan al payload), solo
+  // deciden si se muestra/oculta el input de texto de pastDiseases/surgeries.
+  pastDiseasesFlag: triState,
   pastDiseases: optionalText(255),
+  surgeriesFlag: triState,
   surgeries: optionalText(255),
   healthcareAccess: z.array(z.string()),
+  healthcareAccessOther: optionalText(150),
   alcoholFrequency: optionalText(150),
   alcoholTypes: z.array(z.string()),
+  alcoholTypesOther: optionalText(150),
   smokes: triState,
   cigarettesPerDay: z.string().trim().regex(INTEGER_REGEX, 'Ingresa un número entero').optional().or(z.literal('')),
   smokingExpensePerWeek: optionalDecimal('Ingresa un monto válido'),

@@ -3,7 +3,8 @@ import { Cell, Pie, PieChart } from 'recharts';
 
 interface BmiGaugeProps {
   weightKg: number | null;
-  heightM: number | null;
+  /** En centímetros (ej. 170), no metros — se convierte a metros aquí adentro antes de calcular el IMC. */
+  heightCm: number | null;
 }
 
 const GAUGE_WIDTH = 280;
@@ -39,10 +40,10 @@ function getBmiCategory(bmi: number, theme: Theme): { label: string; color: stri
  * que se calcula la posición con trigonometría simple sobre el mismo
  * centro (CENTER_X, CENTER_Y) que usa el Pie.
  */
-export function BmiGauge({ weightKg, heightM }: BmiGaugeProps) {
+export function BmiGauge({ weightKg, heightCm }: BmiGaugeProps) {
   const theme = useTheme();
 
-  if (!weightKg || !heightM) {
+  if (!weightKg || !heightCm) {
     return (
       <Stack alignItems="center" justifyContent="center" sx={{ height: GAUGE_HEIGHT, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
@@ -52,6 +53,9 @@ export function BmiGauge({ weightKg, heightM }: BmiGaugeProps) {
     );
   }
 
+  // `height` se captura en centímetros (ej. 170) — el IMC se calcula en
+  // metros, así que se convierte aquí antes de elevarlo al cuadrado.
+  const heightM = heightCm / 100;
   const bmi = weightKg / (heightM * heightM);
   const category = getBmiCategory(bmi, theme);
 
@@ -119,7 +123,7 @@ export function BmiGauge({ weightKg, heightM }: BmiGaugeProps) {
       </Box>
 
       <Typography variant="body2" color="text.secondary" sx={{ mt: -1 }}>
-        Índice de Masa Corporal ({weightKg} kg / {heightM} m)
+        Índice de Masa Corporal ({weightKg} kg / {heightCm} cm)
       </Typography>
     </Stack>
   );

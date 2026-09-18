@@ -65,8 +65,10 @@ import type {
 } from '../types/candidate.types';
 import {
   ALCOHOL_TYPE_OPTIONS,
+  CURRENT_HEALTH_OPTIONS,
   DIET_QUALITY_OPTIONS,
   HEALTHCARE_ACCESS_OPTIONS,
+  OTHER_OPTION,
   PHYSICAL_ACTIVITY_OPTIONS,
   healthFormSchema,
   type HealthFormValues,
@@ -91,20 +93,53 @@ function pickOption<T extends string>(options: readonly T[], value: string | nul
   return value && (options as readonly string[]).includes(value) ? (value as T) : '';
 }
 
+/**
+ * `healthcareAccess`/`alcoholTypes` ya guardados pueden traer un valor
+ * que no está en la lista de opciones sugeridas (capturado antes de que
+ * existiera el checkbox "Otro", o escrito directo en el backend) — esos
+ * valores se agrupan bajo "Otro" con su texto original preservado, en
+ * vez de perderse o romper el checkbox.
+ */
+function splitKnownAndOther(
+  values: string[],
+  knownOptions: readonly string[],
+): { known: string[]; other: string } {
+  const known = values.filter((value) => knownOptions.includes(value));
+  const otherValues = values.filter((value) => !knownOptions.includes(value));
+  return {
+    known: otherValues.length > 0 ? [...known, OTHER_OPTION] : known,
+    other: otherValues.join(', '),
+  };
+}
+
+/** Inverso de `splitKnownAndOther`: para el payload, "Otro" nunca se envía tal cual — se reemplaza por lo que el reclutador escribió, o se descarta si lo dejó vacío. */
+function resolveOtherOption(values: string[], otherText: string): string[] {
+  if (!values.includes(OTHER_OPTION)) return values;
+  const resolved = values.filter((value) => value !== OTHER_OPTION);
+  const trimmedOther = otherText.trim();
+  return trimmedOther ? [...resolved, trimmedOther] : resolved;
+}
+
 function buildHealthFormDefaults(health: CandidateHealth): HealthFormValues {
+  const healthcareAccess = splitKnownAndOther(health.healthcareAccess, HEALTHCARE_ACCESS_OPTIONS);
+  const alcoholTypes = splitKnownAndOther(health.alcoholTypes, ALCOHOL_TYPE_OPTIONS);
   return {
     weight: toFormNumber(health.weight),
     height: toFormNumber(health.height),
     usesGlasses: toTriState(health.usesGlasses),
     physicalAspect: health.physicalAspect ?? '',
-    currentHealth: health.currentHealth ?? '',
+    currentHealth: pickOption(CURRENT_HEALTH_OPTIONS, health.currentHealth),
     chronicDiseasesFamily: toTriState(health.chronicDiseasesFamily),
     chronicDiseasesDetails: health.chronicDiseasesDetails ?? '',
+    pastDiseasesFlag: isEmptyMedicalText(health.pastDiseases) ? '' : 'yes',
     pastDiseases: health.pastDiseases ?? '',
+    surgeriesFlag: isEmptyMedicalText(health.surgeries) ? '' : 'yes',
     surgeries: health.surgeries ?? '',
-    healthcareAccess: health.healthcareAccess,
+    healthcareAccess: healthcareAccess.known,
+    healthcareAccessOther: healthcareAccess.other,
     alcoholFrequency: health.alcoholFrequency ?? '',
-    alcoholTypes: health.alcoholTypes,
+    alcoholTypes: alcoholTypes.known,
+    alcoholTypesOther: alcoholTypes.other,
     smokes: toTriState(health.smokes),
     cigarettesPerDay: toFormNumber(health.cigarettesPerDay),
     smokingExpensePerWeek: toFormNumber(health.smokingExpensePerWeek),
@@ -146,9 +181,13 @@ function buildHealthPayload(
   if (dirtyFields.chronicDiseasesDetails) payload.chronicDiseasesDetails = values.chronicDiseasesDetails;
   if (dirtyFields.pastDiseases) payload.pastDiseases = values.pastDiseases;
   if (dirtyFields.surgeries) payload.surgeries = values.surgeries;
-  if (dirtyFields.healthcareAccess) payload.healthcareAccess = values.healthcareAccess;
+  if (dirtyFields.healthcareAccess || dirtyFields.healthcareAccessOther) {
+    payload.healthcareAccess = resolveOtherOption(values.healthcareAccess, values.healthcareAccessOther ?? '');
+  }
   if (dirtyFields.alcoholFrequency) payload.alcoholFrequency = values.alcoholFrequency;
-  if (dirtyFields.alcoholTypes) payload.alcoholTypes = values.alcoholTypes;
+  if (dirtyFields.alcoholTypes || dirtyFields.alcoholTypesOther) {
+    payload.alcoholTypes = resolveOtherOption(values.alcoholTypes, values.alcoholTypesOther ?? '');
+  }
   if (dirtyFields.smokes && values.smokes !== '') payload.smokes = values.smokes === 'yes';
   if (dirtyFields.cigarettesPerDay) payload.cigarettesPerDay = toNumberOrUndefined(values.cigarettesPerDay);
   if (dirtyFields.smokingExpensePerWeek) {
@@ -358,6 +397,10 @@ export function HealthTab({ candidateId, health, captureMode, captureStatus }: H
   const smokesValue = watch('smokes');
   const chronicDiseasesFamilyValue = watch('chronicDiseasesFamily');
   const usedDrugsValue = watch('usedDrugs');
+  const pastDiseasesFlagValue = watch('pastDiseasesFlag');
+  const surgeriesFlagValue = watch('surgeriesFlag');
+  const healthcareAccessValue = watch('healthcareAccess');
+  const alcoholTypesValue = watch('alcoholTypes');
 
   function handleStartEditing() {
     reset(buildHealthFormDefaults(health));
@@ -426,7 +469,7 @@ export function HealthTab({ candidateId, health, captureMode, captureStatus }: H
               </Grid>
               <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <TextField
-                  label="Estatura (m)"
+                  label="Estatura (cm)"
                   fullWidth
                   disabled={isSaving}
                   {...register('height')}
@@ -461,13 +504,23 @@ export function HealthTab({ candidateId, health, captureMode, captureStatus }: H
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
+                  select
                   label="Estado de salud actual"
                   fullWidth
                   disabled={isSaving}
                   {...register('currentHealth')}
                   error={!!errors.currentHealth}
                   helperText={errors.currentHealth?.message}
-                />
+                >
+                  <MenuItem value="">
+                    <em>Sin especificar</em>
+                  </MenuItem>
+                  {CURRENT_HEALTH_OPTIONS.map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))}
+                </TextField>
               </Grid>
             </Grid>
           </Paper>
@@ -510,24 +563,68 @@ export function HealthTab({ candidateId, health, captureMode, captureStatus }: H
                 )}
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  label="Enfermedades pasadas"
-                  fullWidth
-                  disabled={isSaving}
-                  {...register('pastDiseases')}
-                  error={!!errors.pastDiseases}
-                  helperText={errors.pastDiseases?.message}
+                <FormLabel id="past-diseases-flag-label">¿Enfermedades pasadas?</FormLabel>
+                <Controller
+                  name="pastDiseasesFlag"
+                  control={control}
+                  render={({ field }) => (
+                    <RadioGroup
+                      row
+                      aria-labelledby="past-diseases-flag-label"
+                      value={field.value}
+                      onChange={(e) => {
+                        field.onChange(e.target.value);
+                        if (e.target.value === 'no') setValue('pastDiseases', '', { shouldDirty: true });
+                      }}
+                    >
+                      <FormControlLabel value="yes" control={<Radio />} label="Sí" disabled={isSaving} />
+                      <FormControlLabel value="no" control={<Radio />} label="No" disabled={isSaving} />
+                    </RadioGroup>
+                  )}
                 />
+                {pastDiseasesFlagValue === 'yes' && (
+                  <TextField
+                    label="¿Cuáles?"
+                    fullWidth
+                    disabled={isSaving}
+                    {...register('pastDiseases')}
+                    error={!!errors.pastDiseases}
+                    helperText={errors.pastDiseases?.message}
+                    sx={{ mt: 1 }}
+                  />
+                )}
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  label="Cirugías"
-                  fullWidth
-                  disabled={isSaving}
-                  {...register('surgeries')}
-                  error={!!errors.surgeries}
-                  helperText={errors.surgeries?.message}
+                <FormLabel id="surgeries-flag-label">¿Cirugías?</FormLabel>
+                <Controller
+                  name="surgeriesFlag"
+                  control={control}
+                  render={({ field }) => (
+                    <RadioGroup
+                      row
+                      aria-labelledby="surgeries-flag-label"
+                      value={field.value}
+                      onChange={(e) => {
+                        field.onChange(e.target.value);
+                        if (e.target.value === 'no') setValue('surgeries', '', { shouldDirty: true });
+                      }}
+                    >
+                      <FormControlLabel value="yes" control={<Radio />} label="Sí" disabled={isSaving} />
+                      <FormControlLabel value="no" control={<Radio />} label="No" disabled={isSaving} />
+                    </RadioGroup>
+                  )}
                 />
+                {surgeriesFlagValue === 'yes' && (
+                  <TextField
+                    label="¿Cuáles?"
+                    fullWidth
+                    disabled={isSaving}
+                    {...register('surgeries')}
+                    error={!!errors.surgeries}
+                    helperText={errors.surgeries?.message}
+                    sx={{ mt: 1 }}
+                  />
+                )}
               </Grid>
             </Grid>
           </Paper>
@@ -541,13 +638,24 @@ export function HealthTab({ candidateId, health, captureMode, captureStatus }: H
               control={control}
               render={({ field }) => (
                 <CheckboxOptionGroup
-                  options={HEALTHCARE_ACCESS_OPTIONS}
+                  options={[...HEALTHCARE_ACCESS_OPTIONS, OTHER_OPTION]}
                   value={field.value}
                   onChange={field.onChange}
                   disabled={isSaving}
                 />
               )}
             />
+            {healthcareAccessValue.includes(OTHER_OPTION) && (
+              <TextField
+                label="Especifica el servicio de salud"
+                fullWidth
+                disabled={isSaving}
+                {...register('healthcareAccessOther')}
+                error={!!errors.healthcareAccessOther}
+                helperText={errors.healthcareAccessOther?.message}
+                sx={{ mt: 1 }}
+              />
+            )}
           </Paper>
 
           <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
@@ -570,13 +678,24 @@ export function HealthTab({ candidateId, health, captureMode, captureStatus }: H
                     control={control}
                     render={({ field }) => (
                       <CheckboxOptionGroup
-                        options={ALCOHOL_TYPE_OPTIONS}
+                        options={[...ALCOHOL_TYPE_OPTIONS, OTHER_OPTION]}
                         value={field.value}
                         onChange={field.onChange}
                         disabled={isSaving}
                       />
                     )}
                   />
+                  {alcoholTypesValue.includes(OTHER_OPTION) && (
+                    <TextField
+                      label="Especifica el tipo de bebida"
+                      fullWidth
+                      disabled={isSaving}
+                      {...register('alcoholTypesOther')}
+                      error={!!errors.alcoholTypesOther}
+                      helperText={errors.alcoholTypesOther?.message}
+                      sx={{ mt: 1 }}
+                    />
+                  )}
                 </Box>
               </Grid>
 
@@ -794,7 +913,7 @@ export function HealthTab({ candidateId, health, captureMode, captureStatus }: H
               <MonitorWeightOutlinedIcon fontSize="small" color="action" />
               <Typography variant="subtitle1">Índice de Masa Corporal</Typography>
             </Stack>
-            <BmiGauge weightKg={health.weight} heightM={health.height} />
+            <BmiGauge weightKg={health.weight} heightCm={health.height} />
           </Paper>
         </Grid>
       </Grid>
