@@ -25,6 +25,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCandidateDetail } from '../hooks/useCandidateDetail';
 import { useGetEvaluations } from '../hooks/useCandidateEvaluations';
+import { useGetEvidence } from '../hooks/useCandidateEvidence';
 import { useCandidateReportPdf } from '../hooks/useCandidateReportPdf';
 import { useCandidateMutations } from '../hooks/useCandidateMutations';
 import { CandidateStatusChip } from './CandidateStatusChip';
@@ -88,6 +89,13 @@ export function CandidateDetailPage() {
   // F5 (antes no, porque dependíamos de un campo `evaluations` que
   // nunca se confirmó que GET /candidates/:id devolviera).
   const evaluationsQuery = useGetEvaluations(id);
+  // Igual que evaluationsQuery: la evidencia de Documentación y Vivienda
+  // no vive embebida en `candidate` (endpoint propio), pero
+  // getMissingDataReport (botón "Finalizar captura") las necesita —
+  // llamados aquí, antes de los `return` tempranos, por las reglas de
+  // hooks de React.
+  const documentEvidenceQuery = useGetEvidence(id, 'DOCUMENT');
+  const housingEvidenceQuery = useGetEvidence(id, 'HOUSING');
   // Llamado antes de los `return` tempranos de abajo (igual que
   // useGetEvaluations): candidate.folio todavía no existe en este punto
   // del render, por eso el hook toma el folio de la respuesta del
@@ -182,7 +190,11 @@ export function CandidateDetailPage() {
   // de confirmación real que ya dispara la mutación.
   function handleFinalizeCaptureClick() {
     if (!candidate) return;
-    const report = getMissingDataReport(candidate);
+    const report = getMissingDataReport(
+      candidate,
+      documentEvidenceQuery.data ?? [],
+      housingEvidenceQuery.data ?? [],
+    );
     if (!report.isComplete) {
       setMissingDataBySection(report.bySection);
       return;

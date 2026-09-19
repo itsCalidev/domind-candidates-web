@@ -1,4 +1,8 @@
-import type { CandidateDetail } from '../types/candidate.types';
+import type { CandidateDetail, EvidencePhoto } from '../types/candidate.types';
+import { DOCUMENT_DEFINITIONS } from './documentCatalog';
+
+/** Mínimo de fotografías de vivienda exigido para poder finalizar la captura. */
+const MIN_HOUSING_EVIDENCE_COUNT = 3;
 
 /**
  * Validador de "Perfil Mínimo Viable" para el botón "Finalizar captura".
@@ -47,7 +51,18 @@ export interface MissingDataReport {
   bySection: Record<string, string[]>;
 }
 
-export function getMissingDataReport(candidate: CandidateDetail): MissingDataReport {
+/**
+ * `documentEvidence`/`housingEvidence`: la evidencia (documentos y fotos
+ * de vivienda) no vive embebida en `CandidateDetail` — es su propio
+ * endpoint (`GET /candidates/:id/evidence?category=...`, ver
+ * `useGetEvidence`). Por eso el llamador (CandidateDetailPage) debe
+ * pasarlas explícitamente, ya obtenidas de esas queries.
+ */
+export function getMissingDataReport(
+  candidate: CandidateDetail,
+  documentEvidence: EvidencePhoto[],
+  housingEvidence: EvidencePhoto[],
+): MissingDataReport {
   const bySection: Record<string, string[]> = {};
 
   function flag(section: string, field: string, missing: boolean) {
@@ -88,6 +103,11 @@ export function getMissingDataReport(candidate: CandidateDetail): MissingDataRep
     flag(SECTION_FAMILY, 'Detalle de cargos políticos', isMissingNullableText(family.politicalPostsDetails));
   }
   flag(SECTION_FAMILY, 'Integrantes de la familia', candidate.familyMembers.length === 0);
+  candidate.familyMembers.forEach((member, index) => {
+    const memberLabel = member.name.trim() || `Integrante #${index + 1}`;
+    flag(SECTION_FAMILY, `Edad de ${memberLabel}`, isMissingNumber(member.age));
+    flag(SECTION_FAMILY, `Ocupación de ${memberLabel}`, isMissingNullableText(member.occupation));
+  });
 
   // ---- Salud ----
   const SECTION_HEALTH = 'Salud';
@@ -144,6 +164,18 @@ export function getMissingDataReport(candidate: CandidateDetail): MissingDataRep
     flag(SECTION_HOUSING, 'Monto de deuda Infonavit', isMissingNumber(housing.infonavitAmount));
     flag(SECTION_HOUSING, 'Número de crédito Infonavit', isMissingNullableText(housing.infonavitCreditNumber));
   }
+  flag(
+    SECTION_HOUSING,
+    `Fotografías de la vivienda (mínimo ${MIN_HOUSING_EVIDENCE_COUNT})`,
+    housingEvidence.length < MIN_HOUSING_EVIDENCE_COUNT,
+  );
+
+  // ---- Documentación ----
+  const SECTION_DOCUMENTS = 'Documentación';
+  DOCUMENT_DEFINITIONS.forEach((definition) => {
+    const isUploaded = documentEvidence.some((evidence) => evidence.documentType === definition.type);
+    flag(SECTION_DOCUMENTS, definition.label, !isUploaded);
+  });
 
   // ---- Economía ----
   const SECTION_ECONOMY = 'Economía';

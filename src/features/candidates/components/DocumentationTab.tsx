@@ -12,6 +12,7 @@ import type {
   DocumentType,
   EvidencePhoto,
 } from '../types/candidate.types';
+import { DOCUMENT_DEFINITIONS } from '../utils/documentCatalog';
 
 interface DocumentationTabProps {
   candidateId: string;
@@ -19,19 +20,8 @@ interface DocumentationTabProps {
   captureStatus: CandidateCaptureStatus;
 }
 
-/**
- * Los 7 documentos esperados del expediente, en el orden dado por el
- * usuario (NSS/RFC agregados después de los 5 originales).
- */
-const DOCUMENT_DEFINITIONS: { type: DocumentType; label: string }[] = [
-  { type: 'INE', label: 'INE' },
-  { type: 'ACTA_NACIMIENTO', label: 'Acta de Nacimiento' },
-  { type: 'COMPROBANTE_DOMICILIO', label: 'Comprobante de Domicilio' },
-  { type: 'ANTECEDENTES_PENALES', label: 'Antecedentes Penales' },
-  { type: 'COMPROBANTE_ESTUDIOS', label: 'Comprobante de Estudios' },
-  { type: 'NSS', label: 'Número de Seguridad Social' },
-  { type: 'RFC', label: 'RFC' },
-];
+// Catálogo movido a utils/documentCatalog.ts para compartirse con el
+// validador de completitud de "Finalizar captura".
 
 const PDF_MAX_BYTES = 1048576; // 1MB — límite exacto dado por el usuario
 const ACCEPTED_FILE_TYPES = 'application/pdf';
