@@ -276,11 +276,14 @@ export function CandidateDetailPage() {
           content: withGrader(
             'ECONOMY',
             <EconomyTab
+              candidateId={candidateId}
               economy={candidate.economy}
               incomes={candidate.incomes}
               vehicles={candidate.vehicles}
               debts={candidate.debts}
               bankCards={candidate.bankCards}
+              captureMode={candidate.captureMode}
+              captureStatus={candidate.captureStatus}
             />,
           ),
         },

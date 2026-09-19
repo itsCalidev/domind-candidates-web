@@ -29,6 +29,7 @@ import type {
   ReportSummaryResponse,
   SectionEvaluation,
   SocialNetworkPayload,
+  UpdateCandidateEconomyPayload,
   UpdateCandidateFamilyPayload,
   Vehicle,
   WorkHistoryEntry,
@@ -578,6 +579,18 @@ export const candidatesService = {
    */
   async updateHousing(id: string, payload: CandidateHousingPayload): Promise<void> {
     await apiClient.patch(`/candidates/${id}/housing`, payload);
+  },
+
+  /**
+   * PATCH /candidates/:id/economy — actualiza Economía Familiar. Contrato
+   * dado directamente por el usuario en el chat: el backend reemplaza
+   * `incomes`/`vehicles`/`debts`/`bankCards` por completo (`deleteMany` +
+   * `create`), así que a diferencia de `updatePersonalInfo`/`updateHealth`
+   * este NO es un PATCH parcial — EconomyTab siempre manda el objeto
+   * completo, incluidos los 4 arreglos enteros.
+   */
+  async updateEconomy(id: string, payload: UpdateCandidateEconomyPayload): Promise<void> {
+    await apiClient.patch(`/candidates/${id}/economy`, payload);
   },
 
   /**

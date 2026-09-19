@@ -348,6 +348,56 @@ export interface CandidateEconomy {
 }
 
 /**
+ * Body de `PATCH /candidates/:id/economy` (contrato dado directamente
+ * por el usuario en el chat). A diferencia de `/personal`/`/health`, este
+ * endpoint hace un reemplazo total de los 4 arreglos (`deleteMany` +
+ * `create` en el backend) — por eso aquí NO hay tipos "Payload" opcionales
+ * por campo: el formulario siempre debe mandar el objeto completo,
+ * incluidos los 4 arreglos enteros, nunca un PATCH parcial.
+ * `expensesTotal` no lo calcula el backend — EconomyTab lo suma a partir
+ * de las 9 categorías de gasto antes de enviarlo.
+ */
+export interface IncomePayload {
+  source: string;
+  amount: number;
+}
+
+export interface VehiclePayload {
+  model: string;
+  value: number;
+}
+
+export interface DebtPayload {
+  creditor: string;
+  amount: number;
+  monthlyPayment: number;
+}
+
+export interface BankCardPayload {
+  bank: string;
+  creditLimit: number;
+}
+
+export interface UpdateCandidateEconomyPayload {
+  expensesFood: number;
+  expensesLight: number;
+  expensesGas: number;
+  expensesPhone: number;
+  expensesTransport: number;
+  expensesEducation: number;
+  expensesMedical: number;
+  expensesRentOther: number;
+  expensesExtra: number;
+  expensesTotal: number;
+  hasOtherIncome: boolean;
+  otherIncomeDetails: string;
+  incomes: IncomePayload[];
+  vehicles: VehiclePayload[];
+  debts: DebtPayload[];
+  bankCards: BankCardPayload[];
+}
+
+/**
  * `familyMembers`, `incomes`, `vehicles`, `debts` y `bankCards` viven en la
  * raíz del objeto candidato en GET /candidates/:id, como arreglos hermanos
  * de `family`/`economy` (no anidados dentro de ellos) — así lo modela la

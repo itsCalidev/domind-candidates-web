@@ -17,6 +17,7 @@ import type {
   PersonalInfoPayload,
   PersonalReferencePayload,
   SocialNetworkPayload,
+  UpdateCandidateEconomyPayload,
   UpdateCandidateFamilyPayload,
   WorkHistoryPayload,
 } from '../types/candidate.types';
@@ -167,6 +168,21 @@ export function useCandidateMutations() {
     },
     onError: (error) => {
       showToast(extractApiErrorMessage(error, 'No se pudo actualizar la vivienda.'), 'error');
+    },
+  });
+
+  // Sin `Partial`, a diferencia de updatePersonalInfo/updateHealth/updateHousing:
+  // el backend reemplaza incomes/vehicles/debts/bankCards por completo en
+  // cada PATCH, así que EconomyTab siempre manda el objeto entero.
+  const updateEconomy = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateCandidateEconomyPayload }) =>
+      candidatesService.updateEconomy(id, payload),
+    onSuccess: () => {
+      showToast('Economía familiar actualizada exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo actualizar la economía familiar.'), 'error');
     },
   });
 
@@ -433,6 +449,7 @@ export function useCandidateMutations() {
     updateFamily,
     updateHealth,
     updateHousing,
+    updateEconomy,
     getReportSummary,
     evaluateSection,
     createWorkHistory,
