@@ -144,6 +144,9 @@ interface RawEconomy {
   expensesExtra?: number | null;
   expensesTotal?: number | null;
   hasOtherExpenses?: boolean | null;
+  hasVehicles?: boolean | null;
+  hasBankCards?: boolean | null;
+  hasDebts?: boolean | null;
 }
 
 /** Shape crudo de cada fila de `otherExpenses` — mismo criterio que RawFamilyMember/RawWorkHistoryEntry. */
@@ -429,6 +432,9 @@ export const candidatesService = {
         expensesExtra: data.economy?.expensesExtra ?? null,
         expensesTotal: data.economy?.expensesTotal ?? null,
         hasOtherExpenses: data.economy?.hasOtherExpenses ?? null,
+        hasVehicles: data.economy?.hasVehicles ?? null,
+        hasBankCards: data.economy?.hasBankCards ?? null,
+        hasDebts: data.economy?.hasDebts ?? null,
       },
       incomes: data.incomes ?? [],
       vehicles: data.vehicles ?? [],

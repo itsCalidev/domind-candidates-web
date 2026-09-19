@@ -7,6 +7,7 @@ import { useCandidateMutations } from '../hooks/useCandidateMutations';
 import type { CandidateCaptureStatus, CandidateGeneralInfo, PersonalInfoPayload } from '../types/candidate.types';
 import {
   HIGHEST_EDUCATION_OPTIONS,
+  MARITAL_STATUSES_WITH_SPOUSE,
   STUDIES_PROOF_TYPE_OPTIONS,
   maxBirthDateForAdult,
   personalInfoSchema,
@@ -142,11 +143,16 @@ export function GeneralInfoTab({ candidateId, info, captureStatus }: GeneralInfo
     control,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isDirty, dirtyFields },
   } = useForm<PersonalInfoFormValues>({
     resolver: zodResolver(personalInfoSchema),
     defaultValues: buildFormDefaults(info),
   });
+
+  const maritalStatusValue = watch('maritalStatus');
+  const spouseApplies = (MARITAL_STATUSES_WITH_SPOUSE as readonly string[]).includes(maritalStatusValue ?? '');
 
   function handleStartEditing() {
     reset(buildFormDefaults(info));
@@ -222,6 +228,12 @@ export function GeneralInfoTab({ candidateId, info, captureStatus }: GeneralInfo
                   disabled={isSaving}
                   error={!!errors.maritalStatus}
                   helperText={errors.maritalStatus?.message}
+                  onChange={(e) => {
+                    field.onChange(e);
+                    if (!(MARITAL_STATUSES_WITH_SPOUSE as readonly string[]).includes(e.target.value)) {
+                      setValue('spouseBirthDate', '', { shouldDirty: true });
+                    }
+                  }}
                 >
                   <MenuItem value="">
                     <em>Sin especificar</em>
@@ -313,21 +325,23 @@ export function GeneralInfoTab({ candidateId, info, captureStatus }: GeneralInfo
               helperText={errors.birthPlace?.message}
             />
           </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <TextField
-              label="Fecha Nac. Cónyuge"
-              type="date"
-              fullWidth
-              disabled={isSaving}
-              {...register('spouseBirthDate')}
-              error={!!errors.spouseBirthDate}
-              helperText={errors.spouseBirthDate?.message}
-              slotProps={{
-                inputLabel: { shrink: true },
-                htmlInput: { max: maxBirthDateForAdult() },
-              }}
-            />
-          </Grid>
+          {spouseApplies && (
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <TextField
+                label="Fecha Nac. Cónyuge"
+                type="date"
+                fullWidth
+                disabled={isSaving}
+                {...register('spouseBirthDate')}
+                error={!!errors.spouseBirthDate}
+                helperText={errors.spouseBirthDate?.message}
+                slotProps={{
+                  inputLabel: { shrink: true },
+                  htmlInput: { max: maxBirthDateForAdult() },
+                }}
+              />
+            </Grid>
+          )}
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <Controller
               name="highestEducation"

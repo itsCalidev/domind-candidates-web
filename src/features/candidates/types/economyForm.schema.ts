@@ -62,6 +62,11 @@ export const economyFormSchema = z.object({
   expensesRentOther: amountField(),
   expensesExtra: amountField(),
   hasOtherExpenses: z.enum(['yes', 'no']),
+  // Mismo criterio que hasOtherExpenses: 'yes'/'no' binario, condicionan
+  // si su arreglo respectivo se muestra/envía o se manda vacío.
+  hasVehicles: z.enum(['yes', 'no']),
+  hasBankCards: z.enum(['yes', 'no']),
+  hasDebts: z.enum(['yes', 'no']),
   incomes: z.array(incomeItemSchema),
   vehicles: z.array(vehicleItemSchema),
   debts: z.array(debtItemSchema),

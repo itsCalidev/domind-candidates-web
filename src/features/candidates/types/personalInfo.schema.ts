@@ -57,7 +57,10 @@ export const STUDIES_PROOF_TYPE_OPTIONS = ['Certificado', 'Título', 'Constancia
  * que cada uno acepta `''` y solo valida formato/longitud cuando sí trae
  * un valor.
  */
-export const personalInfoSchema = z.object({
+/** `maritalStatus` para los que el cónyuge sí aplica — mismos códigos que usa el backend (MaritalStatus enum), no las etiquetas en español. */
+export const MARITAL_STATUSES_WITH_SPOUSE = ['MARRIED', 'FREE_UNION'] as const;
+
+const baseSchema = z.object({
   firstName: z.string().trim().min(1, 'El nombre es obligatorio').max(150, 'Máximo 150 caracteres'),
   lastName: z.string().trim().min(1, 'El apellido es obligatorio').max(150, 'Máximo 150 caracteres'),
   email: z
@@ -105,4 +108,22 @@ export const personalInfoSchema = z.object({
   positionName: z.string().trim().max(150, 'Máximo 150 caracteres'),
 });
 
-export type PersonalInfoFormValues = z.infer<typeof personalInfoSchema>;
+/**
+ * `spouseBirthDate` solo es obligatorio cuando `maritalStatus` es
+ * 'MARRIED' o 'FREE_UNION' — para el resto de los estados civiles (o sin
+ * especificar) el campo ni siquiera se muestra en el formulario
+ * (GeneralInfoTab lo limpia por UI al cambiar de estado civil), así que
+ * aquí tampoco se exige.
+ */
+export const personalInfoSchema = baseSchema.superRefine((data, ctx) => {
+  const spouseApplies = (MARITAL_STATUSES_WITH_SPOUSE as readonly string[]).includes(data.maritalStatus ?? '');
+  if (spouseApplies && !data.spouseBirthDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['spouseBirthDate'],
+      message: 'La fecha de nacimiento del cónyuge es obligatoria',
+    });
+  }
+});
+
+export type PersonalInfoFormValues = z.infer<typeof baseSchema>;

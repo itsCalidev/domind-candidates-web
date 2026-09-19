@@ -3,6 +3,9 @@ import {
   Box,
   Button,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
   IconButton,
   LinearProgress,
   Skeleton,
@@ -17,6 +20,7 @@ import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined
 import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
 import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined';
 import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined';
+import ErrorOutlineOutlinedIcon from '@mui/icons-material/ErrorOutlineOutlined';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCandidateDetail } from '../hooks/useCandidateDetail';
@@ -40,6 +44,8 @@ import { SectionGrader } from './SectionGrader';
 import { AssignRecruiterDialog } from './AssignRecruiterDialog';
 import { UpdateCandidateStatusDialog } from './UpdateCandidateStatusDialog';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
+import { DialogHeader, dialogPaperSx } from '@/shared/components/DialogHeader';
+import { getMissingDataReport } from '../utils/candidateCompleteness';
 import {
   getValidStatusTransitions,
   REPORT_AVAILABLE_STATUSES,
@@ -73,6 +79,7 @@ export function CandidateDetailPage() {
   const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [isFinalizeCaptureOpen, setIsFinalizeCaptureOpen] = useState(false);
+  const [missingDataBySection, setMissingDataBySection] = useState<Record<string, string[]> | null>(null);
   const { updateCaptureStatus } = useCandidateMutations();
   const { user } = useAuth();
   const canAssignRecruiter = hasFullAccess(user?.role);
@@ -168,6 +175,20 @@ export function CandidateDetailPage() {
   // COMPLETED, o si el candidato se autollenó por Magic Link, esta
   // acción deja de tener sentido.
   const canFinalizeCapture = candidate.captureMode === 'MANUAL' && candidate.captureStatus === 'DRAFT';
+
+  // El botón siempre queda visible/habilitado (mientras canFinalizeCapture
+  // sea true) — la validación de completitud no lo deshabilita, solo
+  // decide qué diálogo abrir al hacer clic: el de datos faltantes, o el
+  // de confirmación real que ya dispara la mutación.
+  function handleFinalizeCaptureClick() {
+    if (!candidate) return;
+    const report = getMissingDataReport(candidate);
+    if (!report.isComplete) {
+      setMissingDataBySection(report.bySection);
+      return;
+    }
+    setIsFinalizeCaptureOpen(true);
+  }
 
   function handleFinalizeCapture() {
     updateCaptureStatus.mutate(
@@ -414,7 +435,7 @@ export function CandidateDetailPage() {
             size="small"
             variant="contained"
             startIcon={<TaskAltOutlinedIcon fontSize="small" />}
-            onClick={() => setIsFinalizeCaptureOpen(true)}
+            onClick={handleFinalizeCaptureClick}
             disabled={updateCaptureStatus.isPending}
           >
             Finalizar captura
@@ -513,6 +534,46 @@ export function CandidateDetailPage() {
         onConfirm={handleFinalizeCapture}
         onClose={() => setIsFinalizeCaptureOpen(false)}
       />
+
+      <Dialog
+        open={!!missingDataBySection}
+        onClose={() => setMissingDataBySection(null)}
+        maxWidth="xs"
+        fullWidth
+        slotProps={{ paper: { sx: dialogPaperSx } }}
+      >
+        <DialogHeader
+          icon={<ErrorOutlineOutlinedIcon fontSize="small" />}
+          title="No puedes finalizar"
+          color="error"
+          onClose={() => setMissingDataBySection(null)}
+        />
+        <DialogContent sx={{ px: 4, pb: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Faltan los siguientes datos:
+          </Typography>
+          <Stack spacing={1.5}>
+            {missingDataBySection &&
+              Object.entries(missingDataBySection).map(([section, fields]) => (
+                <Box key={section}>
+                  <Typography variant="body2" fontWeight={700}>
+                    {section}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {fields.join(', ')}
+                  </Typography>
+                </Box>
+              ))}
+          </Stack>
+        </DialogContent>
+        <DialogActions
+          sx={{ px: 4, pb: 3, pt: 2, gap: 1, mt: 1, borderTop: '1px solid', borderColor: 'divider' }}
+        >
+          <Button onClick={() => setMissingDataBySection(null)} variant="contained">
+            Entendido
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Fuera de pantalla a propósito (ver useCandidateReportPdf): html2canvas
           necesita el nodo con layout real, así que no puede ser display:none ni

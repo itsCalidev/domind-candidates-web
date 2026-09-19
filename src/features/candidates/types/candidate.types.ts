@@ -356,6 +356,10 @@ export interface CandidateEconomy {
   expensesExtra: number | null;
   expensesTotal: number | null;
   hasOtherExpenses: boolean | null;
+  /** Confirmados por el usuario en el chat: mismo criterio que `hasOtherExpenses`, condicionan si sus arreglos respectivos (vehicles/bankCards/debts) aplican. */
+  hasVehicles: boolean | null;
+  hasBankCards: boolean | null;
+  hasDebts: boolean | null;
 }
 
 /**
@@ -406,6 +410,9 @@ export interface UpdateCandidateEconomyPayload {
   expensesExtra: number;
   expensesTotal: number;
   hasOtherExpenses: boolean;
+  hasVehicles: boolean;
+  hasBankCards: boolean;
+  hasDebts: boolean;
   incomes: IncomePayload[];
   vehicles: VehiclePayload[];
   debts: DebtPayload[];

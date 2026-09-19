@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Controller, useFieldArray, useForm } from 'react-hook-form';
+import { Controller, useFieldArray, useForm, type Control } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Box,
@@ -154,6 +154,9 @@ function buildEconomyFormDefaults(
     expensesRentOther: economy.expensesRentOther === null ? '' : String(economy.expensesRentOther),
     expensesExtra: economy.expensesExtra === null ? '' : String(economy.expensesExtra),
     hasOtherExpenses: economy.hasOtherExpenses ? 'yes' : 'no',
+    hasVehicles: economy.hasVehicles ? 'yes' : 'no',
+    hasBankCards: economy.hasBankCards ? 'yes' : 'no',
+    hasDebts: economy.hasDebts ? 'yes' : 'no',
     incomes: incomes.map((income) => ({ source: income.source, amount: toFormAmount(income.amount) })),
     vehicles: vehicles.map((vehicle) => ({ model: vehicle.model, value: toFormAmount(vehicle.value) })),
     debts: debts.map((debt) => ({
@@ -208,14 +211,26 @@ function buildEconomyPayload(values: EconomyFormValues): UpdateCandidateEconomyP
       expensesRentOther +
       expensesExtra,
     hasOtherExpenses: values.hasOtherExpenses === 'yes',
+    hasVehicles: values.hasVehicles === 'yes',
+    hasBankCards: values.hasBankCards === 'yes',
+    hasDebts: values.hasDebts === 'yes',
     incomes: values.incomes.map((income) => ({ source: income.source, amount: toNumber(income.amount) })),
-    vehicles: values.vehicles.map((vehicle) => ({ model: vehicle.model, value: toNumber(vehicle.value) })),
-    debts: values.debts.map((debt) => ({
-      creditor: debt.creditor,
-      amount: toNumber(debt.amount),
-      monthlyPayment: toNumber(debt.monthlyPayment),
-    })),
-    bankCards: values.bankCards.map((card) => ({ bank: card.bank, creditLimit: toNumber(card.creditLimit) })),
+    vehicles:
+      values.hasVehicles === 'yes'
+        ? values.vehicles.map((vehicle) => ({ model: vehicle.model, value: toNumber(vehicle.value) }))
+        : [],
+    debts:
+      values.hasDebts === 'yes'
+        ? values.debts.map((debt) => ({
+            creditor: debt.creditor,
+            amount: toNumber(debt.amount),
+            monthlyPayment: toNumber(debt.monthlyPayment),
+          }))
+        : [],
+    bankCards:
+      values.hasBankCards === 'yes'
+        ? values.bankCards.map((card) => ({ bank: card.bank, creditLimit: toNumber(card.creditLimit) }))
+        : [],
     otherExpenses:
       values.hasOtherExpenses === 'yes'
         ? values.otherExpenses.map((expense) => ({ concept: expense.concept, amount: toNumber(expense.amount) }))
@@ -224,6 +239,51 @@ function buildEconomyPayload(values: EconomyFormValues): UpdateCandidateEconomyP
 }
 
 /** Envoltura común de las 4 tablas dinámicas: título, botón "Agregar fila" y estado vacío — cada tabla solo aporta sus propias filas como children. */
+/**
+ * RadioGroup Sí/No compartido por Vehículos/Tarjetas/Deudas — al pasar a
+ * "No" vacía el arreglo correspondiente de inmediato (mismo criterio que
+ * `hasOtherExpenses` con `otherExpensesArray.replace([])`).
+ */
+function HasItemsToggle({
+  labelId,
+  question,
+  name,
+  control,
+  disabled,
+  onClear,
+}: {
+  labelId: string;
+  question: string;
+  name: 'hasVehicles' | 'hasBankCards' | 'hasDebts';
+  control: Control<EconomyFormValues>;
+  disabled: boolean;
+  onClear: () => void;
+}) {
+  return (
+    <Paper elevation={0} sx={{ p: 2.5, borderRadius: 3 }}>
+      <FormLabel id={labelId}>{question}</FormLabel>
+      <Controller
+        name={name}
+        control={control}
+        render={({ field }) => (
+          <RadioGroup
+            row
+            aria-labelledby={labelId}
+            value={field.value}
+            onChange={(e) => {
+              field.onChange(e.target.value);
+              if (e.target.value === 'no') onClear();
+            }}
+          >
+            <FormControlLabel value="yes" control={<Radio />} label="Sí" disabled={disabled} />
+            <FormControlLabel value="no" control={<Radio />} label="No" disabled={disabled} />
+          </RadioGroup>
+        )}
+      />
+    </Paper>
+  );
+}
+
 function DynamicListSection({
   icon,
   title,
@@ -308,6 +368,9 @@ export function EconomyTab({
   const otherExpensesArray = useFieldArray({ control, name: 'otherExpenses' });
 
   const hasOtherExpensesValue = watch('hasOtherExpenses');
+  const hasVehiclesValue = watch('hasVehicles');
+  const hasBankCardsValue = watch('hasBankCards');
+  const hasDebtsValue = watch('hasDebts');
   const expenseValues = watch(EXPENSE_FORM_FIELDS);
   const calculatedTotal = expenseValues.reduce((sum, value) => sum + toNumber(value), 0);
 
@@ -484,104 +547,138 @@ export function EconomyTab({
 
           <Grid container spacing={3}>
             <Grid size={{ xs: 12, md: 6 }}>
-              <DynamicListSection
-                icon={<DirectionsCarFilledOutlinedIcon fontSize="small" color="action" />}
-                title="Vehículos"
-                addLabel="Agregar fila"
-                disabled={isSaving}
-                onAdd={() => vehiclesArray.append({ model: '', value: '' })}
-                isEmpty={vehiclesArray.fields.length === 0}
-                emptyMessage='No hay vehículos agregados. Usa "Agregar fila" para capturar uno.'
-              >
-                {vehiclesArray.fields.map((field, index) => (
-                  <Paper key={field.id} variant="outlined" sx={{ p: 2, borderRadius: 2, position: 'relative' }}>
-                    <IconButton
-                      size="small"
-                      aria-label="Eliminar vehículo"
-                      disabled={isSaving}
-                      onClick={() => vehiclesArray.remove(index)}
-                      sx={{ position: 'absolute', top: 8, right: 8 }}
-                    >
-                      <DeleteForeverOutlinedIcon fontSize="small" color="error" />
-                    </IconButton>
-                    <Grid container spacing={2} sx={{ pr: 4 }}>
-                      <Grid size={{ xs: 12, sm: 7 }}>
-                        <TextField
-                          label="Modelo"
-                          fullWidth
+              <Stack spacing={2}>
+                <HasItemsToggle
+                  labelId="has-vehicles-label"
+                  question="¿Tiene vehículos?"
+                  name="hasVehicles"
+                  control={control}
+                  disabled={isSaving}
+                  onClear={() => vehiclesArray.replace([])}
+                />
+                {hasVehiclesValue === 'yes' && (
+                  <DynamicListSection
+                    icon={<DirectionsCarFilledOutlinedIcon fontSize="small" color="action" />}
+                    title="Vehículos"
+                    addLabel="Agregar fila"
+                    disabled={isSaving}
+                    onAdd={() => vehiclesArray.append({ model: '', value: '' })}
+                    isEmpty={vehiclesArray.fields.length === 0}
+                    emptyMessage='No hay vehículos agregados. Usa "Agregar fila" para capturar uno.'
+                  >
+                    {vehiclesArray.fields.map((field, index) => (
+                      <Paper key={field.id} variant="outlined" sx={{ p: 2, borderRadius: 2, position: 'relative' }}>
+                        <IconButton
+                          size="small"
+                          aria-label="Eliminar vehículo"
                           disabled={isSaving}
-                          {...register(`vehicles.${index}.model`)}
-                          error={!!errors.vehicles?.[index]?.model}
-                          helperText={errors.vehicles?.[index]?.model?.message}
-                        />
-                      </Grid>
-                      <Grid size={{ xs: 12, sm: 5 }}>
-                        <TextField
-                          label="Valor"
-                          fullWidth
-                          disabled={isSaving}
-                          slotProps={currencySlotProps}
-                          {...register(`vehicles.${index}.value`)}
-                          error={!!errors.vehicles?.[index]?.value}
-                          helperText={errors.vehicles?.[index]?.value?.message}
-                        />
-                      </Grid>
-                    </Grid>
-                  </Paper>
-                ))}
-              </DynamicListSection>
+                          onClick={() => vehiclesArray.remove(index)}
+                          sx={{ position: 'absolute', top: 8, right: 8 }}
+                        >
+                          <DeleteForeverOutlinedIcon fontSize="small" color="error" />
+                        </IconButton>
+                        <Grid container spacing={2} sx={{ pr: 4 }}>
+                          <Grid size={{ xs: 12, sm: 7 }}>
+                            <TextField
+                              label="Modelo"
+                              fullWidth
+                              disabled={isSaving}
+                              {...register(`vehicles.${index}.model`)}
+                              error={!!errors.vehicles?.[index]?.model}
+                              helperText={errors.vehicles?.[index]?.model?.message}
+                            />
+                          </Grid>
+                          <Grid size={{ xs: 12, sm: 5 }}>
+                            <TextField
+                              label="Valor"
+                              fullWidth
+                              disabled={isSaving}
+                              slotProps={currencySlotProps}
+                              {...register(`vehicles.${index}.value`)}
+                              error={!!errors.vehicles?.[index]?.value}
+                              helperText={errors.vehicles?.[index]?.value?.message}
+                            />
+                          </Grid>
+                        </Grid>
+                      </Paper>
+                    ))}
+                  </DynamicListSection>
+                )}
+              </Stack>
             </Grid>
 
             <Grid size={{ xs: 12, md: 6 }}>
-              <DynamicListSection
-                icon={<CreditCardOutlinedIcon fontSize="small" color="action" />}
-                title="Tarjetas bancarias"
-                addLabel="Agregar fila"
-                disabled={isSaving}
-                onAdd={() => bankCardsArray.append({ bank: '', creditLimit: '' })}
-                isEmpty={bankCardsArray.fields.length === 0}
-                emptyMessage='No hay tarjetas agregadas. Usa "Agregar fila" para capturar una.'
-              >
-                {bankCardsArray.fields.map((field, index) => (
-                  <Paper key={field.id} variant="outlined" sx={{ p: 2, borderRadius: 2, position: 'relative' }}>
-                    <IconButton
-                      size="small"
-                      aria-label="Eliminar tarjeta"
-                      disabled={isSaving}
-                      onClick={() => bankCardsArray.remove(index)}
-                      sx={{ position: 'absolute', top: 8, right: 8 }}
-                    >
-                      <DeleteForeverOutlinedIcon fontSize="small" color="error" />
-                    </IconButton>
-                    <Grid container spacing={2} sx={{ pr: 4 }}>
-                      <Grid size={{ xs: 12, sm: 7 }}>
-                        <TextField
-                          label="Banco"
-                          fullWidth
+              <Stack spacing={2}>
+                <HasItemsToggle
+                  labelId="has-bank-cards-label"
+                  question="¿Tiene tarjetas bancarias?"
+                  name="hasBankCards"
+                  control={control}
+                  disabled={isSaving}
+                  onClear={() => bankCardsArray.replace([])}
+                />
+                {hasBankCardsValue === 'yes' && (
+                  <DynamicListSection
+                    icon={<CreditCardOutlinedIcon fontSize="small" color="action" />}
+                    title="Tarjetas bancarias"
+                    addLabel="Agregar fila"
+                    disabled={isSaving}
+                    onAdd={() => bankCardsArray.append({ bank: '', creditLimit: '' })}
+                    isEmpty={bankCardsArray.fields.length === 0}
+                    emptyMessage='No hay tarjetas agregadas. Usa "Agregar fila" para capturar una.'
+                  >
+                    {bankCardsArray.fields.map((field, index) => (
+                      <Paper key={field.id} variant="outlined" sx={{ p: 2, borderRadius: 2, position: 'relative' }}>
+                        <IconButton
+                          size="small"
+                          aria-label="Eliminar tarjeta"
                           disabled={isSaving}
-                          {...register(`bankCards.${index}.bank`)}
-                          error={!!errors.bankCards?.[index]?.bank}
-                          helperText={errors.bankCards?.[index]?.bank?.message}
-                        />
-                      </Grid>
-                      <Grid size={{ xs: 12, sm: 5 }}>
-                        <TextField
-                          label="Límite de crédito"
-                          fullWidth
-                          disabled={isSaving}
-                          slotProps={currencySlotProps}
-                          {...register(`bankCards.${index}.creditLimit`)}
-                          error={!!errors.bankCards?.[index]?.creditLimit}
-                          helperText={errors.bankCards?.[index]?.creditLimit?.message}
-                        />
-                      </Grid>
-                    </Grid>
-                  </Paper>
-                ))}
-              </DynamicListSection>
+                          onClick={() => bankCardsArray.remove(index)}
+                          sx={{ position: 'absolute', top: 8, right: 8 }}
+                        >
+                          <DeleteForeverOutlinedIcon fontSize="small" color="error" />
+                        </IconButton>
+                        <Grid container spacing={2} sx={{ pr: 4 }}>
+                          <Grid size={{ xs: 12, sm: 7 }}>
+                            <TextField
+                              label="Banco"
+                              fullWidth
+                              disabled={isSaving}
+                              {...register(`bankCards.${index}.bank`)}
+                              error={!!errors.bankCards?.[index]?.bank}
+                              helperText={errors.bankCards?.[index]?.bank?.message}
+                            />
+                          </Grid>
+                          <Grid size={{ xs: 12, sm: 5 }}>
+                            <TextField
+                              label="Límite de crédito"
+                              fullWidth
+                              disabled={isSaving}
+                              slotProps={currencySlotProps}
+                              {...register(`bankCards.${index}.creditLimit`)}
+                              error={!!errors.bankCards?.[index]?.creditLimit}
+                              helperText={errors.bankCards?.[index]?.creditLimit?.message}
+                            />
+                          </Grid>
+                        </Grid>
+                      </Paper>
+                    ))}
+                  </DynamicListSection>
+                )}
+              </Stack>
             </Grid>
           </Grid>
 
+          <HasItemsToggle
+            labelId="has-debts-label"
+            question="¿Tiene deudas?"
+            name="hasDebts"
+            control={control}
+            disabled={isSaving}
+            onClear={() => debtsArray.replace([])}
+          />
+
+          {hasDebtsValue === 'yes' && (
           <DynamicListSection
             icon={<RequestQuoteOutlinedIcon fontSize="small" color="action" />}
             title="Deudas"
@@ -639,6 +736,7 @@ export function EconomyTab({
               </Paper>
             ))}
           </DynamicListSection>
+          )}
 
           <Stack direction="row" spacing={1}>
             <Button type="submit" variant="contained" size="small" disabled={isSaving}>
