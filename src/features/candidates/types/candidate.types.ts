@@ -332,6 +332,18 @@ export interface BankCard {
   creditLimit: number;
 }
 
+/**
+ * Reemplaza a `hasOtherIncome`/`otherIncomeDetails` — el usuario confirmó
+ * en el chat que el backend quitó esos 2 campos de `CandidateEconomy` y
+ * los sustituyó por `hasOtherExpenses` (boolean) + una tabla relacional
+ * nueva `CandidateOtherExpense` (mismo patrón que Income/Vehicle/Debt/
+ * BankCard: reemplazo total vía `deleteMany` + `create`).
+ */
+export interface OtherExpense {
+  concept: string;
+  amount: number;
+}
+
 export interface CandidateEconomy {
   expensesFood: number | null;
   expensesLight: number | null;
@@ -343,8 +355,7 @@ export interface CandidateEconomy {
   expensesRentOther: number | null;
   expensesExtra: number | null;
   expensesTotal: number | null;
-  hasOtherIncome: boolean | null;
-  otherIncomeDetails: string | null;
+  hasOtherExpenses: boolean | null;
 }
 
 /**
@@ -378,6 +389,11 @@ export interface BankCardPayload {
   creditLimit: number;
 }
 
+export interface OtherExpensePayload {
+  concept: string;
+  amount: number;
+}
+
 export interface UpdateCandidateEconomyPayload {
   expensesFood: number;
   expensesLight: number;
@@ -389,12 +405,12 @@ export interface UpdateCandidateEconomyPayload {
   expensesRentOther: number;
   expensesExtra: number;
   expensesTotal: number;
-  hasOtherIncome: boolean;
-  otherIncomeDetails: string;
+  hasOtherExpenses: boolean;
   incomes: IncomePayload[];
   vehicles: VehiclePayload[];
   debts: DebtPayload[];
   bankCards: BankCardPayload[];
+  otherExpenses: OtherExpensePayload[];
 }
 
 /**
@@ -414,6 +430,8 @@ export interface CandidateDetail extends CandidateListItem {
   vehicles: Vehicle[];
   debts: Debt[];
   bankCards: BankCard[];
+  /** Arreglo raíz `otherExpenses`, mismo patrón que incomes/vehicles/debts/bankCards — agregado a `candidateDetailSelect` junto con este campo, confirmado por el usuario. */
+  otherExpenses: OtherExpense[];
   /** Arreglo raíz `workHistories` (plural) — nombre de campo confirmado por el usuario. */
   workHistories: WorkHistoryEntry[];
   /** Arreglos raíz `personalReferences`/`neighborhoodReferences` — nombres confirmados por el usuario. */

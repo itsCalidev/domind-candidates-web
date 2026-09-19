@@ -143,8 +143,13 @@ interface RawEconomy {
   expensesRentOther?: number | null;
   expensesExtra?: number | null;
   expensesTotal?: number | null;
-  hasOtherIncome?: boolean | null;
-  otherIncomeDetails?: string | null;
+  hasOtherExpenses?: boolean | null;
+}
+
+/** Shape crudo de cada fila de `otherExpenses` — mismo criterio que RawFamilyMember/RawWorkHistoryEntry. */
+interface RawOtherExpense {
+  concept?: string | null;
+  amount?: number | null;
 }
 
 interface RawFamilyMember {
@@ -252,6 +257,7 @@ interface BackendCandidateDetail extends DetailedCandidateList {
   vehicles?: Vehicle[];
   debts?: Debt[];
   bankCards?: BankCard[];
+  otherExpenses?: RawOtherExpense[];
   workHistories?: RawWorkHistoryEntry[];
   personalReferences?: RawPersonalReferenceEntry[];
   neighborhoodReferences?: RawNeighborhoodReferenceEntry[];
@@ -422,13 +428,16 @@ export const candidatesService = {
         expensesRentOther: data.economy?.expensesRentOther ?? null,
         expensesExtra: data.economy?.expensesExtra ?? null,
         expensesTotal: data.economy?.expensesTotal ?? null,
-        hasOtherIncome: data.economy?.hasOtherIncome ?? null,
-        otherIncomeDetails: data.economy?.otherIncomeDetails ?? null,
+        hasOtherExpenses: data.economy?.hasOtherExpenses ?? null,
       },
       incomes: data.incomes ?? [],
       vehicles: data.vehicles ?? [],
       debts: data.debts ?? [],
       bankCards: data.bankCards ?? [],
+      otherExpenses: (data.otherExpenses ?? []).map((entry) => ({
+        concept: entry.concept ?? '',
+        amount: entry.amount ?? 0,
+      })),
       workHistories: (data.workHistories ?? []).map((entry) => ({
         id: entry.id,
         companyName: entry.companyName ?? '',

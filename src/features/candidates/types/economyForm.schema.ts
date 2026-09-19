@@ -27,6 +27,17 @@ const bankCardItemSchema = z.object({
 });
 
 /**
+ * `otherExpenses` reemplaza al viejo `otherIncomeDetails` de texto libre
+ * — el usuario confirmó que el backend cambió `hasOtherIncome`/
+ * `otherIncomeDetails` por `hasOtherExpenses` + una tabla relacional
+ * `concept`/`amount`, mismo patrón que incomes/vehicles/debts/bankCards.
+ */
+const otherExpenseItemSchema = z.object({
+  concept: z.string().trim().min(1, 'El nombre del egreso es obligatorio').max(150, 'Máximo 150 caracteres'),
+  amount: amountField(),
+});
+
+/**
  * Formulario de edición de Economía Familiar. Los montos viajan como
  * string (lo que produce un input controlado por react-hook-form) y se
  * convierten a `number` recién al construir el payload — mismo criterio
@@ -34,10 +45,11 @@ const bankCardItemSchema = z.object({
  * campo del formulario: EconomyTab lo calcula sumando las 9 categorías
  * de gasto justo antes de enviarlo, nunca lo captura el usuario a mano.
  *
- * `hasOtherIncome` es `'yes' | 'no'` (no tri-estado): a diferencia de las
- * preguntas de riesgo de Salud/Familia, este PATCH siempre reemplaza el
- * objeto entero (confirmado por el usuario), así que no existe un envío
- * parcial donde "sin responder" tenga sentido — hay que mandar sí o no.
+ * `hasOtherExpenses` es `'yes' | 'no'` (no tri-estado): a diferencia de
+ * las preguntas de riesgo de Salud/Familia, este PATCH siempre reemplaza
+ * el objeto entero (confirmado por el usuario), así que no existe un
+ * envío parcial donde "sin responder" tenga sentido — hay que mandar sí
+ * o no. Al pasar a "No", EconomyTab vacía `otherExpenses` por completo.
  */
 export const economyFormSchema = z.object({
   expensesFood: amountField(),
@@ -49,12 +61,12 @@ export const economyFormSchema = z.object({
   expensesMedical: amountField(),
   expensesRentOther: amountField(),
   expensesExtra: amountField(),
-  hasOtherIncome: z.enum(['yes', 'no']),
-  otherIncomeDetails: z.string().trim().max(255, 'Máximo 255 caracteres').optional().or(z.literal('')),
+  hasOtherExpenses: z.enum(['yes', 'no']),
   incomes: z.array(incomeItemSchema),
   vehicles: z.array(vehicleItemSchema),
   debts: z.array(debtItemSchema),
   bankCards: z.array(bankCardItemSchema),
+  otherExpenses: z.array(otherExpenseItemSchema),
 });
 
 export type EconomyFormValues = z.infer<typeof economyFormSchema>;

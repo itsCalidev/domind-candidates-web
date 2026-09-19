@@ -282,6 +282,7 @@ export function CandidateDetailPage() {
               vehicles={candidate.vehicles}
               debts={candidate.debts}
               bankCards={candidate.bankCards}
+              otherExpenses={candidate.otherExpenses}
               captureMode={candidate.captureMode}
               captureStatus={candidate.captureStatus}
             />,

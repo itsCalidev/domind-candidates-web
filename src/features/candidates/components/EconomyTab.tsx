@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { useFieldArray, useForm } from 'react-hook-form';
+import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Box,
@@ -8,6 +8,7 @@ import {
   FormLabel,
   Grid,
   IconButton,
+  InputAdornment,
   Paper,
   Radio,
   RadioGroup,
@@ -54,6 +55,7 @@ import type {
   CandidateEconomy,
   Debt,
   Income,
+  OtherExpense,
   UpdateCandidateEconomyPayload,
   Vehicle,
 } from '../types/candidate.types';
@@ -67,9 +69,14 @@ interface EconomyTabProps {
   vehicles: Vehicle[];
   debts: Debt[];
   bankCards: BankCard[];
+  otherExpenses: OtherExpense[];
   captureMode: CandidateCaptureMode;
   captureStatus: CandidateCaptureStatus;
 }
+
+/** Decorador `$` para todos los inputs monetarios del formulario. */
+const CURRENCY_ADORNMENT = <InputAdornment position="start">$</InputAdornment>;
+const currencySlotProps = { input: { startAdornment: CURRENCY_ADORNMENT } };
 
 const EXPENSE_CATEGORIES: { key: keyof CandidateEconomy; label: string }[] = [
   { key: 'expensesFood', label: 'Alimentación' },
@@ -134,6 +141,7 @@ function buildEconomyFormDefaults(
   vehicles: Vehicle[],
   debts: Debt[],
   bankCards: BankCard[],
+  otherExpenses: OtherExpense[],
 ): EconomyFormValues {
   return {
     expensesFood: economy.expensesFood === null ? '' : String(economy.expensesFood),
@@ -145,8 +153,7 @@ function buildEconomyFormDefaults(
     expensesMedical: economy.expensesMedical === null ? '' : String(economy.expensesMedical),
     expensesRentOther: economy.expensesRentOther === null ? '' : String(economy.expensesRentOther),
     expensesExtra: economy.expensesExtra === null ? '' : String(economy.expensesExtra),
-    hasOtherIncome: economy.hasOtherIncome ? 'yes' : 'no',
-    otherIncomeDetails: economy.otherIncomeDetails ?? '',
+    hasOtherExpenses: economy.hasOtherExpenses ? 'yes' : 'no',
     incomes: incomes.map((income) => ({ source: income.source, amount: toFormAmount(income.amount) })),
     vehicles: vehicles.map((vehicle) => ({ model: vehicle.model, value: toFormAmount(vehicle.value) })),
     debts: debts.map((debt) => ({
@@ -155,6 +162,10 @@ function buildEconomyFormDefaults(
       monthlyPayment: toFormAmount(debt.monthlyPayment),
     })),
     bankCards: bankCards.map((card) => ({ bank: card.bank, creditLimit: toFormAmount(card.creditLimit) })),
+    otherExpenses: otherExpenses.map((expense) => ({
+      concept: expense.concept,
+      amount: toFormAmount(expense.amount),
+    })),
   };
 }
 
@@ -196,8 +207,7 @@ function buildEconomyPayload(values: EconomyFormValues): UpdateCandidateEconomyP
       expensesMedical +
       expensesRentOther +
       expensesExtra,
-    hasOtherIncome: values.hasOtherIncome === 'yes',
-    otherIncomeDetails: values.hasOtherIncome === 'yes' ? (values.otherIncomeDetails ?? '') : '',
+    hasOtherExpenses: values.hasOtherExpenses === 'yes',
     incomes: values.incomes.map((income) => ({ source: income.source, amount: toNumber(income.amount) })),
     vehicles: values.vehicles.map((vehicle) => ({ model: vehicle.model, value: toNumber(vehicle.value) })),
     debts: values.debts.map((debt) => ({
@@ -206,6 +216,10 @@ function buildEconomyPayload(values: EconomyFormValues): UpdateCandidateEconomyP
       monthlyPayment: toNumber(debt.monthlyPayment),
     })),
     bankCards: values.bankCards.map((card) => ({ bank: card.bank, creditLimit: toNumber(card.creditLimit) })),
+    otherExpenses:
+      values.hasOtherExpenses === 'yes'
+        ? values.otherExpenses.map((expense) => ({ concept: expense.concept, amount: toNumber(expense.amount) }))
+        : [],
   };
 }
 
@@ -265,6 +279,7 @@ export function EconomyTab({
   vehicles,
   debts,
   bankCards,
+  otherExpenses,
   captureMode,
   captureStatus,
 }: EconomyTabProps) {
@@ -283,20 +298,21 @@ export function EconomyTab({
     formState: { errors },
   } = useForm<EconomyFormValues>({
     resolver: zodResolver(economyFormSchema),
-    defaultValues: buildEconomyFormDefaults(economy, incomes, vehicles, debts, bankCards),
+    defaultValues: buildEconomyFormDefaults(economy, incomes, vehicles, debts, bankCards, otherExpenses),
   });
 
   const incomesArray = useFieldArray({ control, name: 'incomes' });
   const vehiclesArray = useFieldArray({ control, name: 'vehicles' });
   const debtsArray = useFieldArray({ control, name: 'debts' });
   const bankCardsArray = useFieldArray({ control, name: 'bankCards' });
+  const otherExpensesArray = useFieldArray({ control, name: 'otherExpenses' });
 
-  const hasOtherIncomeValue = watch('hasOtherIncome');
+  const hasOtherExpensesValue = watch('hasOtherExpenses');
   const expenseValues = watch(EXPENSE_FORM_FIELDS);
   const calculatedTotal = expenseValues.reduce((sum, value) => sum + toNumber(value), 0);
 
   function handleStartEditing() {
-    reset(buildEconomyFormDefaults(economy, incomes, vehicles, debts, bankCards));
+    reset(buildEconomyFormDefaults(economy, incomes, vehicles, debts, bankCards, otherExpenses));
     setIsEditing(true);
   }
 
@@ -327,6 +343,7 @@ export function EconomyTab({
                     label={category.label}
                     fullWidth
                     disabled={isSaving}
+                    slotProps={currencySlotProps}
                     {...register(category.key as (typeof EXPENSE_FORM_FIELDS)[number])}
                     error={!!errors[category.key as (typeof EXPENSE_FORM_FIELDS)[number]]}
                     helperText={errors[category.key as (typeof EXPENSE_FORM_FIELDS)[number]]?.message}
@@ -339,28 +356,84 @@ export function EconomyTab({
                   fullWidth
                   disabled
                   value={formatCurrency(calculatedTotal)}
+                  slotProps={currencySlotProps}
                 />
               </Grid>
             </Grid>
 
             <Stack spacing={1.5} sx={{ mt: 3 }}>
-              <FormLabel id="has-other-income-label">¿Tiene otros ingresos?</FormLabel>
-              <RadioGroup row aria-labelledby="has-other-income-label" {...register('hasOtherIncome')}>
-                <FormControlLabel value="yes" control={<Radio />} label="Sí" disabled={isSaving} />
-                <FormControlLabel value="no" control={<Radio />} label="No" disabled={isSaving} />
-              </RadioGroup>
-              {hasOtherIncomeValue === 'yes' && (
-                <TextField
-                  label="Detalle de otros ingresos"
-                  fullWidth
-                  disabled={isSaving}
-                  {...register('otherIncomeDetails')}
-                  error={!!errors.otherIncomeDetails}
-                  helperText={errors.otherIncomeDetails?.message}
-                />
-              )}
+              <FormLabel id="has-other-expenses-label" error={!!errors.hasOtherExpenses}>
+                ¿Tiene otros egresos?
+              </FormLabel>
+              <Controller
+                name="hasOtherExpenses"
+                control={control}
+                render={({ field }) => (
+                  <RadioGroup
+                    row
+                    aria-labelledby="has-other-expenses-label"
+                    value={field.value}
+                    onChange={(e) => {
+                      field.onChange(e.target.value);
+                      if (e.target.value === 'no') otherExpensesArray.replace([]);
+                    }}
+                  >
+                    <FormControlLabel value="yes" control={<Radio />} label="Sí" disabled={isSaving} />
+                    <FormControlLabel value="no" control={<Radio />} label="No" disabled={isSaving} />
+                  </RadioGroup>
+                )}
+              />
             </Stack>
           </Paper>
+
+          {hasOtherExpensesValue === 'yes' && (
+            <DynamicListSection
+              icon={<RequestQuoteOutlinedIcon fontSize="small" color="action" />}
+              title="Otros egresos"
+              addLabel="Agregar fila"
+              disabled={isSaving}
+              onAdd={() => otherExpensesArray.append({ concept: '', amount: '' })}
+              isEmpty={otherExpensesArray.fields.length === 0}
+              emptyMessage='No hay otros egresos agregados. Usa "Agregar fila" para capturar uno.'
+            >
+              {otherExpensesArray.fields.map((field, index) => (
+                <Paper key={field.id} variant="outlined" sx={{ p: 2, borderRadius: 2, position: 'relative' }}>
+                  <IconButton
+                    size="small"
+                    aria-label="Eliminar egreso"
+                    disabled={isSaving}
+                    onClick={() => otherExpensesArray.remove(index)}
+                    sx={{ position: 'absolute', top: 8, right: 8 }}
+                  >
+                    <DeleteForeverOutlinedIcon fontSize="small" color="error" />
+                  </IconButton>
+                  <Grid container spacing={2} sx={{ pr: 4 }}>
+                    <Grid size={{ xs: 12, sm: 7 }}>
+                      <TextField
+                        label="Nombre del egreso"
+                        fullWidth
+                        disabled={isSaving}
+                        {...register(`otherExpenses.${index}.concept`)}
+                        error={!!errors.otherExpenses?.[index]?.concept}
+                        helperText={errors.otherExpenses?.[index]?.concept?.message}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 5 }}>
+                      <TextField
+                        label="Monto"
+                        fullWidth
+                        disabled={isSaving}
+                        slotProps={currencySlotProps}
+                        {...register(`otherExpenses.${index}.amount`)}
+                        error={!!errors.otherExpenses?.[index]?.amount}
+                        helperText={errors.otherExpenses?.[index]?.amount?.message}
+                      />
+                    </Grid>
+                  </Grid>
+                </Paper>
+              ))}
+            </DynamicListSection>
+          )}
 
           <DynamicListSection
             icon={<PaymentsOutlinedIcon fontSize="small" color="action" />}
@@ -398,6 +471,7 @@ export function EconomyTab({
                       label="Monto"
                       fullWidth
                       disabled={isSaving}
+                      slotProps={currencySlotProps}
                       {...register(`incomes.${index}.amount`)}
                       error={!!errors.incomes?.[index]?.amount}
                       helperText={errors.incomes?.[index]?.amount?.message}
@@ -446,6 +520,7 @@ export function EconomyTab({
                           label="Valor"
                           fullWidth
                           disabled={isSaving}
+                          slotProps={currencySlotProps}
                           {...register(`vehicles.${index}.value`)}
                           error={!!errors.vehicles?.[index]?.value}
                           helperText={errors.vehicles?.[index]?.value?.message}
@@ -494,6 +569,7 @@ export function EconomyTab({
                           label="Límite de crédito"
                           fullWidth
                           disabled={isSaving}
+                          slotProps={currencySlotProps}
                           {...register(`bankCards.${index}.creditLimit`)}
                           error={!!errors.bankCards?.[index]?.creditLimit}
                           helperText={errors.bankCards?.[index]?.creditLimit?.message}
@@ -542,6 +618,7 @@ export function EconomyTab({
                       label="Monto"
                       fullWidth
                       disabled={isSaving}
+                      slotProps={currencySlotProps}
                       {...register(`debts.${index}.amount`)}
                       error={!!errors.debts?.[index]?.amount}
                       helperText={errors.debts?.[index]?.amount?.message}
@@ -552,6 +629,7 @@ export function EconomyTab({
                       label="Pago mensual"
                       fullWidth
                       disabled={isSaving}
+                      slotProps={currencySlotProps}
                       {...register(`debts.${index}.monthlyPayment`)}
                       error={!!errors.debts?.[index]?.monthlyPayment}
                       helperText={errors.debts?.[index]?.monthlyPayment?.message}
@@ -641,14 +719,39 @@ export function EconomyTab({
             />
           ))}
           <DetailField label="Total de egresos" value={formatCurrency(economy.expensesTotal)} />
-          <DetailField label="Tiene otros ingresos" value={economy.hasOtherIncome} />
-          <DetailField
-            label="Detalle de otros ingresos"
-            value={economy.otherIncomeDetails}
-            size={{ xs: 12, sm: 6, md: 8 }}
-          />
+          <DetailField label="Tiene otros egresos" value={economy.hasOtherExpenses} />
         </Grid>
       </Paper>
+
+      {economy.hasOtherExpenses === true && (
+        <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
+          <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 2 }}>
+            <RequestQuoteOutlinedIcon fontSize="small" color="action" />
+            <Typography variant="subtitle1">Otros egresos</Typography>
+          </Stack>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell scope="col">Nombre del egreso</TableCell>
+                  <TableCell scope="col" align="right">Monto</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {otherExpenses.map((expense, index) => (
+                  <TableRow key={`${expense.concept}-${index}`}>
+                    <TableCell>{expense.concept}</TableCell>
+                    <TableCell align="right">{formatCurrency(expense.amount)}</TableCell>
+                  </TableRow>
+                ))}
+                {otherExpenses.length === 0 && (
+                  <EmptyTableState colSpan={2} message="No hay otros egresos registrados." />
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      )}
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 6 }}>
