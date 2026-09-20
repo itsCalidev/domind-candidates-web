@@ -247,6 +247,7 @@ export function CandidateDetailPage() {
             <GeneralInfoTab
               candidateId={candidateId}
               info={candidate.generalInfo}
+              captureMode={candidate.captureMode}
               captureStatus={candidate.captureStatus}
             />,
           ),

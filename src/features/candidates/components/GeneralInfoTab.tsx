@@ -4,7 +4,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Grid, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { useCandidateMutations } from '../hooks/useCandidateMutations';
-import type { CandidateCaptureStatus, CandidateGeneralInfo, PersonalInfoPayload } from '../types/candidate.types';
+import type {
+  CandidateCaptureMode,
+  CandidateCaptureStatus,
+  CandidateGeneralInfo,
+  PersonalInfoPayload,
+} from '../types/candidate.types';
 import {
   HIGHEST_EDUCATION_OPTIONS,
   MARITAL_STATUSES_WITH_SPOUSE,
@@ -19,6 +24,7 @@ import { maritalStatusLabels } from '../utils/maritalStatus';
 interface GeneralInfoTabProps {
   candidateId: string;
   info: CandidateGeneralInfo;
+  captureMode: CandidateCaptureMode;
   captureStatus: CandidateCaptureStatus;
 }
 
@@ -132,11 +138,11 @@ function withCurrentValueOption(options: readonly string[], currentValue: string
  * (longitudes, regex de teléfono/CP, edad mínima), así que amerita un
  * resolver en vez de checks manuales dispersos.
  */
-export function GeneralInfoTab({ candidateId, info, captureStatus }: GeneralInfoTabProps) {
+export function GeneralInfoTab({ candidateId, info, captureMode, captureStatus }: GeneralInfoTabProps) {
   const { updatePersonalInfo } = useCandidateMutations();
   const [isEditing, setIsEditing] = useState(false);
   const isSaving = updatePersonalInfo.isPending;
-  const canEdit = captureStatus === 'DRAFT';
+  const canEdit = captureMode === 'MANUAL' && captureStatus === 'DRAFT';
 
   const {
     register,
