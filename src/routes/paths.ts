@@ -14,4 +14,6 @@ export const paths = {
   users: '/users',
   /** Fuera de ProtectedRoute (ver AppRouter.tsx): el candidato no tiene sesión JWT, solo un token temporal en `?token=`. */
   candidateForm: '/candidato/formulario',
+  /** Destino dedicado cuando el token de Magic Link falta, es inválido o ya expiró — ver MagicLinkEntryPage.tsx. */
+  magicLinkInvalid: '/enlace-invalido',
 } as const;

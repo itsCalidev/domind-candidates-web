@@ -49,6 +49,11 @@ const MagicLinkEntryPage = lazy(() =>
     default: m.MagicLinkEntryPage,
   })),
 );
+const InvalidMagicLinkPage = lazy(() =>
+  import('@/features/candidate-auth/components/InvalidMagicLinkPage').then((m) => ({
+    default: m.InvalidMagicLinkPage,
+  })),
+);
 
 export function AppRouter() {
   return (
@@ -81,6 +86,7 @@ export function AppRouter() {
             URL, nunca con sesión JWT. Interfaz completamente separada del
             panel administrativo, ver MagicLinkEntryPage.tsx. */}
         <Route path={paths.candidateForm} element={<MagicLinkEntryPage />} />
+        <Route path={paths.magicLinkInvalid} element={<InvalidMagicLinkPage />} />
 
         {/* Rutas del panel administrativo, protegidas y bajo el mismo layout */}
         <Route

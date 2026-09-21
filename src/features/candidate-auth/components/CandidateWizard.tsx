@@ -12,6 +12,7 @@ import { useCandidateDetail } from '@/features/candidates/hooks/useCandidateDeta
 import { useGetEvidence } from '@/features/candidates/hooks/useCandidateEvidence';
 import { getMissingDataReport } from '@/features/candidates/utils/candidateCompleteness';
 import type { CandidateDetail, CandidateGeneralInfo, CandidateHealth, CandidateHousing } from '@/features/candidates/types/candidate.types';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { useToast } from '@/shared/context/ToastContext';
 import { useMagicLink } from '../context/MagicLinkContext';
 
@@ -101,6 +102,7 @@ export function CandidateWizard() {
   const [furthestUnlockedStep, setFurthestUnlockedStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isConfirmSubmitOpen, setIsConfirmSubmitOpen] = useState(false);
   const hasRestoredProgress = useRef(false);
 
   const candidateId = candidate?.candidateId;
@@ -213,6 +215,10 @@ export function CandidateWizard() {
 
   async function handleFinalSubmit() {
     if (!candidateId) return;
+    // Se cierra apenas se confirma, no al terminar: el resultado (éxito o
+    // error) se comunica con la pantalla de éxito o un Toast, no dejando
+    // el modal de confirmación abierto de fondo mientras corre.
+    setIsConfirmSubmitOpen(false);
     setIsSubmitting(true);
     try {
       // Pide la versión más fresca antes de validar: si el candidato
@@ -303,7 +309,7 @@ export function CandidateWizard() {
               variant="contained"
               size="large"
               disabled={isSubmitting || isVerifyingEvidence || evidenceLoadFailed}
-              onClick={handleFinalSubmit}
+              onClick={() => setIsConfirmSubmitOpen(true)}
             >
               {isSubmitting ? 'Enviando…' : isVerifyingEvidence ? 'Verificando…' : 'Enviar formulario'}
             </Button>
@@ -360,6 +366,17 @@ export function CandidateWizard() {
           onSaved={() => handleStepSaved(ECONOMY_STEP_INDEX)}
         />
       ) : null}
+
+      <ConfirmDialog
+        open={isConfirmSubmitOpen}
+        title="Enviar formulario"
+        description="¿Estás seguro de enviar el formulario? Revisa que tus datos sean correctos — una vez enviado, no podrás volver a editarlo."
+        confirmText="Enviar formulario"
+        severity="warning"
+        loading={isSubmitting}
+        onConfirm={handleFinalSubmit}
+        onClose={() => setIsConfirmSubmitOpen(false)}
+      />
     </Box>
   );
 }

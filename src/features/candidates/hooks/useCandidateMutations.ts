@@ -104,6 +104,22 @@ export function useCandidateMutations() {
     },
   });
 
+  // `candidatesService.deleteCandidate` es un STUB (ver ese archivo): no
+  // existe todavía un endpoint de eliminación confirmado. Esta mutación
+  // ya queda cableada (toast + invalidateCandidates) para el día que se
+  // reemplace el cuerpo del service method por la llamada real — hoy
+  // siempre cae en `onError` porque el service siempre lanza.
+  const deleteCandidate = useMutation({
+    mutationFn: (id: string) => candidatesService.deleteCandidate(id),
+    onSuccess: () => {
+      showToast('Candidato eliminado exitosamente.');
+      return invalidateCandidates();
+    },
+    onError: (error) => {
+      showToast(extractApiErrorMessage(error, 'No se pudo eliminar al candidato.'), 'error');
+    },
+  });
+
   const updateCaptureStatus = useMutation({
     mutationFn: ({ id, captureStatus }: { id: string; captureStatus: CandidateCaptureStatus }) =>
       candidatesService.updateCaptureStatus(id, captureStatus),
@@ -444,6 +460,7 @@ export function useCandidateMutations() {
     sendMagicLink,
     createAndAssignCandidate,
     updateStatus,
+    deleteCandidate,
     updateCaptureStatus,
     updatePersonalInfo,
     updateFamily,

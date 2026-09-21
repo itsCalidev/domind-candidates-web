@@ -21,6 +21,8 @@ import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
 import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined';
 import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined';
 import ErrorOutlineOutlinedIcon from '@mui/icons-material/ErrorOutlineOutlined';
+import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined';
+import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCandidateDetail } from '../hooks/useCandidateDetail';
@@ -58,7 +60,7 @@ import {
 import { paths } from '@/routes/paths';
 import { ExportButton } from '@/shared/components/ExportButton';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { hasFullAccess, UserRole } from '@/features/auth/types/role.enum';
+import { hasFullAccess, isSystem, UserRole } from '@/features/auth/types/role.enum';
 
 /**
  * Estructura de navegación en 2 niveles: 3 pestañas principales, cada
@@ -81,9 +83,14 @@ export function CandidateDetailPage() {
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [isFinalizeCaptureOpen, setIsFinalizeCaptureOpen] = useState(false);
   const [missingDataBySection, setMissingDataBySection] = useState<Record<string, string[]> | null>(null);
-  const { updateCaptureStatus } = useCandidateMutations();
+  const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const { updateCaptureStatus, updateStatus, deleteCandidate } = useCandidateMutations();
   const { user } = useAuth();
   const canAssignRecruiter = hasFullAccess(user?.role);
+  // Exclusivo de SYSTEM (no ADMIN) — más restrictivo que canAssignRecruiter
+  // a propósito, pedido explícitamente para "Archivar"/"Eliminar candidato".
+  const isSystemUser = isSystem(user?.role);
   // Fuente única de verdad del progreso de calificación: GET
   // /candidates/:id/evaluations, no estado local — así sobrevive a un
   // F5 (antes no, porque dependíamos de un campo `evaluations` que
@@ -207,6 +214,32 @@ export function CandidateDetailPage() {
       { id: candidateId, captureStatus: 'COMPLETED' },
       { onSuccess: () => setIsFinalizeCaptureOpen(false) },
     );
+  }
+
+  /**
+   * "Archivar" para SYSTEM siempre visible/habilitado, sin importar el
+   * estado actual — a propósito más permisivo que la máquina de estados
+   * de `getValidStatusTransitions`/`ADMIN_STATUS_TRANSITIONS` (que solo
+   * ofrece ARCHIVED como destino desde EVALUATED/RECOMMENDED/
+   * NOT_RECOMMENDED dentro del diálogo "Cambiar estado"). Es un botón de
+   * acción rápida aparte, no una entrada más de esa máquina de estados:
+   * llama a `updateStatus` directo (mismo endpoint PATCH /status ya
+   * confirmado) sin pasar por el <Select> de destinos válidos.
+   */
+  function handleArchive() {
+    updateStatus.mutate(
+      { id: candidateId, status: 'ARCHIVED' },
+      { onSuccess: () => setIsArchiveConfirmOpen(false) },
+    );
+  }
+
+  function handleDelete() {
+    deleteCandidate.mutate(candidateId, {
+      onSuccess: () => {
+        setIsDeleteConfirmOpen(false);
+        navigate(paths.candidates);
+      },
+    });
   }
 
   /**
@@ -454,6 +487,32 @@ export function CandidateDetailPage() {
             Finalizar captura
           </Button>
         )}
+        {/* Pedido explícito: para SYSTEM, "Archivar" siempre visible y
+            habilitado sin importar el estado actual — a diferencia del
+            resto de esta página, deliberadamente NO se deshabilita ni
+            siquiera si `isArchived` ya es true. */}
+        {isSystemUser && (
+          <Button
+            size="small"
+            variant="outlined"
+            color="inherit"
+            startIcon={<ArchiveOutlinedIcon fontSize="small" />}
+            onClick={() => setIsArchiveConfirmOpen(true)}
+          >
+            Archivar
+          </Button>
+        )}
+        {isSystemUser && (
+          <Button
+            size="small"
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteOutlineOutlinedIcon fontSize="small" />}
+            onClick={() => setIsDeleteConfirmOpen(true)}
+          >
+            Eliminar candidato
+          </Button>
+        )}
         {canDownloadReport && (
           <ExportButton
             label="Descargar reporte"
@@ -546,6 +605,28 @@ export function CandidateDetailPage() {
         loading={updateCaptureStatus.isPending}
         onConfirm={handleFinalizeCapture}
         onClose={() => setIsFinalizeCaptureOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={isArchiveConfirmOpen}
+        title="Archivar candidato"
+        description={`¿Estás seguro de archivar a ${candidate.fullName}? El candidato se desactivará y se le quitará el reclutador asignado.`}
+        confirmText="Archivar"
+        severity="warning"
+        loading={updateStatus.isPending}
+        onConfirm={handleArchive}
+        onClose={() => setIsArchiveConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={isDeleteConfirmOpen}
+        title="Eliminar candidato"
+        description={`Esta acción es irreversible. Se eliminará permanentemente a ${candidate.fullName} y todo su expediente. ¿Deseas continuar?`}
+        confirmText="Eliminar candidato"
+        severity="error"
+        loading={deleteCandidate.isPending}
+        onConfirm={handleDelete}
+        onClose={() => setIsDeleteConfirmOpen(false)}
       />
 
       <Dialog

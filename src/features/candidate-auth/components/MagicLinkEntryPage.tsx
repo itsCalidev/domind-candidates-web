@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Box, Typography } from '@mui/material';
-import ErrorOutlineOutlinedIcon from '@mui/icons-material/ErrorOutlineOutlined';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { PageLoader } from '@/shared/components/PageLoader';
+import { paths } from '@/routes/paths';
 import { useMagicLink } from '../context/MagicLinkContext';
 import { CandidateWizard } from './CandidateWizard';
 
 /**
  * Página capturadora de /candidato/formulario?token=... — fuera de
  * ProtectedRoute (ver AppRouter.tsx): el candidato no tiene sesión JWT,
- * solo este token temporal. Cubre ella sola las 3 pantallas del flujo de
- * entrada (cargando / enlace inválido / formulario), sin inventar rutas
- * adicionales que no se pidieron.
+ * solo este token temporal. Solo cubre carga/formulario; el estado
+ * "enlace inválido" ya no se renderiza in-place aquí, redirige a
+ * `paths.magicLinkInvalid` (ver InvalidMagicLinkPage.tsx) — así React
+ * Query nunca deja un error a medio renderizar sobre esta misma ruta, y
+ * el candidato aterriza en una URL de error real, no en un estado
+ * transitorio de este componente.
  */
 export function MagicLinkEntryPage() {
   const [searchParams] = useSearchParams();
@@ -28,6 +30,13 @@ export function MagicLinkEntryPage() {
     validateToken(token).then((ok) => {
       if (!ok) clearMagicLink();
       setHasChecked(true);
+      // Borra el token de la barra de direcciones apenas se leyó y se
+      // validó (falle o no) — nunca debe quedar expuesto en el historial
+      // del navegador ni en un link compartido por accidente (ej. captura
+      // de pantalla, "compartir URL"). `replaceState` (no `pushState`):
+      // no debe crear una entrada nueva en el historial, solo limpiar la
+      // actual.
+      window.history.replaceState({}, document.title, window.location.pathname);
     });
     // Debe correr solo una vez, al montar con el token que trae la URL —
     // no en cada re-render, aunque validateToken/clearMagicLink sean
@@ -40,30 +49,10 @@ export function MagicLinkEntryPage() {
   }
 
   if (!candidate) {
-    // El toast genérico ya lo mostró validateToken (ver MagicLinkContext) —
-    // esta es la "pantalla limpia" complementaria, sin ningún detalle
-    // técnico del error real.
-    return (
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          textAlign: 'center',
-          p: 3,
-        }}
-      >
-        <ErrorOutlineOutlinedIcon sx={{ fontSize: 56, color: 'text.disabled', mb: 2 }} />
-        <Typography variant="h6" sx={{ mb: 1 }}>
-          Este enlace ya no está disponible
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360 }}>
-          Puede haber expirado o ya haberse utilizado. Contacta a tu reclutador para solicitar uno nuevo.
-        </Typography>
-      </Box>
-    );
+    // El toast genérico ya lo mostró validateToken (ver MagicLinkContext).
+    // `replace`: no debe quedar en el historial una entrada intermedia a
+    // la que el botón "atrás" del navegador pueda volver.
+    return <Navigate to={paths.magicLinkInvalid} replace />;
   }
 
   return <CandidateWizard />;
