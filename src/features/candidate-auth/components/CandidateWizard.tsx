@@ -8,6 +8,8 @@ import { FamilyForm } from '@/features/candidates/components/forms/FamilyForm';
 import { HealthForm } from '@/features/candidates/components/forms/HealthForm';
 import { HousingForm } from '@/features/candidates/components/forms/HousingForm';
 import { EconomyForm } from '@/features/candidates/components/forms/EconomyForm';
+import { useGetEvidence } from '@/features/candidates/hooks/useCandidateEvidence';
+import { getMissingDataReport } from '@/features/candidates/utils/candidateCompleteness';
 import type { CandidateDetail } from '@/features/candidates/types/candidate.types';
 import { useToast } from '@/shared/context/ToastContext';
 import { useMagicLink } from '../context/MagicLinkContext';
@@ -62,6 +64,14 @@ export function CandidateWizard() {
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const candidateId = candidate?.candidateId;
+  // La evidencia (documentos y fotos de vivienda) no vive embebida en
+  // `CandidateDetail` — es su propio endpoint, igual que en
+  // CandidateDetailPage (ver ese archivo). getMissingDataReport las
+  // necesita para el checklist de "Documentación" y el mínimo de 3 fotos
+  // de "Vivienda". Llamados aquí, antes de cualquier `return` temprano,
+  // por las reglas de hooks de React.
+  const documentEvidenceQuery = useGetEvidence(candidateId, 'DOCUMENT');
+  const housingEvidenceQuery = useGetEvidence(candidateId, 'HOUSING');
 
   // Pre-llena cada paso si el candidato ya había capturado datos antes
   // (ej. cerró la pestaña a medio formulario y volvió a entrar con el
@@ -92,8 +102,32 @@ export function CandidateWizard() {
     setActiveStep((prev) => Math.min(prev + 1, WIZARD_STEPS.length - 1));
   }
 
+  /**
+   * Mismo validador de "Perfil Mínimo Viable" que ya usa el reclutador en
+   * CandidateDetailPage para "Finalizar captura" (getMissingDataReport) —
+   * una sola fuente de verdad de "qué le falta" a un candidato, sin
+   * importar quién intente cerrar la captura. Aquí se abre en un Toast en
+   * vez de un diálogo (el candidato no tiene un panel de detalle al que
+   * volver a mirar la lista con calma): al aceptarlo, vuelve directo al
+   * paso que le falta.
+   */
+  function getMissingDataMessage(): string | null {
+    if (!detail) return 'No se pudo verificar tu información. Intenta de nuevo.';
+    const report = getMissingDataReport(detail, documentEvidenceQuery.data ?? [], housingEvidenceQuery.data ?? []);
+    if (report.isComplete) return null;
+    const missingItems = Object.entries(report.bySection).flatMap(([section, fields]) =>
+      fields.map((field) => `${section}: ${field}`),
+    );
+    return `No puedes enviar el formulario. Faltan datos obligatorios: ${missingItems.join(', ')}.`;
+  }
+
   async function handleFinalSubmit() {
     if (!candidateId) return;
+    const missingDataMessage = getMissingDataMessage();
+    if (missingDataMessage) {
+      showToast(missingDataMessage, 'error');
+      return;
+    }
     setIsSubmitting(true);
     try {
       await candidatesService.submitForm(candidateId);
