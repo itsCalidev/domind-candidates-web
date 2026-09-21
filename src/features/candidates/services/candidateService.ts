@@ -518,20 +518,9 @@ export const candidatesService = {
     await apiClient.patch(`/candidates/${id}/capture-status`, { captureStatus });
   },
 
-  /**
-   * STUB — no existe todavía un endpoint de eliminación de candidatos
-   * confirmado (ni en /docs-json ni dado por el usuario en el chat). No
-   * manda ninguna petición real: lanza un error explícito para que sea
-   * obvio en pruebas manuales que falta el contrato del backend, en vez
-   * de fallar con un 404 confuso contra una ruta inventada (mismo
-   * criterio que se usó para `createAndAssignCandidate` mientras esa
-   * ruta tampoco existía). El día que se confirme el endpoint real
-   * (`DELETE /candidates/:id` es la convención REST más probable, pero
-   * no se asume sin confirmar), solo hay que reemplazar este cuerpo —
-   * useDeleteCandidate ya queda listo para consumirlo.
-   */
-  async deleteCandidate(_id: string): Promise<void> {
-    throw new Error('deleteCandidate: falta confirmar el contrato del backend.');
+  /** DELETE /candidates/:id — confirmado por el usuario, elimina permanentemente al candidato y su expediente. */
+  async deleteCandidate(id: string): Promise<void> {
+    await apiClient.delete(`/candidates/${id}`);
   },
 
   /**

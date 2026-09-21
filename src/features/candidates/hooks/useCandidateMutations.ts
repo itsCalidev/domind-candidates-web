@@ -104,11 +104,6 @@ export function useCandidateMutations() {
     },
   });
 
-  // `candidatesService.deleteCandidate` es un STUB (ver ese archivo): no
-  // existe todavía un endpoint de eliminación confirmado. Esta mutación
-  // ya queda cableada (toast + invalidateCandidates) para el día que se
-  // reemplace el cuerpo del service method por la llamada real — hoy
-  // siempre cae en `onError` porque el service siempre lanza.
   const deleteCandidate = useMutation({
     mutationFn: (id: string) => candidatesService.deleteCandidate(id),
     onSuccess: () => {

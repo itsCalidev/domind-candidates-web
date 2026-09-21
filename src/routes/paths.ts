@@ -16,4 +16,11 @@ export const paths = {
   candidateForm: '/candidato/formulario',
   /** Destino dedicado cuando el token de Magic Link falta, es inválido o ya expiró — ver MagicLinkEntryPage.tsx. */
   magicLinkInvalid: '/enlace-invalido',
+  /**
+   * 404 genérico — también es el destino de "modo sigilo" de
+   * MagicLinkEntryPage cuando no hay token ni en la URL ni en storage:
+   * a un visitante sin invitación no se le confirma que esta ruta
+   * siquiera existe mostrándole un mensaje de "enlace expirado".
+   */
+  notFound: '/404',
 } as const;

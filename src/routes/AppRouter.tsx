@@ -54,6 +54,9 @@ const InvalidMagicLinkPage = lazy(() =>
     default: m.InvalidMagicLinkPage,
   })),
 );
+const NotFoundPage = lazy(() =>
+  import('@/shared/components/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
+);
 
 export function AppRouter() {
   return (
@@ -87,6 +90,9 @@ export function AppRouter() {
             panel administrativo, ver MagicLinkEntryPage.tsx. */}
         <Route path={paths.candidateForm} element={<MagicLinkEntryPage />} />
         <Route path={paths.magicLinkInvalid} element={<InvalidMagicLinkPage />} />
+        <Route path={paths.notFound} element={<NotFoundPage />} />
+        {/* Catch-all: cualquier ruta no declarada arriba (JWT o no) cae aquí, mismo componente que paths.notFound. */}
+        <Route path="*" element={<NotFoundPage />} />
 
         {/* Rutas del panel administrativo, protegidas y bajo el mismo layout */}
         <Route
