@@ -20,6 +20,25 @@ export const MAGIC_LINK_INVALID_EVENT = 'domind:magic-link-invalid';
 const MAGIC_LINK_HEADER = 'x-magic-link';
 
 /**
+ * Endpoints "secundarios" del flujo de candidato: su 401/403 no prueba
+ * que el enlace mágico en sí esté inválido, solo que ESA petición puntual
+ * falló (ej. una carga de evidencia que se dispara en segundo plano para
+ * el validador de completitud). Tumbar toda la sesión del candidato por
+ * esto lo saca del Wizard sin motivo — el caller (ej. `useGetEvidence`,
+ * vía `isError`) ya sabe manejar el fallo de su propia petición sin que
+ * `apiClient` tenga que reaccionar de forma global. Cualquier otro
+ * endpoint (los PATCH de cada paso, `submit-form`, y por supuesto
+ * `/candidates/magic-link/validate`) se sigue tratando como rechazo
+ * estructural: si el backend responde 401/403 ahí, el token realmente ya
+ * no sirve.
+ */
+const MAGIC_LINK_SECONDARY_ENDPOINTS = ['/evidence'];
+
+function isSecondaryMagicLinkEndpoint(url?: string): boolean {
+  return !!url && MAGIC_LINK_SECONDARY_ENDPOINTS.some((path) => url.includes(path));
+}
+
+/**
  * Instancia central de axios para toda la aplicación.
  *
  * El interceptor de respuesta es la "red de seguridad" de sesión: ante un
@@ -90,9 +109,14 @@ apiClient.interceptors.response.use(
 
     // Petición de Magic Link inválida/caducada: nunca debe caer en el
     // flujo de refresh de JWT de abajo (un token mágico no se
-    // "refresca") — se limpia el storage y se avisa por evento, sin
-    // reintentar nada.
+    // "refresca"). Un 401/403 en un endpoint secundario (ver
+    // MAGIC_LINK_SECONDARY_ENDPOINTS) se deja pasar tal cual al caller,
+    // sin tocar el storage ni el estado global — solo un rechazo
+    // estructural limpia el token y avisa por evento.
     if (originalRequest?.headers?.[MAGIC_LINK_HEADER] && (status === 401 || status === 403)) {
+      if (isSecondaryMagicLinkEndpoint(originalRequest.url)) {
+        return Promise.reject(error);
+      }
       magicLinkStorage.remove();
       window.dispatchEvent(new Event(MAGIC_LINK_INVALID_EVENT));
       return Promise.reject(error);

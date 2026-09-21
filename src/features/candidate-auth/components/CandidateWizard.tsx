@@ -113,6 +113,13 @@ export function CandidateWizard() {
    */
   function getMissingDataMessage(): string | null {
     if (!detail) return 'No se pudo verificar tu información. Intenta de nuevo.';
+    // Sin esto, un fallo de red en /evidence haría que `?? []` se lea como
+    // "no subiste nada" — un falso negativo que bloquearía el envío por un
+    // motivo distinto al real. Mejor pedir que reintente a que mienta sobre
+    // qué le falta.
+    if (documentEvidenceQuery.isError || housingEvidenceQuery.isError) {
+      return 'No se pudo verificar tu documentación y evidencia de vivienda. Intenta de nuevo.';
+    }
     const report = getMissingDataReport(detail, documentEvidenceQuery.data ?? [], housingEvidenceQuery.data ?? []);
     if (report.isComplete) return null;
     const missingItems = Object.entries(report.bySection).flatMap(([section, fields]) =>
@@ -153,6 +160,13 @@ export function CandidateWizard() {
   }
 
   const readyToSubmit = furthestUnlockedStep >= WIZARD_STEPS.length;
+  // El botón de envío depende de esta evidencia para validar completitud
+  // (ver getMissingDataMessage) — mientras carga o si falló, no tiene
+  // caso ofrecer "Enviar formulario" todavía: isLoading evita un click en
+  // falso mientras se resuelve, isError evita el falso negativo de tratar
+  // un fallo de red como "no subiste nada".
+  const isVerifyingEvidence = documentEvidenceQuery.isLoading || housingEvidenceQuery.isLoading;
+  const evidenceLoadFailed = documentEvidenceQuery.isError || housingEvidenceQuery.isError;
 
   return (
     <Box sx={{ maxWidth: 900, mx: 'auto', p: { xs: 2, sm: 4 } }}>
@@ -181,8 +195,18 @@ export function CandidateWizard() {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             Revisa que todo esté correcto y envía tu formulario final.
           </Typography>
-          <Button variant="contained" size="large" disabled={isSubmitting} onClick={handleFinalSubmit}>
-            {isSubmitting ? 'Enviando…' : 'Enviar formulario'}
+          {evidenceLoadFailed && (
+            <Typography variant="body2" color="error.main" sx={{ mb: 2 }}>
+              No se pudo verificar tu documentación y evidencia de vivienda. Recarga la página e intenta de nuevo.
+            </Typography>
+          )}
+          <Button
+            variant="contained"
+            size="large"
+            disabled={isSubmitting || isVerifyingEvidence || evidenceLoadFailed}
+            onClick={handleFinalSubmit}
+          >
+            {isSubmitting ? 'Enviando…' : isVerifyingEvidence ? 'Verificando…' : 'Enviar formulario'}
           </Button>
         </Paper>
       ) : activeStep === GENERAL_INFO_STEP_INDEX ? (
