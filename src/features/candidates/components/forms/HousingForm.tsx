@@ -39,6 +39,7 @@ import TvOutlinedIcon from '@mui/icons-material/TvOutlined';
 import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
 import RequestQuoteOutlinedIcon from '@mui/icons-material/RequestQuoteOutlined';
 import { CleanStateBadge } from '@/shared/components/CleanStateBadge';
+import { InfoTooltip } from '@/shared/components/InfoTooltip';
 import { formatCurrency } from '@/shared/utils/formatCurrency';
 import { assessArraigo } from '../../utils/housingArraigo';
 import { EvidenceGallery } from '../EvidenceGallery';
@@ -495,6 +496,10 @@ export function HousingForm(props: HousingFormProps) {
       </Paper>
 
       <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
+        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1.5 }}>
+          <Typography variant="subtitle1">Fotografías de la vivienda</Typography>
+          <InfoTooltip title="Sube al menos 3 fotografías claras de tu vivienda (ej. fachada, interior, sala)." />
+        </Stack>
         <EvidenceGallery
           candidateId={candidateId}
           category="HOUSING"

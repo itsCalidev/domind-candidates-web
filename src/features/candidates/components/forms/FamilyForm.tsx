@@ -32,6 +32,7 @@ import DeleteForeverOutlinedIcon from '@mui/icons-material/DeleteForeverOutlined
 import { useState } from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { TooltipContentProps } from 'recharts';
+import { InfoTooltip } from '@/shared/components/InfoTooltip';
 import { VisuallyHidden } from '@/shared/components/VisuallyHidden';
 import { useCandidateMutations } from '../../hooks/useCandidateMutations';
 import type {
@@ -318,9 +319,10 @@ export function FamilyForm(props: FamilyFormProps) {
 
       <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-          <Stack direction="row" alignItems="center" spacing={1.25}>
+          <Stack direction="row" alignItems="center" spacing={0.5}>
             <GroupsOutlinedIcon fontSize="small" color="action" />
             <Typography variant="subtitle1">Estructura familiar</Typography>
+            <InfoTooltip title="Agrega a las personas con las que vives o que dependen económicamente de ti: padres, cónyuge, hijos(as) o hermanos(as)." />
           </Stack>
           <Button
             size="small"

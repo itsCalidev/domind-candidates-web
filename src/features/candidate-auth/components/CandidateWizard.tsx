@@ -49,7 +49,14 @@ function hasText(value: string | null | undefined): boolean {
  * con el Stepper.
  */
 function hasGeneralInfoData(info: CandidateGeneralInfo): boolean {
-  return hasText(info.address) || hasText(info.phone) || hasText(info.email);
+  // Deliberadamente NO evalúa `email`/`address`: el reclutador puede
+  // pre-llenar el correo del candidato al darlo de alta para Magic Link
+  // (ver CreateAndAssignCandidateDialog), así que un correo ya presente
+  // no prueba que el candidato haya tocado este paso — eso hacía que el
+  // Wizard saltara directo a "Documentación" para cualquiera que
+  // entrara por primera vez. `birthDate`/`phone` sí son estrictamente
+  // datos que solo el candidato captura en su propio formulario.
+  return hasText(info.birthDate) || hasText(info.phone);
 }
 
 function hasHealthData(health: CandidateHealth): boolean {
@@ -154,13 +161,22 @@ export function CandidateWizard() {
 
     if (unlockedCount > 0) {
       setFurthestUnlockedStep(unlockedCount);
-      setActiveStep(Math.min(unlockedCount, WIZARD_STEPS.length - 1));
+      // Sin clamp a `length - 1`: si los 6 pasos ya están llenos,
+      // `unlockedCount` es exactamente `WIZARD_STEPS.length`, el valor
+      // centinela de la pantalla final (ver showFinalScreen más abajo) —
+      // recargar la página con el perfil ya completo debe reabrir ahí,
+      // no forzar al candidato de vuelta al último paso de captura.
+      setActiveStep(unlockedCount);
     }
   }, [detail, documentEvidenceQuery.data, documentEvidenceQuery.isLoading, housingEvidenceQuery.data, housingEvidenceQuery.isLoading]);
 
   function handleStepSaved(stepIndex: number) {
     setFurthestUnlockedStep((prev) => Math.max(prev, stepIndex + 1));
-    setActiveStep((prev) => Math.min(prev + 1, WIZARD_STEPS.length - 1));
+    // `WIZARD_STEPS.length` (no `length - 1`) a propósito: es el valor
+    // centinela que representa la pantalla final "Ya completaste todos
+    // los pasos" — ver showFinalScreen más abajo. Guardar el último paso
+    // (Economía) debe poder aterrizar ahí.
+    setActiveStep((prev) => Math.min(prev + 1, WIZARD_STEPS.length));
   }
 
   /**
@@ -187,10 +203,12 @@ export function CandidateWizard() {
     }
     const report = getMissingDataReport(freshDetail, documentEvidenceQuery.data ?? [], housingEvidenceQuery.data ?? []);
     if (report.isComplete) return null;
-    const missingItems = Object.entries(report.bySection).flatMap(([section, fields]) =>
-      fields.map((field) => `${section}: ${field}`),
-    );
-    return `No puedes enviar el formulario. Faltan datos obligatorios: ${missingItems.join(', ')}.`;
+    // Antes concatenaba los ~40 campos de `report.bySection` en un solo
+    // Toast — un muro de texto abrumador. El detalle exacto de qué falta
+    // ya se ve al navegar cada sección (los campos vacíos quedan a la
+    // vista); aquí solo hace falta decirle al candidato que le falta algo
+    // y hacia dónde ir a buscarlo.
+    return 'Aún faltan campos obligatorios. Por favor, navega por las secciones anteriores para completar tu información.';
   }
 
   async function handleFinalSubmit() {
@@ -231,7 +249,15 @@ export function CandidateWizard() {
     );
   }
 
-  const readyToSubmit = furthestUnlockedStep >= WIZARD_STEPS.length;
+  // `showFinalScreen` (no solo `furthestUnlockedStep >= WIZARD_STEPS.length`)
+  // es lo que decide qué se renderiza: antes, una vez los 6 pasos quedaban
+  // desbloqueados, esta pantalla se quedaba fija para siempre sin importar
+  // a qué `activeStep` navegara el candidato — clickear cualquier botón
+  // del Stepper cambiaba `activeStep` pero la vista nunca se enteraba.
+  // `activeStep === WIZARD_STEPS.length` es el valor centinela que sí
+  // distingue "terminé y quiero enviar" de "ya terminé, pero quiero
+  // revisar un paso" (ver el botón "Regresar a revisar" más abajo).
+  const showFinalScreen = activeStep === WIZARD_STEPS.length;
   // El botón de envío depende de esta evidencia para validar completitud
   // (ver getMissingDataMessage) — mientras carga o si falló, no tiene
   // caso ofrecer "Enviar formulario" todavía: isLoading evita un click en
@@ -259,7 +285,7 @@ export function CandidateWizard() {
         ))}
       </Stepper>
 
-      {readyToSubmit ? (
+      {showFinalScreen ? (
         <Paper elevation={0} sx={{ p: 3, borderRadius: 3, textAlign: 'center' }}>
           <Typography variant="h6" sx={{ mb: 1 }}>
             Ya completaste todos los pasos
@@ -272,14 +298,19 @@ export function CandidateWizard() {
               No se pudo verificar tu documentación y evidencia de vivienda. Recarga la página e intenta de nuevo.
             </Typography>
           )}
-          <Button
-            variant="contained"
-            size="large"
-            disabled={isSubmitting || isVerifyingEvidence || evidenceLoadFailed}
-            onClick={handleFinalSubmit}
-          >
-            {isSubmitting ? 'Enviando…' : isVerifyingEvidence ? 'Verificando…' : 'Enviar formulario'}
-          </Button>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, alignItems: 'center' }}>
+            <Button
+              variant="contained"
+              size="large"
+              disabled={isSubmitting || isVerifyingEvidence || evidenceLoadFailed}
+              onClick={handleFinalSubmit}
+            >
+              {isSubmitting ? 'Enviando…' : isVerifyingEvidence ? 'Verificando…' : 'Enviar formulario'}
+            </Button>
+            <Button variant="outlined" size="large" disabled={isSubmitting} onClick={() => setActiveStep(ECONOMY_STEP_INDEX)}>
+              Regresar a revisar
+            </Button>
+          </Box>
         </Paper>
       ) : activeStep === GENERAL_INFO_STEP_INDEX ? (
         <PersonalInfoForm
