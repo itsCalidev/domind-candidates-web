@@ -32,9 +32,11 @@ import RequestQuoteOutlinedIcon from '@mui/icons-material/RequestQuoteOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
 import DeleteForeverOutlinedIcon from '@mui/icons-material/DeleteForeverOutlined';
+import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import { Bar, BarChart, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { accentColors, brandColors } from '@/theme/palette';
 import { formatCurrency } from '@/shared/utils/formatCurrency';
+import { CleanStateBadge } from '@/shared/components/CleanStateBadge';
 import { VisuallyHidden } from '@/shared/components/VisuallyHidden';
 import { useCandidateMutations } from '../../hooks/useCandidateMutations';
 import type {
@@ -136,9 +138,9 @@ const EMPTY_ECONOMY: CandidateEconomy = {
   expensesExtra: null,
   expensesTotal: null,
   hasOtherExpenses: false,
-  hasVehicles: false,
-  hasBankCards: false,
-  hasDebts: false,
+  hasVehicles: null,
+  hasBankCards: null,
+  hasDebts: null,
 };
 
 function EmptyTableState({ colSpan, message }: { colSpan: number; message: string }) {
@@ -181,9 +183,12 @@ function buildEconomyFormDefaults(
     expensesRentOther: safeEconomy.expensesRentOther === null ? '' : String(safeEconomy.expensesRentOther),
     expensesExtra: safeEconomy.expensesExtra === null ? '' : String(safeEconomy.expensesExtra),
     hasOtherExpenses: safeEconomy.hasOtherExpenses ? 'yes' : 'no',
-    hasVehicles: safeEconomy.hasVehicles ? 'yes' : 'no',
-    hasBankCards: safeEconomy.hasBankCards ? 'yes' : 'no',
-    hasDebts: safeEconomy.hasDebts ? 'yes' : 'no',
+    // '' cuando el backend no tiene respuesta (`null`) — nunca defaultea a
+    // "No", que antes se leía como una respuesta real sin que nadie la
+    // hubiera dado (ver el comentario de economyFormSchema.ts).
+    hasVehicles: safeEconomy.hasVehicles === null ? '' : safeEconomy.hasVehicles ? 'yes' : 'no',
+    hasBankCards: safeEconomy.hasBankCards === null ? '' : safeEconomy.hasBankCards ? 'yes' : 'no',
+    hasDebts: safeEconomy.hasDebts === null ? '' : safeEconomy.hasDebts ? 'yes' : 'no',
     incomes: (incomes ?? []).map((income) => ({ source: income.source, amount: toFormAmount(income.amount) })),
     vehicles: (vehicles ?? []).map((vehicle) => ({ model: vehicle.model, value: toFormAmount(vehicle.value) })),
     debts: (debts ?? []).map((debt) => ({
@@ -265,7 +270,9 @@ function buildEconomyPayload(values: EconomyFormValues): UpdateCandidateEconomyP
 
 /**
  * RadioGroup Sí/No compartido por Vehículos/Tarjetas/Deudas — al pasar a
- * "No" vacía el arreglo correspondiente de inmediato.
+ * "No" vacía el arreglo correspondiente de inmediato. Arranca sin ninguna
+ * opción marcada (`field.value === ''`) cuando el backend no tiene
+ * respuesta guardada — nunca "No" por defecto.
  */
 function HasItemsToggle({
   labelId,
@@ -273,6 +280,8 @@ function HasItemsToggle({
   name,
   control,
   disabled,
+  error,
+  helperText,
   onClear,
 }: {
   labelId: string;
@@ -280,11 +289,15 @@ function HasItemsToggle({
   name: 'hasVehicles' | 'hasBankCards' | 'hasDebts';
   control: Control<EconomyFormValues>;
   disabled: boolean;
+  error?: boolean;
+  helperText?: string;
   onClear: () => void;
 }) {
   return (
     <Paper elevation={0} sx={{ p: 2.5, borderRadius: 3 }}>
-      <FormLabel id={labelId}>{question}</FormLabel>
+      <FormLabel id={labelId} error={error}>
+        {question}
+      </FormLabel>
       <Controller
         name={name}
         control={control}
@@ -303,8 +316,55 @@ function HasItemsToggle({
           </RadioGroup>
         )}
       />
+      {error && helperText && (
+        <Typography variant="caption" color="error.main" sx={{ display: 'block', mt: 0.5 }}>
+          {helperText}
+        </Typography>
+      )}
     </Paper>
   );
+}
+
+/**
+ * Estado neutral (gris) para "todavía sin responder" — nunca verde como
+ * CleanStateBadge, que es exclusivamente para un `false` confirmado. Mismo
+ * criterio que el badge homónimo de HealthForm.tsx (dominio distinto, no
+ * se comparte porque cada uno vive junto a su propio contexto).
+ */
+function PendingStateBadge({ label }: { label: string }) {
+  return (
+    <Stack direction="row" spacing={1} alignItems="center">
+      <HelpOutlineOutlinedIcon fontSize="small" sx={{ color: 'text.disabled' }} />
+      <Typography variant="body2" fontWeight={600} color="text.secondary">
+        {label}
+      </Typography>
+    </Stack>
+  );
+}
+
+/**
+ * Decide qué mostrar en el panel de solo lectura del reclutador para
+ * Vehículos/Tarjetas/Deudas: la tabla con registros solo cuando el
+ * candidato respondió "Sí" — un `false` explícito nunca debe verse como
+ * una tabla vacía (ignora la respuesta), y `null`/`undefined` (todavía
+ * sin responder) tampoco debe leerse como "No".
+ */
+function OwnershipSection({
+  hasItems,
+  noItemsLabel,
+  children,
+}: {
+  hasItems: boolean | null | undefined;
+  noItemsLabel: string;
+  children: ReactNode;
+}) {
+  if (hasItems === null || hasItems === undefined) {
+    return <PendingStateBadge label="Pendiente por registrar" />;
+  }
+  if (hasItems === false) {
+    return <CleanStateBadge label={noItemsLabel} />;
+  }
+  return <>{children}</>;
 }
 
 function DynamicListSection({
@@ -579,6 +639,8 @@ export function EconomyForm(props: EconomyFormProps) {
               name="hasVehicles"
               control={control}
               disabled={isSaving}
+              error={!!errors.hasVehicles}
+              helperText={errors.hasVehicles?.message}
               onClear={() => vehiclesArray.replace([])}
             />
             {hasVehiclesValue === 'yes' && (
@@ -640,6 +702,8 @@ export function EconomyForm(props: EconomyFormProps) {
               name="hasBankCards"
               control={control}
               disabled={isSaving}
+              error={!!errors.hasBankCards}
+              helperText={errors.hasBankCards?.message}
               onClear={() => bankCardsArray.replace([])}
             />
             {hasBankCardsValue === 'yes' && (
@@ -700,6 +764,8 @@ export function EconomyForm(props: EconomyFormProps) {
         name="hasDebts"
         control={control}
         disabled={isSaving}
+        error={!!errors.hasDebts}
+        helperText={errors.hasDebts?.message}
         onClear={() => debtsArray.replace([])}
       />
 
@@ -1011,25 +1077,27 @@ export function EconomyForm(props: EconomyFormProps) {
               <DirectionsCarFilledOutlinedIcon fontSize="small" color="action" />
               <Typography variant="subtitle1">Vehículos</Typography>
             </Stack>
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell scope="col">Modelo</TableCell>
-                    <TableCell scope="col" align="right">Valor</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {vehicles.map((vehicle, index) => (
-                    <TableRow key={`${vehicle.model}-${index}`}>
-                      <TableCell>{vehicle.model}</TableCell>
-                      <TableCell align="right">{formatCurrency(vehicle.value)}</TableCell>
+            <OwnershipSection hasItems={economy.hasVehicles} noItemsLabel="El candidato indicó que no cuenta con vehículos">
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell scope="col">Modelo</TableCell>
+                      <TableCell scope="col" align="right">Valor</TableCell>
                     </TableRow>
-                  ))}
-                  {vehicles.length === 0 && <EmptyTableState colSpan={2} message="No hay vehículos registrados." />}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {vehicles.map((vehicle, index) => (
+                      <TableRow key={`${vehicle.model}-${index}`}>
+                        <TableCell>{vehicle.model}</TableCell>
+                        <TableCell align="right">{formatCurrency(vehicle.value)}</TableCell>
+                      </TableRow>
+                    ))}
+                    {vehicles.length === 0 && <EmptyTableState colSpan={2} message="No hay vehículos registrados." />}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </OwnershipSection>
           </Paper>
         </Grid>
 
@@ -1039,25 +1107,32 @@ export function EconomyForm(props: EconomyFormProps) {
               <CreditCardOutlinedIcon fontSize="small" color="action" />
               <Typography variant="subtitle1">Tarjetas bancarias</Typography>
             </Stack>
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell scope="col">Banco</TableCell>
-                    <TableCell scope="col" align="right">Límite de crédito</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {bankCards.map((card, index) => (
-                    <TableRow key={`${card.bank}-${index}`}>
-                      <TableCell>{card.bank}</TableCell>
-                      <TableCell align="right">{formatCurrency(card.creditLimit)}</TableCell>
+            <OwnershipSection
+              hasItems={economy.hasBankCards}
+              noItemsLabel="El candidato indicó que no cuenta con tarjetas bancarias"
+            >
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell scope="col">Banco</TableCell>
+                      <TableCell scope="col" align="right">Límite de crédito</TableCell>
                     </TableRow>
-                  ))}
-                  {bankCards.length === 0 && <EmptyTableState colSpan={2} message="No hay tarjetas bancarias registradas." />}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {bankCards.map((card, index) => (
+                      <TableRow key={`${card.bank}-${index}`}>
+                        <TableCell>{card.bank}</TableCell>
+                        <TableCell align="right">{formatCurrency(card.creditLimit)}</TableCell>
+                      </TableRow>
+                    ))}
+                    {bankCards.length === 0 && (
+                      <EmptyTableState colSpan={2} message="No hay tarjetas bancarias registradas." />
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </OwnershipSection>
           </Paper>
         </Grid>
       </Grid>
@@ -1066,27 +1141,29 @@ export function EconomyForm(props: EconomyFormProps) {
         <Typography variant="subtitle1" sx={{ mb: 2 }}>
           Deudas
         </Typography>
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell scope="col">Acreedor</TableCell>
-                <TableCell scope="col" align="right">Monto</TableCell>
-                <TableCell scope="col" align="right">Pago mensual</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {debts.map((debt, index) => (
-                <TableRow key={`${debt.creditor}-${index}`}>
-                  <TableCell>{debt.creditor}</TableCell>
-                  <TableCell align="right">{formatCurrency(debt.amount)}</TableCell>
-                  <TableCell align="right">{formatCurrency(debt.monthlyPayment)}</TableCell>
+        <OwnershipSection hasItems={economy.hasDebts} noItemsLabel="El candidato indicó que no cuenta con deudas">
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell scope="col">Acreedor</TableCell>
+                  <TableCell scope="col" align="right">Monto</TableCell>
+                  <TableCell scope="col" align="right">Pago mensual</TableCell>
                 </TableRow>
-              ))}
-              {debts.length === 0 && <EmptyTableState colSpan={3} message="No hay deudas registradas." />}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHead>
+              <TableBody>
+                {debts.map((debt, index) => (
+                  <TableRow key={`${debt.creditor}-${index}`}>
+                    <TableCell>{debt.creditor}</TableCell>
+                    <TableCell align="right">{formatCurrency(debt.amount)}</TableCell>
+                    <TableCell align="right">{formatCurrency(debt.monthlyPayment)}</TableCell>
+                  </TableRow>
+                ))}
+                {debts.length === 0 && <EmptyTableState colSpan={3} message="No hay deudas registradas." />}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </OwnershipSection>
       </Paper>
     </Stack>
   );
