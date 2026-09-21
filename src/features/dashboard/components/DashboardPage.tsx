@@ -8,6 +8,19 @@ import { QuickActions } from './QuickActions';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { hasFullAccess } from '@/features/auth/types/role.enum';
 
+/**
+ * Toggle temporal pedido por el usuario para ocultar la tarjeta de
+ * Alertas sin borrar el componente ni sus datos — cambiar a `true` la
+ * vuelve a mostrar. `boolean` (no el literal `false` inline en el JSX):
+ * TypeScript elimina como código muerto una rama de `&&` cuyo operando
+ * izquierdo es el tipo literal `false`, y dentro de código que marca
+ * inalcanzable deja de aplicar el angostamiento de tipos normal (el
+ * `!data` de abajo dejaba de narrowear `data` a no-nulo) — con esta
+ * variable de tipo `boolean` esa rama sigue siendo código real para el
+ * compilador, solo que nunca se ejecuta en tiempo de ejecución.
+ */
+const SHOW_ALERTS = false;
+
 export function DashboardPage() {
   const { data, isLoading, isError } = useDashboardData();
   const { user } = useAuth();
@@ -50,16 +63,20 @@ export function DashboardPage() {
 
       {/* Gráfica (ya viene escalada a "mis candidatos" para RECRUITER)
           + Alertas (solo SYSTEM/ADMIN — sigue siendo mock e información
-          de tipo administrativo, no personal). */}
+          de tipo administrativo, no personal).
+          Alertas oculta temporalmente a pedido del usuario — componente
+          y datos se dejan intactos, solo se deja de renderizar. La
+          gráfica pasa a lg=12 siempre (antes solo para !isFullAccess)
+          para ocupar el espacio que dejaba libre la columna de Alertas. */}
       <Grid container spacing={2.5} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, lg: isFullAccess ? 8 : 12 }}>
+        <Grid size={12}>
           {isLoading || !data ? (
             <Skeleton variant="rounded" height={340} sx={{ borderRadius: 3 }} />
           ) : (
             <CandidatesStatusChart data={data.candidatesByStatus} />
           )}
         </Grid>
-        {isFullAccess && (
+        {SHOW_ALERTS && isFullAccess && (
           <Grid size={{ xs: 12, lg: 4 }}>
             {isLoading || !data ? (
               <Skeleton variant="rounded" height={340} sx={{ borderRadius: 3 }} />
