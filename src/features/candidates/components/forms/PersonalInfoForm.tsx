@@ -1,8 +1,9 @@
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
-import { Button, Grid, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
+import { useState, type ReactNode } from 'react';
+import { Box, Button, Grid, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import { useToast } from '@/shared/context/ToastContext';
 import { useCandidateMutations } from '../../hooks/useCandidateMutations';
 import type {
   CandidateCaptureMode,
@@ -45,6 +46,46 @@ type PersonalInfoFormProps =
       /** Avisa al Wizard que este paso se guardó — desbloquea el siguiente. */
       onSaved: () => void;
     };
+
+/**
+ * Etiqueta con asterisco rojo cuando `required` — usada solo en
+ * `mode="candidate"` para los campos del "hard gate" de abajo, así el
+ * candidato ve de antemano cuáles no puede dejar vacíos, en vez de
+ * enterarse hasta que "Guardar y continuar" lo rechaza.
+ */
+function FieldLabel({ text, required }: { text: string; required: boolean }): ReactNode {
+  if (!required) return text;
+  return (
+    <>
+      {text}
+      <Box component="span" sx={{ color: 'error.main', ml: 0.5 }}>
+        *
+      </Box>
+    </>
+  );
+}
+
+/**
+ * Identidad mínima que el candidato (nunca el reclutador) debe capturar
+ * en este paso antes de poder avanzar el Wizard — `curp`/`rfc` NO forman
+ * parte de este formulario: no existe todavía DTO/endpoint que los
+ * respalde (ver el comentario de `candidateService.ts` sobre el bloque
+ * `identity`, que sigue "Próximamente"), así que exigirlos aquí sería
+ * bloquear al candidato con un campo que ni siquiera se le muestra.
+ * `firstName`/`lastName` se incluyen aunque casi siempre ya vienen
+ * pre-llenados por el reclutador, para blindar el caso raro de que
+ * lleguen vacíos.
+ */
+const REQUIRED_CANDIDATE_FIELDS: readonly (keyof PersonalInfoFormValues)[] = [
+  'firstName',
+  'lastName',
+  'phone',
+  'birthDate',
+];
+
+function getMissingRequiredFields(values: PersonalInfoFormValues): (keyof PersonalInfoFormValues)[] {
+  return REQUIRED_CANDIDATE_FIELDS.filter((field) => !values[field]?.trim());
+}
 
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
@@ -148,6 +189,7 @@ function withCurrentValueOption(options: readonly string[], currentValue: string
 export function PersonalInfoForm(props: PersonalInfoFormProps) {
   const { candidateId, initialValues } = props;
   const { updatePersonalInfo } = useCandidateMutations();
+  const { showToast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const isSaving = updatePersonalInfo.isPending;
 
@@ -158,6 +200,7 @@ export function PersonalInfoForm(props: PersonalInfoFormProps) {
     reset,
     watch,
     setValue,
+    setError,
     formState: { errors, isDirty, dirtyFields },
   } = useForm<PersonalInfoFormValues>({
     resolver: zodResolver(personalInfoSchema),
@@ -175,6 +218,25 @@ export function PersonalInfoForm(props: PersonalInfoFormProps) {
   }
 
   async function onSubmit(values: PersonalInfoFormValues) {
+    // Hard gate exclusivo del candidato: el reclutador puede seguir
+    // guardando datos parciales como siempre (ver más abajo, el PATCH
+    // pasa directo en `mode="admin"`) — esta validación solo bloquea el
+    // paso 1 del Wizard, para que "Guardar y continuar" nunca desbloquee
+    // "Documentación" con una identidad mínima incompleta (lo que
+    // rompía la heurística de restauración de progreso al recargar).
+    if (props.mode === 'candidate') {
+      const missingFields = getMissingRequiredFields(values);
+      if (missingFields.length > 0) {
+        missingFields.forEach((field) => {
+          setError(field, { type: 'required', message: 'Este campo es obligatorio' });
+        });
+        showToast(
+          'Para continuar, debes completar al menos tu Nombre, Apellido, Teléfono y Fecha de nacimiento.',
+          'error',
+        );
+        return;
+      }
+    }
     try {
       const payload = buildChangedPayload(values, dirtyFields);
       await updatePersonalInfo.mutateAsync({ id: candidateId, payload });
@@ -194,7 +256,7 @@ export function PersonalInfoForm(props: PersonalInfoFormProps) {
     <>
       <Grid size={{ xs: 12, sm: 6 }}>
         <TextField
-          label="Nombre(s)"
+          label={<FieldLabel text="Nombre(s)" required={props.mode === 'candidate'} />}
           fullWidth
           disabled={isSaving}
           {...register('firstName')}
@@ -204,7 +266,7 @@ export function PersonalInfoForm(props: PersonalInfoFormProps) {
       </Grid>
       <Grid size={{ xs: 12, sm: 6 }}>
         <TextField
-          label="Apellido(s)"
+          label={<FieldLabel text="Apellido(s)" required={props.mode === 'candidate'} />}
           fullWidth
           disabled={isSaving}
           {...register('lastName')}
@@ -297,7 +359,7 @@ export function PersonalInfoForm(props: PersonalInfoFormProps) {
       </Grid>
       <Grid size={{ xs: 12, sm: 6, md: 4 }}>
         <TextField
-          label="Teléfono"
+          label={<FieldLabel text="Teléfono" required={props.mode === 'candidate'} />}
           fullWidth
           disabled={isSaving}
           {...register('phone')}
@@ -319,7 +381,7 @@ export function PersonalInfoForm(props: PersonalInfoFormProps) {
       </Grid>
       <Grid size={{ xs: 12, sm: 6, md: 4 }}>
         <TextField
-          label="Fecha de nacimiento"
+          label={<FieldLabel text="Fecha de nacimiento" required={props.mode === 'candidate'} />}
           type="date"
           fullWidth
           disabled={isSaving}
