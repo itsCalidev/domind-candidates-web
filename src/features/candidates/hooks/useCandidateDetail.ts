@@ -10,7 +10,10 @@ import { candidatesService } from '../services/candidateService';
  * que useCandidateMutations puede invalidar ambas por separado.
  *
  * Devuelve la misma forma { candidate, isLoading } que antes para no
- * obligar a CandidateDetailPage a cambiar.
+ * obligar a CandidateDetailPage a cambiar — `isError`/`refetch` se
+ * agregaron después (CandidateWizard.tsx los necesita: `refetch` para
+ * pedir la versión más fresca antes de validar completitud en
+ * `handleFinalSubmit`, ver ese archivo) sin tocar nada de lo anterior.
  */
 export function useCandidateDetail(id: string | undefined) {
   const query = useQuery({
@@ -25,5 +28,7 @@ export function useCandidateDetail(id: string | undefined) {
     // true para siempre; ese caso es "no hay nada que cargar", no "está
     // cargando" — la página debe pasar directo a "Candidato no encontrado".
     isLoading: !!id && query.isLoading,
+    isError: query.isError,
+    refetch: query.refetch,
   };
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Box, Button, CircularProgress, Paper, Step, StepButton, Stepper, Typography } from '@mui/material';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import { candidatesService } from '@/features/candidates/services/candidateService';
@@ -8,9 +8,10 @@ import { FamilyForm } from '@/features/candidates/components/forms/FamilyForm';
 import { HealthForm } from '@/features/candidates/components/forms/HealthForm';
 import { HousingForm } from '@/features/candidates/components/forms/HousingForm';
 import { EconomyForm } from '@/features/candidates/components/forms/EconomyForm';
+import { useCandidateDetail } from '@/features/candidates/hooks/useCandidateDetail';
 import { useGetEvidence } from '@/features/candidates/hooks/useCandidateEvidence';
 import { getMissingDataReport } from '@/features/candidates/utils/candidateCompleteness';
-import type { CandidateDetail } from '@/features/candidates/types/candidate.types';
+import type { CandidateDetail, CandidateGeneralInfo, CandidateHealth, CandidateHousing } from '@/features/candidates/types/candidate.types';
 import { useToast } from '@/shared/context/ToastContext';
 import { useMagicLink } from '../context/MagicLinkContext';
 
@@ -29,6 +30,39 @@ const FAMILY_STEP_INDEX = 2;
 const HEALTH_STEP_INDEX = 3;
 const HOUSING_STEP_INDEX = 4;
 const ECONOMY_STEP_INDEX = 5;
+
+/** Placeholder que candidateService.ts pone en `generalInfo` cuando el backend no trae el dato — nunca es un valor real capturado. */
+const NOT_REGISTERED = 'No registrado';
+
+function hasText(value: string | null | undefined): boolean {
+  return !!value && value.trim() !== '' && value !== NOT_REGISTERED;
+}
+
+/**
+ * Heurísticas de "¿el candidato ya tocó este paso?", una por sección —
+ * deliberadamente más laxas que `getMissingDataReport` (que exige TODOS
+ * los campos para permitir el envío final). Aquí solo deciden dónde
+ * reanudar el Wizard al recargar la página: un falso positivo (marcar un
+ * paso "tocado" cuando en realidad está a medias) no bloquea nada, porque
+ * `getMissingDataReport` sigue siendo quien exige completitud real antes
+ * del envío — y el candidato puede volver a cualquier paso desbloqueado
+ * con el Stepper.
+ */
+function hasGeneralInfoData(info: CandidateGeneralInfo): boolean {
+  return hasText(info.address) || hasText(info.phone) || hasText(info.email);
+}
+
+function hasHealthData(health: CandidateHealth): boolean {
+  return health.weight !== null || health.height !== null || hasText(health.currentHealth);
+}
+
+function hasHousingData(housing: CandidateHousing, evidenceCount: number): boolean {
+  return hasText(housing.housingType) || hasText(housing.housingConditions) || evidenceCount > 0;
+}
+
+function hasEconomyData(detail: CandidateDetail): boolean {
+  return detail.incomes.length > 0 || detail.economy.expensesTotal !== null;
+}
 
 function SubmittedScreen() {
   return (
@@ -58,44 +92,71 @@ export function CandidateWizard() {
   const { showToast } = useToast();
   const [activeStep, setActiveStep] = useState(0);
   const [furthestUnlockedStep, setFurthestUnlockedStep] = useState(0);
-  const [detail, setDetail] = useState<CandidateDetail | null>(null);
-  const [isLoadingDetail, setIsLoadingDetail] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const hasRestoredProgress = useRef(false);
 
   const candidateId = candidate?.candidateId;
+  // TanStack Query (no el useState/useEffect crudo que tenía antes): la
+  // misma query y clave (['candidates','detail',id]) que ya usa
+  // CandidateDetailPage, así que cada mutación de los *Form.tsx
+  // (updatePersonalInfo/updateFamily/updateHealth/updateHousing/
+  // updateEconomy, todas con `invalidateCandidates()` en su `onSuccess`,
+  // ver useCandidateMutations.ts) la invalida y dispara un refetch en
+  // segundo plano automáticamente. `refetch` además se usa explícitamente
+  // en `handleFinalSubmit` para no validar completitud contra una versión
+  // obsoleta si el candidato hace clic justo después de guardar el último
+  // paso, antes de que ese refetch en segundo plano termine.
+  const {
+    candidate: detail,
+    isLoading: isLoadingDetail,
+    isError: isDetailError,
+    refetch: refetchDetail,
+  } = useCandidateDetail(candidateId);
   // La evidencia (documentos y fotos de vivienda) no vive embebida en
   // `CandidateDetail` — es su propio endpoint, igual que en
   // CandidateDetailPage (ver ese archivo). getMissingDataReport las
   // necesita para el checklist de "Documentación" y el mínimo de 3 fotos
-  // de "Vivienda". Llamados aquí, antes de cualquier `return` temprano,
-  // por las reglas de hooks de React.
+  // de "Vivienda".
   const documentEvidenceQuery = useGetEvidence(candidateId, 'DOCUMENT');
   const housingEvidenceQuery = useGetEvidence(candidateId, 'HOUSING');
 
-  // Pre-llena cada paso si el candidato ya había capturado datos antes
-  // (ej. cerró la pestaña a medio formulario y volvió a entrar con el
-  // mismo enlace) — reutiliza `getById`, la misma función de SERVICIO
-  // que ya usa el panel administrativo (dato, no componente visual), vía
-  // la ruta híbrida GET /candidates/:id.
   useEffect(() => {
-    if (!candidateId) return;
-    let isMounted = true;
-    candidatesService
-      .getById(candidateId)
-      .then((data) => {
-        if (isMounted) setDetail(data);
-      })
-      .catch(() => {
-        if (isMounted) showToast('No se pudo cargar tu información previa.', 'error');
-      })
-      .finally(() => {
-        if (isMounted) setIsLoadingDetail(false);
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, [candidateId, showToast]);
+    if (isDetailError) showToast('No se pudo cargar tu información previa.', 'error');
+  }, [isDetailError, showToast]);
+
+  // Restaura el progreso al recargar la página: si el candidato ya guardó
+  // datos en el backend para un paso, lo marca desbloqueado y arranca en
+  // el primer paso realmente pendiente, en vez de forzarlo a repetir
+  // "Guardar y continuar" en pasos que el backend ya tiene. Se ejecuta UNA
+  // sola vez (hasRestoredProgress) apenas `detail` y ambas evidencias
+  // terminan de resolver — después de eso, la navegación del candidato
+  // (Stepper, handleStepSaved) manda, sin que este efecto la vuelva a pisar.
+  useEffect(() => {
+    if (hasRestoredProgress.current) return;
+    if (!detail) return;
+    if (documentEvidenceQuery.isLoading || housingEvidenceQuery.isLoading) return;
+    hasRestoredProgress.current = true;
+
+    const stepIsFilled = [
+      hasGeneralInfoData(detail.generalInfo),
+      (documentEvidenceQuery.data?.length ?? 0) > 0,
+      detail.familyMembers.length > 0,
+      hasHealthData(detail.health),
+      hasHousingData(detail.housing, housingEvidenceQuery.data?.length ?? 0),
+      hasEconomyData(detail),
+    ];
+
+    let unlockedCount = 0;
+    while (unlockedCount < stepIsFilled.length && stepIsFilled[unlockedCount]) {
+      unlockedCount += 1;
+    }
+
+    if (unlockedCount > 0) {
+      setFurthestUnlockedStep(unlockedCount);
+      setActiveStep(Math.min(unlockedCount, WIZARD_STEPS.length - 1));
+    }
+  }, [detail, documentEvidenceQuery.data, documentEvidenceQuery.isLoading, housingEvidenceQuery.data, housingEvidenceQuery.isLoading]);
 
   function handleStepSaved(stepIndex: number) {
     setFurthestUnlockedStep((prev) => Math.max(prev, stepIndex + 1));
@@ -110,9 +171,13 @@ export function CandidateWizard() {
    * vez de un diálogo (el candidato no tiene un panel de detalle al que
    * volver a mirar la lista con calma): al aceptarlo, vuelve directo al
    * paso que le falta.
+   *
+   * Recibe `freshDetail` como parámetro en vez de cerrar sobre el `detail`
+   * ya renderizado — `handleFinalSubmit` le pasa el resultado de un
+   * `refetch()` recién resuelto, no el estado potencialmente obsoleto.
    */
-  function getMissingDataMessage(): string | null {
-    if (!detail) return 'No se pudo verificar tu información. Intenta de nuevo.';
+  function getMissingDataMessage(freshDetail: CandidateDetail | null): string | null {
+    if (!freshDetail) return 'No se pudo verificar tu información. Intenta de nuevo.';
     // Sin esto, un fallo de red en /evidence haría que `?? []` se lea como
     // "no subiste nada" — un falso negativo que bloquearía el envío por un
     // motivo distinto al real. Mejor pedir que reintente a que mienta sobre
@@ -120,7 +185,7 @@ export function CandidateWizard() {
     if (documentEvidenceQuery.isError || housingEvidenceQuery.isError) {
       return 'No se pudo verificar tu documentación y evidencia de vivienda. Intenta de nuevo.';
     }
-    const report = getMissingDataReport(detail, documentEvidenceQuery.data ?? [], housingEvidenceQuery.data ?? []);
+    const report = getMissingDataReport(freshDetail, documentEvidenceQuery.data ?? [], housingEvidenceQuery.data ?? []);
     if (report.isComplete) return null;
     const missingItems = Object.entries(report.bySection).flatMap(([section, fields]) =>
       fields.map((field) => `${section}: ${field}`),
@@ -130,13 +195,20 @@ export function CandidateWizard() {
 
   async function handleFinalSubmit() {
     if (!candidateId) return;
-    const missingDataMessage = getMissingDataMessage();
-    if (missingDataMessage) {
-      showToast(missingDataMessage, 'error');
-      return;
-    }
     setIsSubmitting(true);
     try {
+      // Pide la versión más fresca antes de validar: si el candidato
+      // guardó el último paso hace apenas un instante, el refetch en
+      // segundo plano que dispara esa mutación (ver el comentario de
+      // useCandidateDetail arriba) puede no haber resuelto todavía —
+      // confiar en el `detail` ya renderizado ahí produciría el falso
+      // "te falta todo" que se reportó.
+      const { data: freshDetail } = await refetchDetail();
+      const missingDataMessage = getMissingDataMessage(freshDetail ?? null);
+      if (missingDataMessage) {
+        showToast(missingDataMessage, 'error');
+        return;
+      }
       await candidatesService.submitForm(candidateId);
       clearMagicLink();
       setIsSubmitted(true);
