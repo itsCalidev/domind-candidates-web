@@ -482,7 +482,7 @@ export function EconomyForm(props: EconomyFormProps) {
       <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
         <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 2 }}>
           <RequestQuoteOutlinedIcon fontSize="small" color="action" />
-          <Typography variant="subtitle1">Egresos mensuales</Typography>
+          <Typography variant="subtitle1">Gastos mensuales</Typography>
         </Stack>
         <Grid container spacing={2}>
           {EXPENSE_CATEGORIES.map((category) => (
@@ -500,7 +500,7 @@ export function EconomyForm(props: EconomyFormProps) {
           ))}
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <TextField
-              label="Total de egresos (calculado)"
+              label="Total de gastos (calculado)"
               fullWidth
               disabled
               value={formatCurrency(calculatedTotal)}
@@ -511,7 +511,7 @@ export function EconomyForm(props: EconomyFormProps) {
 
         <Stack spacing={1.5} sx={{ mt: 3 }}>
           <FormLabel id="has-other-expenses-label" error={!!errors.hasOtherExpenses}>
-            ¿Tiene otros egresos?
+            ¿Tiene otros gastos?
           </FormLabel>
           <Controller
             name="hasOtherExpenses"
@@ -537,18 +537,18 @@ export function EconomyForm(props: EconomyFormProps) {
       {hasOtherExpensesValue === 'yes' && (
         <DynamicListSection
           icon={<RequestQuoteOutlinedIcon fontSize="small" color="action" />}
-          title="Otros egresos"
+          title="Otros gastos"
           addLabel="Agregar fila"
           disabled={isSaving}
           onAdd={() => otherExpensesArray.append({ concept: '', amount: '' })}
           isEmpty={otherExpensesArray.fields.length === 0}
-          emptyMessage='No hay otros egresos agregados. Usa "Agregar fila" para capturar uno.'
+          emptyMessage='No hay otros gastos agregados. Usa "Agregar fila" para capturar uno.'
         >
           {otherExpensesArray.fields.map((field, index) => (
             <Paper key={field.id} variant="outlined" sx={{ p: 2, borderRadius: 2, position: 'relative' }}>
               <IconButton
                 size="small"
-                aria-label="Eliminar egreso"
+                aria-label="Eliminar gasto"
                 disabled={isSaving}
                 onClick={() => otherExpensesArray.remove(index)}
                 sx={{ position: 'absolute', top: 8, right: 8 }}
@@ -558,7 +558,7 @@ export function EconomyForm(props: EconomyFormProps) {
               <Grid container spacing={2} sx={{ pr: 4 }}>
                 <Grid size={{ xs: 12, sm: 7 }}>
                   <TextField
-                    label="Nombre del egreso"
+                    label="Nombre del gasto"
                     fullWidth
                     disabled={isSaving}
                     {...register(`otherExpenses.${index}.concept`)}
@@ -886,13 +886,13 @@ export function EconomyForm(props: EconomyFormProps) {
 
   const comparisonData = [
     { label: 'Ingresos', value: totalIncome, color: theme.palette.success.main },
-    { label: 'Egresos', value: totalExpenses ?? 0, color: theme.palette.error.main },
+    { label: 'Gastos', value: totalExpenses ?? 0, color: theme.palette.error.main },
   ];
 
-  const expenseChartDescription = `Gráfica de dona que muestra el desglose de egresos mensuales por categoría, con un total de ${formatCurrency(
+  const expenseChartDescription = `Gráfica de dona que muestra el desglose de gastos mensuales por categoría, con un total de ${formatCurrency(
     expenseData.reduce((sum, entry) => sum + entry.value, 0),
   )}.`;
-  const financialHealthDescription = `Gráfica de barras que compara el total de ingresos (${formatCurrency(totalIncome)}) contra el total de egresos (${formatCurrency(totalExpenses)}).`;
+  const financialHealthDescription = `Gráfica de barras que compara el total de ingresos (${formatCurrency(totalIncome)}) contra el total de gastos (${formatCurrency(totalExpenses)}).`;
 
   const financialHealth =
     totalExpenses === null
@@ -914,14 +914,14 @@ export function EconomyForm(props: EconomyFormProps) {
       <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
         <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 2 }}>
           <RequestQuoteOutlinedIcon fontSize="small" color="action" />
-          <Typography variant="subtitle1">Egresos mensuales</Typography>
+          <Typography variant="subtitle1">Gastos mensuales</Typography>
         </Stack>
         <Grid container spacing={3}>
           {EXPENSE_CATEGORIES.map((category) => (
             <DetailField key={category.key} label={category.label} value={formatCurrency(economy[category.key] as number | null)} />
           ))}
-          <DetailField label="Total de egresos" value={formatCurrency(economy.expensesTotal)} />
-          <DetailField label="Tiene otros egresos" value={economy.hasOtherExpenses} />
+          <DetailField label="Total de gastos" value={formatCurrency(economy.expensesTotal)} />
+          <DetailField label="Tiene otros gastos" value={economy.hasOtherExpenses} />
         </Grid>
       </Paper>
 
@@ -929,13 +929,13 @@ export function EconomyForm(props: EconomyFormProps) {
         <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
           <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 2 }}>
             <RequestQuoteOutlinedIcon fontSize="small" color="action" />
-            <Typography variant="subtitle1">Otros egresos</Typography>
+            <Typography variant="subtitle1">Otros gastos</Typography>
           </Stack>
           <TableContainer>
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell scope="col">Nombre del egreso</TableCell>
+                  <TableCell scope="col">Nombre del gasto</TableCell>
                   <TableCell scope="col" align="right">Monto</TableCell>
                 </TableRow>
               </TableHead>
@@ -946,7 +946,7 @@ export function EconomyForm(props: EconomyFormProps) {
                     <TableCell align="right">{formatCurrency(expense.amount)}</TableCell>
                   </TableRow>
                 ))}
-                {otherExpenses.length === 0 && <EmptyTableState colSpan={2} message="No hay otros egresos registrados." />}
+                {otherExpenses.length === 0 && <EmptyTableState colSpan={2} message="No hay otros gastos registrados." />}
               </TableBody>
             </Table>
           </TableContainer>
@@ -958,13 +958,13 @@ export function EconomyForm(props: EconomyFormProps) {
           <Paper elevation={0} sx={{ p: 3, borderRadius: 3, height: '100%' }}>
             <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 2 }}>
               <PieChartOutlineOutlinedIcon fontSize="small" color="action" />
-              <Typography variant="subtitle1">Desglose de egresos</Typography>
+              <Typography variant="subtitle1">Desglose de gastos</Typography>
             </Stack>
 
             {expenseData.length === 0 ? (
               <Box sx={{ py: 6, textAlign: 'center' }}>
                 <Typography variant="body2" color="text.secondary">
-                  No hay egresos registrados para graficar.
+                  No hay gastos registrados para graficar.
                 </Typography>
               </Box>
             ) : (
@@ -1028,7 +1028,7 @@ export function EconomyForm(props: EconomyFormProps) {
                 Ingresos totales: <strong>{formatCurrency(totalIncome)}</strong>
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Egresos totales: <strong>{formatCurrency(totalExpenses)}</strong>
+                Gastos totales: <strong>{formatCurrency(totalExpenses)}</strong>
               </Typography>
               {financialHealth ? (
                 <Typography variant="body2" fontWeight={600} color={financialHealth.color} sx={{ mt: 0.5 }}>
@@ -1036,7 +1036,7 @@ export function EconomyForm(props: EconomyFormProps) {
                 </Typography>
               ) : (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  No hay egresos totales registrados para comparar.
+                  No hay gastos totales registrados para comparar.
                 </Typography>
               )}
             </Stack>

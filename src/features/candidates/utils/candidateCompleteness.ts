@@ -215,11 +215,11 @@ export function getMissingDataReport(
   flag(SECTION_ECONOMY, 'Gasto médico', isMissingNumber(economy.expensesMedical));
   flag(SECTION_ECONOMY, 'Gasto en renta/otros', isMissingNumber(economy.expensesRentOther));
   flag(SECTION_ECONOMY, 'Gastos extra', isMissingNumber(economy.expensesExtra));
-  flag(SECTION_ECONOMY, 'Total de egresos', isMissingNumber(economy.expensesTotal));
+  flag(SECTION_ECONOMY, 'Total de gastos', isMissingNumber(economy.expensesTotal));
   flag(SECTION_ECONOMY, 'Ingresos', candidate.incomes.length === 0);
-  flag(SECTION_ECONOMY, '¿Otros egresos?', isMissingBoolean(economy.hasOtherExpenses));
+  flag(SECTION_ECONOMY, '¿Otros gastos?', isMissingBoolean(economy.hasOtherExpenses));
   if (economy.hasOtherExpenses === true) {
-    flag(SECTION_ECONOMY, 'Detalle de otros egresos', candidate.otherExpenses.length === 0);
+    flag(SECTION_ECONOMY, 'Detalle de otros gastos', candidate.otherExpenses.length === 0);
   }
   flag(SECTION_ECONOMY, '¿Tiene vehículos?', isMissingBoolean(economy.hasVehicles));
   if (economy.hasVehicles === true) {

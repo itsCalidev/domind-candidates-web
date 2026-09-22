@@ -33,7 +33,7 @@ const bankCardItemSchema = z.object({
  * `concept`/`amount`, mismo patrón que incomes/vehicles/debts/bankCards.
  */
 const otherExpenseItemSchema = z.object({
-  concept: z.string().trim().min(1, 'El nombre del egreso es obligatorio').max(150, 'Máximo 150 caracteres'),
+  concept: z.string().trim().min(1, 'El nombre del gasto es obligatorio').max(150, 'Máximo 150 caracteres'),
   amount: amountField(),
 });
 
