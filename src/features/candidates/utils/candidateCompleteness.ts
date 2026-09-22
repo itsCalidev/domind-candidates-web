@@ -1,4 +1,4 @@
-import type { CandidateDetail, EvidencePhoto } from '../types/candidate.types';
+import type { CandidateDetail, CandidateGeneralInfo, EvidencePhoto } from '../types/candidate.types';
 import { DOCUMENT_DEFINITIONS } from './documentCatalog';
 
 /** Mínimo de fotografías de vivienda exigido para poder finalizar la captura. */
@@ -52,6 +52,41 @@ export interface MissingDataReport {
 }
 
 /**
+ * Reglas de "Información General" completa — extraídas de
+ * `getMissingDataReport` para que el flujo MAGIC_LINK de "Finalizar
+ * Captura" (ver CandidateDetailPage.tsx) pueda validar ÚNICAMENTE esta
+ * sección, sin correr el resto del reporte completo (Familia/Salud/
+ * Vivienda/Documentación/Economía las sigue llenando el propio candidato
+ * vía el Wizard, el reclutador no las edita para MAGIC_LINK). Misma
+ * fuente de verdad para ambos modos — ningún criterio duplicado.
+ */
+export function getMissingGeneralInfoFields(info: CandidateGeneralInfo): string[] {
+  const missing: string[] = [];
+  function add(field: string, isMissing: boolean) {
+    if (isMissing) missing.push(field);
+  }
+
+  add('Domicilio', isMissingText(info.address));
+  add('Colonia', isMissingText(info.neighborhood));
+  add('Código postal', isMissingText(info.postalCode));
+  add('Teléfono', isMissingText(info.phone));
+  add('Correo electrónico', isMissingText(info.email));
+  add('Fecha de nacimiento', isMissingText(info.birthDate));
+  add('Lugar de nacimiento', isMissingText(info.birthPlace));
+  add('Estado civil', isMissingText(info.civilStatus));
+  if (MARITAL_STATUSES_WITH_SPOUSE.includes(info.civilStatus)) {
+    add('Fecha de nacimiento del cónyuge', isMissingText(info.spouseBirthDate));
+  }
+  add('Último grado de estudios', isMissingText(info.highestEducation));
+  add('Tipo de comprobante de estudios', isMissingText(info.studiesProofType));
+  add('Fecha del comprobante de estudios', isMissingText(info.studiesProofDate));
+  add('Empresa', isMissingText(info.companyName));
+  add('Puesto solicitado', isMissingText(info.positionApplied));
+
+  return missing;
+}
+
+/**
  * `documentEvidence`/`housingEvidence`: la evidencia (documentos y fotos
  * de vivienda) no vive embebida en `CandidateDetail` — es su propio
  * endpoint (`GET /candidates/:id/evidence?category=...`, ver
@@ -73,23 +108,7 @@ export function getMissingDataReport(
 
   // ---- Información General ----
   const SECTION_GENERAL = 'Información General';
-  const info = candidate.generalInfo;
-  flag(SECTION_GENERAL, 'Domicilio', isMissingText(info.address));
-  flag(SECTION_GENERAL, 'Colonia', isMissingText(info.neighborhood));
-  flag(SECTION_GENERAL, 'Código postal', isMissingText(info.postalCode));
-  flag(SECTION_GENERAL, 'Teléfono', isMissingText(info.phone));
-  flag(SECTION_GENERAL, 'Correo electrónico', isMissingText(info.email));
-  flag(SECTION_GENERAL, 'Fecha de nacimiento', isMissingText(info.birthDate));
-  flag(SECTION_GENERAL, 'Lugar de nacimiento', isMissingText(info.birthPlace));
-  flag(SECTION_GENERAL, 'Estado civil', isMissingText(info.civilStatus));
-  if (MARITAL_STATUSES_WITH_SPOUSE.includes(info.civilStatus)) {
-    flag(SECTION_GENERAL, 'Fecha de nacimiento del cónyuge', isMissingText(info.spouseBirthDate));
-  }
-  flag(SECTION_GENERAL, 'Último grado de estudios', isMissingText(info.highestEducation));
-  flag(SECTION_GENERAL, 'Tipo de comprobante de estudios', isMissingText(info.studiesProofType));
-  flag(SECTION_GENERAL, 'Fecha del comprobante de estudios', isMissingText(info.studiesProofDate));
-  flag(SECTION_GENERAL, 'Empresa', isMissingText(info.companyName));
-  flag(SECTION_GENERAL, 'Puesto solicitado', isMissingText(info.positionApplied));
+  getMissingGeneralInfoFields(candidate.generalInfo).forEach((field) => flag(SECTION_GENERAL, field, true));
 
   // ---- Estructura Familiar ----
   const SECTION_FAMILY = 'Estructura Familiar';
@@ -171,11 +190,18 @@ export function getMissingDataReport(
   );
 
   // ---- Documentación ----
-  const SECTION_DOCUMENTS = 'Documentación';
-  DOCUMENT_DEFINITIONS.forEach((definition) => {
-    const isUploaded = documentEvidence.some((evidence) => evidence.documentType === definition.type);
-    flag(SECTION_DOCUMENTS, definition.label, !isUploaded);
-  });
+  // Solo se exige para MAGIC_LINK: el candidato la sube él mismo en su
+  // propio Wizard. En MANUAL, el reclutador es quien captura todo a
+  // mano y los documentos dejaron de ser un requisito para poder
+  // finalizar — pedido explícito del usuario, ya no deben bloquear
+  // "Finalizar Captura" en ese modo.
+  if (candidate.captureMode === 'MAGIC_LINK') {
+    const SECTION_DOCUMENTS = 'Documentación';
+    DOCUMENT_DEFINITIONS.forEach((definition) => {
+      const isUploaded = documentEvidence.some((evidence) => evidence.documentType === definition.type);
+      flag(SECTION_DOCUMENTS, definition.label, !isUploaded);
+    });
+  }
 
   // ---- Economía ----
   const SECTION_ECONOMY = 'Economía';

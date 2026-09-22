@@ -48,7 +48,7 @@ import { AssignRecruiterDialog } from './AssignRecruiterDialog';
 import { UpdateCandidateStatusDialog } from './UpdateCandidateStatusDialog';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { DialogHeader, dialogPaperSx } from '@/shared/components/DialogHeader';
-import { getMissingDataReport } from '../utils/candidateCompleteness';
+import { getMissingDataReport, getMissingGeneralInfoFields } from '../utils/candidateCompleteness';
 import {
   getValidStatusTransitions,
   REPORT_AVAILABLE_STATUSES,
@@ -186,25 +186,40 @@ export function CandidateDetailPage() {
   // guard de arriba dentro de una función declarada más adelante en el
   // mismo cuerpo del componente.
   const candidateId = candidate.id;
-  // Solo aplica a captura manual todavía sin terminar — una vez
-  // COMPLETED, o si el candidato se autollenó por Magic Link, esta
-  // acción deja de tener sentido.
-  const canFinalizeCapture = candidate.captureMode === 'MANUAL' && candidate.captureStatus === 'DRAFT';
+  // Visible en ambos modos mientras siga en DRAFT — antes exigía MANUAL
+  // también, pero MAGIC_LINK ahora puede finalizarse desde aquí validando
+  // solo Información General (ver handleFinalizeCaptureClick), la única
+  // sección que el reclutador edita sobre un candidato autollenado.
+  const canFinalizeCapture = candidate.captureStatus === 'DRAFT';
 
   // El botón siempre queda visible/habilitado (mientras canFinalizeCapture
   // sea true) — la validación de completitud no lo deshabilita, solo
   // decide qué diálogo abrir al hacer clic: el de datos faltantes, o el
   // de confirmación real que ya dispara la mutación.
+  //
+  // MANUAL: corre el reporte completo (ya no exige Documentación, ver
+  // candidateCompleteness.ts). MAGIC_LINK: el candidato llena el resto del
+  // perfil por su cuenta vía el Wizard — el reclutador solo puede haber
+  // tocado Información General (única pestaña editable para este modo,
+  // ver PersonalInfoForm.tsx), así que es lo único que se valida aquí.
   function handleFinalizeCaptureClick() {
     if (!candidate) return;
-    const report = getMissingDataReport(
-      candidate,
-      documentEvidenceQuery.data ?? [],
-      housingEvidenceQuery.data ?? [],
-    );
-    if (!report.isComplete) {
-      setMissingDataBySection(report.bySection);
-      return;
+    if (candidate.captureMode === 'MANUAL') {
+      const report = getMissingDataReport(
+        candidate,
+        documentEvidenceQuery.data ?? [],
+        housingEvidenceQuery.data ?? [],
+      );
+      if (!report.isComplete) {
+        setMissingDataBySection(report.bySection);
+        return;
+      }
+    } else {
+      const missingGeneralInfo = getMissingGeneralInfoFields(candidate.generalInfo);
+      if (missingGeneralInfo.length > 0) {
+        setMissingDataBySection({ 'Información General': missingGeneralInfo });
+        return;
+      }
     }
     setIsFinalizeCaptureOpen(true);
   }

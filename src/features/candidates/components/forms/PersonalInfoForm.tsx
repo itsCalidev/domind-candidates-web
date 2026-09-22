@@ -509,7 +509,12 @@ export function PersonalInfoForm(props: PersonalInfoFormProps) {
     );
   }
 
-  const canEdit = props.captureMode === 'MANUAL' && props.captureStatus === 'DRAFT';
+  // Excepción deliberada al resto de la familia de formularios (Family/
+  // Health/Housing/Economy/Documentation siguen exigiendo MANUAL && DRAFT):
+  // el reclutador SÍ puede corregir Información General de un candidato
+  // MAGIC_LINK mientras sigue en DRAFT — es la única sección que edita
+  // sobre un perfil que en general está llenando el propio candidato.
+  const canEdit = props.captureStatus === 'DRAFT';
 
   if (isEditing) {
     return (
